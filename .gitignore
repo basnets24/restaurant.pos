@@ -1,0 +1,43 @@
+# Build output
+bin/
+obj/
+*.dll
+*.exe
+
+# User-specific files
+*.user
+*.suo
+
+# IDE settings
+.idea/
+*.sln.iml
+
+# VS Code (in case)
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+
+# Temporary files
+*.swp
+*.tmp
+
+# dotnet tooling
+.nuget/
+*.nupkg
+*.snupkg
+
+# Docker
+**/Dockerfile
+
+# Launch profiles
+**/launchSettings.json
