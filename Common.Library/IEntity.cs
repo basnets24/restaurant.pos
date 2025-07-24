@@ -1,6 +1,5 @@
-using System;
 
-namespace Play.Common;
+namespace Common.Library;
 
 public interface IEntity
 {
