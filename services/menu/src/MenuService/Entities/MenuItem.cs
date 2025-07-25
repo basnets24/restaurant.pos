@@ -11,6 +11,6 @@ public class MenuItem : IEntity
     public decimal Price { get; set; }
     public string Category { get; set; } = null!;
     public bool IsAvailable { get; set; } = true;
-    public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; init; } = DateTime.UtcNow;
     
 }

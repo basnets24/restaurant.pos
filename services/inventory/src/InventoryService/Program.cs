@@ -1,13 +1,12 @@
-using MenuService.Entities;
 using Common.Library.MongoDB;
+using InventoryService.Entities;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
-builder.Services
-    .AddMongo()
-    .AddMongoRepository<MenuItem>("menuitems");
+// Add services to the container.
+builder.Services.AddMongo()
+    .AddMongoRepository<InventoryItem>("inventoryitems");
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
@@ -16,21 +15,19 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Restaurant.Menu.Service", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Restaurant.Inventory.Service", Version = "v1" });
 });
 
 var app = builder.Build();
 
-// Configure HTTP request pipeline
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Uncomment if using authentication in the future
-// app.UseAuthentication();
-// app.UseAuthorization();
 app.UseHttpsRedirection();
 app.MapControllers();
 app.Run();
+

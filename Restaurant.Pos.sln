@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A4C00D86-76C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MenuService", "services\menu\src\MenuService\MenuService.csproj", "{E6020741-E268-48F0-AD7F-56E8E6C5AFA5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService", "services\inventory\src\InventoryService\InventoryService.csproj", "{15063428-4E68-4E42-A08D-FE3B50C1BFD7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,6 +34,10 @@ Global
 		{E6020741-E268-48F0-AD7F-56E8E6C5AFA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E6020741-E268-48F0-AD7F-56E8E6C5AFA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E6020741-E268-48F0-AD7F-56E8E6C5AFA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15063428-4E68-4E42-A08D-FE3B50C1BFD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15063428-4E68-4E42-A08D-FE3B50C1BFD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15063428-4E68-4E42-A08D-FE3B50C1BFD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15063428-4E68-4E42-A08D-FE3B50C1BFD7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{CED7BA4E-9434-442E-9630-B7CBA65E9237} = {827FD859-D2B3-4ACB-A5E1-9832E480FD8E}
