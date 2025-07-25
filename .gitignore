@@ -9,6 +9,7 @@ obj/
 *.suo
 
 # IDE settings
+*.idea
 .idea/
 *.sln.iml
 
@@ -41,3 +42,4 @@ Thumbs.db
 
 # Launch profiles
 **/launchSettings.json
+.idea/
