@@ -48,7 +48,7 @@ public class MenuItemsController : Controller
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _repository.CreateAsync(menuItem);
-        return CreatedAtAction(nameof (GetByIdAsync), new {id = menuItem.Id}, menuItem);
+        return CreatedAtAction(nameof(GetByIdAsync), new {id = menuItem.Id}, menuItem.ToDto());
     }
     
     [HttpPut("{id}")]
@@ -82,7 +82,7 @@ public class MenuItemsController : Controller
     }
     
     
-    [HttpDelete]
+    [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteAsync(Guid id)
     {
         var menuItem = await _repository.GetAsync(id);
