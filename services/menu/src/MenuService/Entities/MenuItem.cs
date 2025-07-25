@@ -1,7 +1,9 @@
 
+using Common.Library;
+
 namespace MenuService.Entities;
 
-public class MenuItem 
+public class MenuItem : IEntity
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;

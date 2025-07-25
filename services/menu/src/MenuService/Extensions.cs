@@ -1,4 +1,3 @@
-using MenuService.Dtos;
 using MenuService.Entities;
 
 namespace MenuService;

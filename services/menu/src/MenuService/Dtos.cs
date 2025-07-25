@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MenuService.Dtos;
+namespace MenuService;
 
 public record MenuItemDto
 {

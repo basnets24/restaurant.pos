@@ -7,34 +7,34 @@ namespace Common.Library.MongoDB;
 public class MongoRepository<T> : IRepository<T> where T : IEntity
 {
     
-    private readonly IMongoCollection<T> dbcollection;
-    private readonly FilterDefinitionBuilder<T> filterBuilder = Builders<T>.Filter;
+    private readonly IMongoCollection<T> _dbcollection;
+    private readonly FilterDefinitionBuilder<T> _filterBuilder = Builders<T>.Filter;
 
     public MongoRepository(IMongoDatabase database, string collectionName)
     {
-        dbcollection = database.GetCollection<T>(collectionName);
+        _dbcollection = database.GetCollection<T>(collectionName);
     }
     
     public async Task<IReadOnlyCollection<T>> GetAllAsync()
     {
-        return await dbcollection.Find(filterBuilder.Empty).ToListAsync();
+        return await _dbcollection.Find(_filterBuilder.Empty).ToListAsync();
     }
 
     public async Task<IReadOnlyCollection<T>> GetAllAsync(Expression<Func<T, bool>> filter)
     {
-        return await dbcollection.Find(filter).ToListAsync();
+        return await _dbcollection.Find(filter).ToListAsync();
     }
 
     // find a single
     public async Task<T> GetAsync(Guid id)
     {
-        FilterDefinition<T> filter = filterBuilder.Eq(entity => entity.Id, id);
-        return await dbcollection.Find(filter).FirstOrDefaultAsync();
+        FilterDefinition<T> filter = _filterBuilder.Eq(entity => entity.Id, id);
+        return await _dbcollection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<T> GetAsync(Expression<Func<T, bool>> filter)
     {
-        return await dbcollection.Find(filter).FirstOrDefaultAsync();
+        return await _dbcollection.Find(filter).FirstOrDefaultAsync();
     }
 
     //create 
@@ -44,7 +44,7 @@ public class MongoRepository<T> : IRepository<T> where T : IEntity
         {
             throw new ArgumentNullException(nameof(entity));
         }
-        await dbcollection.InsertOneAsync(entity);
+        await _dbcollection.InsertOneAsync(entity);
     }
 
     public async Task UpdateAsync(T entity)
@@ -54,14 +54,14 @@ public class MongoRepository<T> : IRepository<T> where T : IEntity
             throw new ArgumentNullException(nameof(entity));
         }
 
-        var filter = filterBuilder.Eq(entity => entity.Id, entity.Id); 
-        await dbcollection.ReplaceOneAsync(filter, entity);
+        var filter = _filterBuilder.Eq(entity => entity.Id, entity.Id); 
+        await _dbcollection.ReplaceOneAsync(filter, entity);
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var filter = filterBuilder.Eq(entity => entity.Id, id);
-        await dbcollection.DeleteOneAsync(filter);
+        var filter = _filterBuilder.Eq(entity => entity.Id, id);
+        await _dbcollection.DeleteOneAsync(filter);
     }
 
 }
