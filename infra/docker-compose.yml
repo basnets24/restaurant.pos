@@ -1,4 +1,3 @@
-version: "3.8"
 
 services:
   mongodb:
@@ -9,5 +8,16 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: restaurant-rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    hostname: rabbitmq
+
 volumes:
   mongo_data:
+  rabbitmq_data:

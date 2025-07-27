@@ -9,6 +9,6 @@ public class InventoryItem : IEntity
     public string MenuItemName { get; set; } = null!; // for convenience/display
     public int Quantity { get; set; }
     public bool IsAvailable { get; set; } = true;
-    public DateTimeOffset AcquiredDate { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset AcquiredDate { get; init; } = DateTimeOffset.UtcNow;
     
 }
