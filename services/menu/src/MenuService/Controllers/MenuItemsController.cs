@@ -89,7 +89,14 @@ public class MenuItemsController : Controller
             menuItem.IsAvailable = item.IsAvailable.Value;
 
         await _repository.UpdateAsync(menuItem);
-
+        await _publishEndpoint.Publish(new MenuItemUpdated(
+            menuItem.Id,
+            menuItem.Name,
+            menuItem.Description,
+            menuItem.Price,
+            menuItem.Category,
+            menuItem.IsAvailable
+        ));
         return Ok(menuItem.ToDto());
     }
     

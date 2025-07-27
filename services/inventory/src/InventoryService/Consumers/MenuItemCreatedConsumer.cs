@@ -9,12 +9,16 @@ public class MenuItemCreatedConsumer : IConsumer<MenuItemCreated>
 {
     private readonly IRepository<MenuItem> _menuRepo;
     private readonly IRepository<InventoryItem> _inventoryRepo;
+    private readonly ILogger<MenuItemCreatedConsumer> _logger;
     
     public MenuItemCreatedConsumer(
-        IRepository<MenuItem> menuRepo, IRepository<InventoryItem> inventoryRepo)
+        IRepository<MenuItem> menuRepo, 
+        IRepository<InventoryItem> inventoryRepo,
+        ILogger<MenuItemCreatedConsumer> logger)
     {
         _menuRepo = menuRepo;
         _inventoryRepo = inventoryRepo;
+        _logger = logger;
     }
     
     public async Task Consume(ConsumeContext<MenuItemCreated> context)
@@ -25,6 +29,8 @@ public class MenuItemCreatedConsumer : IConsumer<MenuItemCreated>
         if (existing is not null)
         {
             // Item already processed — exit gracefully
+            _logger.LogWarning("MenuItem with ID {MenuItemId} already exists. Skipping creation."
+                , message.Id);
             return;
         }
         
@@ -36,6 +42,8 @@ public class MenuItemCreatedConsumer : IConsumer<MenuItemCreated>
             Category = message.Category
         }; 
        await  _menuRepo.CreateAsync(menuItem);
+       _logger.LogInformation("Created local MenuItem {MenuItemId} - {Name}",
+           message.Id, message.Name);
        
        // Create an initial inventory item
         var inventoryItem = new InventoryItem
@@ -48,5 +56,6 @@ public class MenuItemCreatedConsumer : IConsumer<MenuItemCreated>
             AcquiredDate = DateTimeOffset.UtcNow
         };
         await _inventoryRepo.CreateAsync(inventoryItem);
+        _logger.LogInformation("Created InventoryItem for MenuItem {MenuItemId}", message.Id);
     }
 }
