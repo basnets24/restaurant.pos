@@ -14,7 +14,7 @@ public static class Extensions
     {
         services.AddMassTransit(configure =>
         {
-            // consumption of message
+            // consumption of a message
             // any consumer classes that are in the assembly will be registered here 
             configure.AddConsumers(Assembly.GetEntryAssembly());
             configure.UsingRestaurantPosRabbitMq(configureRetries);

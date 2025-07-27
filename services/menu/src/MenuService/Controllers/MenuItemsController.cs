@@ -1,5 +1,7 @@
 using Common.Library;
+using MassTransit;
 using MenuService.Entities;
+using Messaging.Contracts.Events.Menu;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MenuService.Controllers;
@@ -10,10 +12,12 @@ namespace MenuService.Controllers;
 public class MenuItemsController : Controller 
 {
     private readonly IRepository<MenuItem> _repository;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public MenuItemsController(IRepository<MenuItem> repository)
+    public MenuItemsController(IRepository<MenuItem> repository, IPublishEndpoint publishEndpoint)
     {
         _repository = repository;
+        _publishEndpoint = publishEndpoint;
     }
     
     [HttpGet]
@@ -48,6 +52,14 @@ public class MenuItemsController : Controller
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _repository.CreateAsync(menuItem);
+        await _publishEndpoint.Publish(new MenuItemCreated(
+            menuItem.Id,
+            menuItem.Name,
+            menuItem.Description,
+            menuItem.Price,
+            menuItem.Category,
+            menuItem.IsAvailable)); 
+        
         return CreatedAtAction(nameof(GetByIdAsync), new {id = menuItem.Id}, menuItem.ToDto());
     }
     
