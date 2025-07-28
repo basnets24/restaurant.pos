@@ -47,7 +47,6 @@ public class InventoryItemsController : ControllerBase
         };
 
         await _repository.CreateAsync(item);
-
         return CreatedAtAction(nameof(GetByIdAsync), new { id = item.Id }, item.ToDto());
     }
 
@@ -62,9 +61,18 @@ public class InventoryItemsController : ControllerBase
         if (dto.IsAvailable.HasValue) item.IsAvailable = dto.IsAvailable.Value;
 
         await _repository.UpdateAsync(item);
-
         return NoContent();
     }
 
+    // DELETE /inventory-items/{id}
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteAsync(Guid id)
+    {
+        var item = await _repository.GetAsync(id);
+        if (item is null) return NotFound();
+
+        await _repository.DeleteAsync(id);
+        return NoContent();
+    }
     
 }

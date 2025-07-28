@@ -110,6 +110,7 @@ public class MenuItemsController : Controller
             return NotFound();
         }
         await _repository.DeleteAsync(id);
+        await _publishEndpoint.Publish(new MenuItemDeleted(id));
         return NoContent();
     }
 }
