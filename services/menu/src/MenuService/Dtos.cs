@@ -30,7 +30,7 @@ public record CreateMenuItemDto
     [MaxLength(50)]
     public string Category { get; init; } = null!;
 
-    public bool IsAvailable { get; init; } = true;
+    public bool IsAvailable { get; init; } = false;
 }
 
 public record UpdateMenuItemDto

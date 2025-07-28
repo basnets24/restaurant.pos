@@ -1,12 +1,17 @@
+using Common.Library.Logging;
 using Common.Library.MassTransit;
 using MenuService.Entities;
 using Common.Library.MongoDB;
 using MassTransit;
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
+builder.Services.AddSeqLogging(builder.Configuration);
+builder.Host.UseSerilog();
+
 builder.Services
     .AddMongo()
     .AddMongoRepository<MenuItem>("menuitems")

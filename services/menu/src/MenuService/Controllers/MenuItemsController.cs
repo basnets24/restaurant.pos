@@ -48,7 +48,7 @@ public class MenuItemsController : Controller
             Description = item.Description,
             Price = item.Price,
             Category = item.Category,
-            IsAvailable = item.IsAvailable,
+            IsAvailable = false,
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _repository.CreateAsync(menuItem);
