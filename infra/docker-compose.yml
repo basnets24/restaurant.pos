@@ -17,7 +17,19 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     hostname: rabbitmq
+    
+  seq:
+    image: datalust/seq
+    container_name: restaurant-seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    ports:
+      - 5341:80
+    volumes:
+      - seq_data:/data
 
 volumes:
   mongo_data:
   rabbitmq_data:
+  seq_data: 
