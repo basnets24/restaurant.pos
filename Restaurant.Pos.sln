@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService", "service
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messaging.Contracts", "shared\Messaging.Contracts\Messaging.Contracts.csproj", "{52BF92F9-0680-47D5-B3BF-45D5B0B15A90}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService", "services\order\src\OrderService\OrderService.csproj", "{E63F20F0-450C-452E-B681-99ECC4B67737}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,10 @@ Global
 		{52BF92F9-0680-47D5-B3BF-45D5B0B15A90}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{52BF92F9-0680-47D5-B3BF-45D5B0B15A90}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{52BF92F9-0680-47D5-B3BF-45D5B0B15A90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E63F20F0-450C-452E-B681-99ECC4B67737}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E63F20F0-450C-452E-B681-99ECC4B67737}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E63F20F0-450C-452E-B681-99ECC4B67737}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E63F20F0-450C-452E-B681-99ECC4B67737}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{CED7BA4E-9434-442E-9630-B7CBA65E9237} = {827FD859-D2B3-4ACB-A5E1-9832E480FD8E}
