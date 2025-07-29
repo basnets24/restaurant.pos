@@ -30,11 +30,11 @@ public class MenuItemDeletedConsumer : IConsumer<MenuItemDeleted>
         if (menuItem is not null)
         {
             await _menuItems.DeleteAsync(id);
-            _logger.LogInformation("Deleted local MenuItem: {MenuItemId}", id);
+            _logger.LogInformation("Deleted local MenuItem {MenuItemName} - {MenuItemId}", menuItem.Name, menuItem.Id);
         }
         else
         {
-            _logger.LogWarning("MenuItem not found in local projection for deletion: {MenuItemId}", id);
+            _logger.LogWarning("MenuItem not found in local projection for deletion: {MenuItemName} - {MenuItemId}", menuItem.Name, menuItem.Id);
         }
 
         // Try to delete InventoryItem by MenuItemId
@@ -42,11 +42,11 @@ public class MenuItemDeletedConsumer : IConsumer<MenuItemDeleted>
         if (inventoryItem is not null)
         {
             await _inventoryItems.DeleteAsync(inventoryItem.Id);
-            _logger.LogInformation("Deleted InventoryItem linked to MenuItem: {MenuItemId}", id);
+            _logger.LogInformation("Deleted InventoryItem linked to MenuItem: {MenuItemName} - {MenuItemId}", menuItem.Name, menuItem.Id);
         }
         else
         {
-            _logger.LogWarning("No InventoryItem linked to MenuItem: {MenuItemId} — nothing to delete", id);
+            _logger.LogWarning("No InventoryItem linked to MenuItem: {MenuItemName} - {MenuItemId} - nothing to delete", menuItem.Name, menuItem.Id);
         }
     }
 }
