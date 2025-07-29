@@ -34,12 +34,13 @@ public class MenuItemUpdatedConsumer : IConsumer<MenuItemUpdated>
                 inventoryItem.MenuItemName = message.Name;
                 inventoryItem.IsAvailable = message.IsAvailable;
                 await _inventoryRepo.UpdateAsync(inventoryItem);
-                _logger.LogInformation("Updated InventoryItem for MenuItem {MenuItemId}", message.Id);
+                _logger.LogInformation("Updated InventoryItem for MenuItem {MenuItemName} {MenuItemId}"
+                    ,message.Name,message.Id);
             }
             else
             {
-                _logger.LogInformation("No changes detected in InventoryItem for MenuItem {MenuItemId}", 
-                    message.Id);
+                _logger.LogInformation("No changes detected in InventoryItem for MenuItem {MenuItemName} {MenuItemId}"
+                    ,message.Name,message.Id);
             }
         }else
         {
@@ -56,7 +57,8 @@ public class MenuItemUpdatedConsumer : IConsumer<MenuItemUpdated>
                 localMenuItem.Name = message.Name;
                 localMenuItem.Category = message.Category;
                 await _menuRepo.UpdateAsync(localMenuItem);
-                
+                _logger.LogInformation("Updated local MenuItem cache: {MenuItemId} - {MenuItemName}"
+                    , message.Id, message.Name);
             }
         }else
         {
