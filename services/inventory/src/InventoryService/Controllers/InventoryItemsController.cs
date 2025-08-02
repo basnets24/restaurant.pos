@@ -38,13 +38,7 @@ public class InventoryItemsController : ControllerBase
         return Ok(item.ToDto());
     }
 
-    [HttpPost]
-    public async Task<ActionResult<InventoryItemDto>> PostAsync(CreateInventoryItemDto dto)
-    {
-        var item = await _inventoryManager.CreateOrUpdateAsync(dto);
-        return CreatedAtAction(nameof(GetByIdAsync), new { id = item.Id }, item.ToDto());
-    }
-
+    
     [HttpPut("{id}")]
     public async Task<IActionResult> PutAsync(Guid id, UpdateInventoryItemDto dto)
     {

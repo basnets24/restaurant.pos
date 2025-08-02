@@ -14,6 +14,7 @@ public class InventoryManager
 
     public InventoryManager(
         IRepository<InventoryItem> repository,
+        
         IPublishEndpoint publishEndpoint,
         ILogger<InventoryManager> logger)
     {
@@ -21,76 +22,44 @@ public class InventoryManager
         _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
-
-    public async Task<InventoryItem> CreateOrUpdateAsync(CreateInventoryItemDto dto)
-    {
-        var existing = await _repository.GetAsync(i => i.MenuItemId == dto.MenuItemId);
-        InventoryItem item;
-
-        if (existing is null)
-        {
-            item = new InventoryItem
-            {
-                Id = Guid.NewGuid(),
-                MenuItemId = dto.MenuItemId,
-                MenuItemName = dto.MenuItemName,
-                Quantity = dto.Quantity,
-                IsAvailable = dto.Quantity > 0,
-                AcquiredDate = DateTimeOffset.UtcNow
-            };
-            await _repository.CreateAsync(item);
-            await _publishEndpoint.Publish(new InventoryItemRestocked(item.MenuItemId, item.Quantity, item.IsAvailable));
-           
-        }
-        else
-        {
-            existing.Quantity += dto.Quantity;
-            existing.IsAvailable = existing.Quantity > 0;
-            item = existing;
-            await _repository.UpdateAsync(item);
-            await PublishInventoryEventsAsync(item, dto.Quantity);
-        }
-
-        
-
-        return item;
-    }
-
+    
     public async Task UpdateAsync(Guid id, UpdateInventoryItemDto dto)
     {
         var item = await _repository.GetAsync(id);
         if (item is null) throw new InvalidOperationException("Item not found.");
-
-        var previousQuantity = item.Quantity;
-
+        var previous = new InventoryItemState(item.Quantity, item.IsAvailable);
         if (dto.Quantity.HasValue)
-            item.Quantity = dto.Quantity.Value + previousQuantity ;
-
+            item.Quantity = dto.Quantity.Value + item.Quantity;
         if (dto.IsAvailable.HasValue)
             item.IsAvailable = dto.IsAvailable.Value;
-
         await _repository.UpdateAsync(item);
-
-        await PublishInventoryEventsAsync(item, previousQuantity);
+        await PublishInventoryEventsAsync(item, previous);
     }
-
-    private async Task PublishInventoryEventsAsync(InventoryItem item, int previousQuantity)
+    
+    private record InventoryItemState(int Quantity, bool IsAvailable);
+    private async Task PublishInventoryEventsAsync(InventoryItem current, InventoryItemState previous)
     {
-        if (previousQuantity == 0 && item.Quantity > 0)
+        if (previous.Quantity == 0 && current.Quantity > 0)
         {
-            await _publishEndpoint.Publish(new InventoryItemRestocked(item.MenuItemId, item.Quantity, item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemRestocked for MenuItemId {MenuItemId}", item.MenuItemId);
+            await _publishEndpoint.Publish(new InventoryItemRestocked(current.MenuItemId, current.Quantity, current.IsAvailable));
+            _logger.LogInformation("Published InventoryItemRestocked for MenuItemId {MenuItemId}", current.MenuItemId);
         }
-        else if (previousQuantity > 0 && item.Quantity == 0)
+        else if (previous.Quantity > 0 && current.Quantity == 0)
         {
-            await _publishEndpoint.Publish(new InventoryItemDepleted(item.MenuItemId, item.Quantity, item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemDepleted for MenuItemId {MenuItemId}", item.MenuItemId);
+            await _publishEndpoint.Publish(new InventoryItemDepleted(current.MenuItemId, current.Quantity, current.IsAvailable));
+            _logger.LogInformation("Published InventoryItemDepleted for MenuItemId {MenuItemId}", current.MenuItemId);
         }
-        else if (previousQuantity != item.Quantity || !item.IsAvailable)
+        else if (previous.Quantity != current.Quantity || previous.IsAvailable != current.IsAvailable)
         {
-            await _publishEndpoint.Publish(new InventoryItemUpdated(item.MenuItemId, item.Quantity, item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemUpdated for MenuItemId {MenuItemId}", item.MenuItemId);
+            await _publishEndpoint.Publish(new InventoryItemUpdated(current.MenuItemId, current.Quantity, current.IsAvailable));
+            _logger.LogInformation("Published InventoryItemUpdated for MenuItemId {MenuItemId}", current.MenuItemId);
+        }
+        else
+        {
+            _logger.LogWarning("No inventory event published for MenuItemId {MenuItemId}. Prev: {Prev}, Curr: {Curr}, Avail: {Avail}",
+                current.MenuItemId, previous.Quantity, current.Quantity, current.IsAvailable);
         }
     }
+    
     
 }
