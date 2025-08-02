@@ -15,6 +15,7 @@ builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
 builder.Services.AddMongo()
+    .AddMongoRepository<Order>("order")
     .AddMongoRepository<InventoryItem>("inventoryitems")
     .AddMongoRepository<MenuItem>("menuitems")
     .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));

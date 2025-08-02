@@ -2,6 +2,7 @@ using Common.Library.Logging;
 using Common.Library.MassTransit;
 using Common.Library.MongoDB;
 using InventoryService.Entities;
+using InventoryService.Services;
 using MassTransit;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -9,6 +10,7 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddScoped<InventoryManager>();
 
 // Register Serilog first
 builder.Services.AddSeqLogging(builder.Configuration);

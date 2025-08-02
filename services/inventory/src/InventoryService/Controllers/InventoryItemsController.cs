@@ -1,8 +1,7 @@
 
 using Common.Library;
 using InventoryService.Entities;
-using MassTransit;
-using Messaging.Contracts.Events.Inventory;
+using InventoryService.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryService.Controllers;
@@ -12,16 +11,14 @@ namespace InventoryService.Controllers;
 public class InventoryItemsController : ControllerBase
 {
     private readonly IRepository<InventoryItem> _repository;
-    private readonly IPublishEndpoint _publishEndpoint;
-    private readonly ILogger<InventoryItemsController> _logger;
+    private readonly InventoryManager _inventoryManager;
+    
     public InventoryItemsController(
         IRepository<InventoryItem> repository, 
-        IPublishEndpoint publishEndpoint, 
-        ILogger<InventoryItemsController> logger)
+         InventoryManager inventoryManager)
     {
         _repository = repository;
-        _publishEndpoint = publishEndpoint;
-        _logger = logger;
+        _inventoryManager = inventoryManager;
     }
 
     // GET /inventory-items
@@ -41,71 +38,20 @@ public class InventoryItemsController : ControllerBase
         return Ok(item.ToDto());
     }
 
-    // POST /inventory-items
     [HttpPost]
     public async Task<ActionResult<InventoryItemDto>> PostAsync(CreateInventoryItemDto dto)
     {
-        var item = new InventoryItem
-        {
-            Id = Guid.NewGuid(),
-            MenuItemId = dto.MenuItemId,
-            MenuItemName = dto.MenuItemName,
-            Quantity = dto.Quantity,
-            IsAvailable = dto.Quantity > 0,
-            AcquiredDate = DateTimeOffset.UtcNow
-        };
-        await _repository.CreateAsync(item);
-        
-        if (item.Quantity > 0)
-        {
-            await _publishEndpoint.Publish(new InventoryItemRestocked(
-                item.MenuItemId,
-                item.Quantity,
-                item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemRestocked for MenuItemId {MenuItemId}", item.MenuItemId);
-        }
-        else
-        {
-            await _publishEndpoint.Publish(new InventoryItemDepleted(
-                item.MenuItemId,
-                item.Quantity,
-                item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemDepleted for MenuItemId {MenuItemId}", item.MenuItemId);
-        }
+        var item = await _inventoryManager.CreateOrUpdateAsync(dto);
         return CreatedAtAction(nameof(GetByIdAsync), new { id = item.Id }, item.ToDto());
     }
 
-    // PUT /inventory-items/{id}
     [HttpPut("{id}")]
     public async Task<IActionResult> PutAsync(Guid id, UpdateInventoryItemDto dto)
     {
-        var item = await _repository.GetAsync(id);
-        // Save previous state for comparison
-        if (item is null) return NotFound();
-        int previousQuantity = item.Quantity;
-        if (dto.Quantity.HasValue) item.Quantity = dto.Quantity.Value;
-        if (dto.IsAvailable.HasValue) item.IsAvailable = dto.IsAvailable.Value;
-
-        await _repository.UpdateAsync(item);
-        if (previousQuantity == 0 && item.Quantity > 0)
-        {
-            await _publishEndpoint.Publish(new InventoryItemRestocked(
-                item.MenuItemId,
-                item.Quantity,
-                item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemDepleted for MenuItemId {MenuItemId}", item.MenuItemId);
-        }
-        else if (previousQuantity > 0 && item.Quantity == 0)
-        {
-            await _publishEndpoint.Publish(new InventoryItemDepleted(
-                item.MenuItemId,
-                item.Quantity,
-                item.IsAvailable));
-            _logger.LogInformation("Published InventoryItemDepleted for MenuItemId {MenuItemId}", item.MenuItemId);
-        }
+        await _inventoryManager.UpdateAsync(id, dto);
         return NoContent();
     }
-
+    
     // DELETE /inventory-items/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAsync(Guid id)
