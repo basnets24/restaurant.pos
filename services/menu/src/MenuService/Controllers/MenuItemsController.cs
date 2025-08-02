@@ -84,9 +84,7 @@ public class MenuItemsController : Controller
 
         if (item.Category is not null)
             menuItem.Category = item.Category;
-
-        if (item.IsAvailable is not null)
-            menuItem.IsAvailable = item.IsAvailable.Value;
+        
 
         await _repository.UpdateAsync(menuItem);
         await _publishEndpoint.Publish(new MenuItemUpdated(

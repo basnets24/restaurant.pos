@@ -4,11 +4,14 @@ namespace InventoryService;
 
     public record CreateInventoryItemDto
     {
+        [Required]
         public Guid MenuItemId { get; init; }
+        
+        [Required]
         public string MenuItemName { get; init; } = null!;
         
         
-        [Range(0, int.MaxValue, ErrorMessage = "Quantity must be non-negative.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
         public int Quantity { get; init; }
     }
 
@@ -16,7 +19,7 @@ namespace InventoryService;
     {
         [Range(0, int.MaxValue, ErrorMessage = "Quantity must be non-negative.")]
         public int? Quantity { get; init; }
-        public bool? IsAvailable { get; init; }
+        public bool? IsAvailable { get; set; }
     }
 
     public record InventoryItemDto
