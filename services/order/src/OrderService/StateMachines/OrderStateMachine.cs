@@ -113,7 +113,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                     })
                 .TransitionTo(Completed),
             When(PaymentFailed)
-                // compensating message send to inventory for subtracting items 
                 .Then(context =>
                 {
                     context.Saga.LastUpdated = DateTimeOffset.UtcNow;
@@ -121,6 +120,12 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                     _logger.LogWarning("Payment failed for OrderId {OrderId}: {Reason}",
                         context.Saga.OrderId, context.Message.Reason);
                 })
+                .Send(context =>
+                    // compensating message send to inventory for subtracting items 
+                    new ReleaseInventory(
+                        context.Saga.CorrelationId,
+                        context.Saga.OrderId,
+                        context.Saga.Items))
             .TransitionTo(Rejected)
             );
     }

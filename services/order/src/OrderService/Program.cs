@@ -1,9 +1,8 @@
 using Common.Library.Logging;
-using Common.Library.MassTransit;
 using Common.Library.MongoDB;
 using OrderService.Entities;
-using MassTransit;
 using Microsoft.OpenApi.Models;
+using OrderService;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,8 +16,8 @@ builder.Host.UseSerilog();
 builder.Services.AddMongo()
     .AddMongoRepository<Order>("order")
     .AddMongoRepository<InventoryItem>("inventoryitems")
-    .AddMongoRepository<MenuItem>("menuitems")
-    .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
+    .AddMongoRepository<MenuItem>("menuitems");
+builder.Services.AddMassTransitWithSaga(builder.Configuration);
 
 builder.Services.AddControllers(options =>
 {
