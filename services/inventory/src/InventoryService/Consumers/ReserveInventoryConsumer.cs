@@ -42,6 +42,7 @@ public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
                 }
 
                 inventoryItem.Quantity -= item.Quantity;
+                inventoryItem.IsAvailable = inventoryItem.Quantity > 0;
                 await _inventoryRepository.UpdateAsync(inventoryItem);
             }
 

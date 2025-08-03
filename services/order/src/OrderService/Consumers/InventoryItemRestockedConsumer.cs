@@ -28,20 +28,20 @@ public class InventoryItemRestockedConsumer : IConsumer<InventoryItemRestocked>
             var item = new InventoryItem
             {
                 MenuId = msg.MenuItemId,
-                Quantity = msg.newQuantity,
-                IsAvailable = msg.isAvailable
+                Quantity = msg.NewQuantity,
+                IsAvailable = msg.IsAvailable
             };
             await _inventoryRepo.CreateAsync(item); 
             _logger.LogInformation("Inventory item cache in OrderService created for MenuItemId {MenuItemId} with quantity {Quantity}",
-                msg.MenuItemId,msg.newQuantity);
+                msg.MenuItemId,msg.NewQuantity);
         }
         else
         {
-            inventoryItem.Quantity = msg.newQuantity;
-            inventoryItem.IsAvailable = msg.isAvailable;
+            inventoryItem.Quantity = msg.NewQuantity;
+            inventoryItem.IsAvailable = msg.IsAvailable;
             await _inventoryRepo.UpdateAsync(inventoryItem);
             _logger.LogInformation("Inventory item cache in OrderService updated for MenuItemId {MenuItemId} with quantity {Quantity}",
-                msg.MenuItemId,msg.newQuantity);
+                msg.MenuItemId,msg.NewQuantity);
         }
     }
 }

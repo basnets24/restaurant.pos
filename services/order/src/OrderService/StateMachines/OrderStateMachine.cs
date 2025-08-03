@@ -64,8 +64,6 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         context.Saga.OrderId,
                         context.Saga.Items))
                 .TransitionTo(InventoryPending)
-                // could have a possible exception here, but the controller
-                // already checks the local cache for availability and quantity
         ); 
     }
     
