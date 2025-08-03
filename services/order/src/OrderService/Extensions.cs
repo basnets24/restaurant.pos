@@ -50,7 +50,7 @@ public static class Extensions
                         .Get<ServiceSettings>();
                     var mongoSettings = config.GetRequiredSection(nameof(MongoDbSettings))
                         .Get<MongoDbSettings>();
-                    r.Connection = mongoSettings!.ConnectionString;
+                    r.Connection = mongoSettings!.GetConnectionString();
                     r.DatabaseName = serviceSettings!.ServiceName;
                 });
         });
