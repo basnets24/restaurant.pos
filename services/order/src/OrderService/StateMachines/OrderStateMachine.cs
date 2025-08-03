@@ -121,7 +121,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         context.Saga.OrderId, context.Message.Reason);
                 })
                 .Send(context =>
-                    // compensating message send to inventory for subtracting items 
+                    // compensating messages send to inventory for subtracting items 
                     new ReleaseInventory(
                         context.Saga.CorrelationId,
                         context.Saga.OrderId,
