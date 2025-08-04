@@ -17,7 +17,8 @@ builder.Services.AddMongo()
     .AddMongoRepository<Order>("order")
     .AddMongoRepository<InventoryItem>("inventoryitems")
     .AddMongoRepository<MenuItem>("menuitems")
-   ;
+    .AddMongoRepository<Cart>("carts")
+    .AddMongoRepository<DiningTable>("diningtables");
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 
 builder.Services.AddControllers(options =>
