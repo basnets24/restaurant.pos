@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using OrderService.Entities;
 
 namespace OrderService;
@@ -9,7 +10,9 @@ public record CreateOrderDto
 
 public record OrderItemDto
 {
+    [Required]
     public Guid MenuItemId { get; init; }
+    [Required, Range(1, 100)]
     public int Quantity { get; init; }
 }
 

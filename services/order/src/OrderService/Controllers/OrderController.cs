@@ -1,4 +1,6 @@
 using Common.Library;
+using MassTransit;
+using Messaging.Contracts.Events.Order;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Entities;
 
@@ -12,16 +14,18 @@ public class OrderController : ControllerBase
     private readonly IRepository<Order> _orderRepo;
     private readonly IRepository<InventoryItem> _inventoryRepo;
     private readonly IRepository<MenuItem> _menuRepo;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public OrderController(ILogger<OrderController> logger,
         IRepository<Order> orderRepo, 
         IRepository<InventoryItem> inventoryRepo, 
-        IRepository<MenuItem> menuRepo)
+        IRepository<MenuItem> menuRepo, IPublishEndpoint publishEndpoint)
     {
         _logger = logger;
         _orderRepo = orderRepo;
         _inventoryRepo = inventoryRepo;
         _menuRepo = menuRepo;
+        _publishEndpoint = publishEndpoint;
     }
 
     [HttpGet]
@@ -56,7 +60,7 @@ public class OrderController : ControllerBase
                 !inventoryItem.IsAvailable ||
                 inventoryItem.Quantity < dtoItem.Quantity)
             {
-                return BadRequest($"Item '{menuItem.Name}' is not available or insufficient stock.");
+                return BadRequest($"Item '{menuItem.Name}' is not available or insufficient stock {inventoryItem?.Quantity ?? 0} for quantity {dtoItem.Quantity}.");
             }
 
             var orderItem = new OrderItem
@@ -69,15 +73,29 @@ public class OrderController : ControllerBase
 
             items.Add(orderItem);
         }
+        var correlationId = Guid.NewGuid(); // Used to track the Saga
+        var orderId = Guid.NewGuid();       // Business-level order ID
         
         var order = new Order
         {
-            Id = Guid.NewGuid(),
+            Id = orderId,
             Items = items,
             TotalAmount = items.Sum(i => i.Quantity * i.UnitPrice),
-            Status = "Pending"
+            Status = "Pending",
+            CreatedAt = DateTimeOffset.Now
         };
         await _orderRepo.CreateAsync(order);
+        _logger.LogInformation("Order {OrderId} created", orderId);
+        
+        
+        await _publishEndpoint.Publish(new OrderSubmitted(
+            CorrelationId: correlationId,
+            OrderId: order.Id,
+            Items: order.Items.Select(i => new OrderItemMessage(
+                i.MenuItemId, i.Quantity)).ToList(),
+            TotalAmount: order.TotalAmount
+        ));
+
         return CreatedAtAction(nameof(GetByIdAsync), new { id = order.Id }, order.ToDto());
     }
     

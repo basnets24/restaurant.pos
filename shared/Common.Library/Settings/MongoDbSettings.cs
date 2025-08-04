@@ -5,7 +5,7 @@ public class MongoDbSettings
     public string Host { get; init; } = null!; 
     public int Port { get; init; }
 
-    public string? ConnectionString { get; set; } 
+    public string? ConnectionString { get; init; } 
     
     public string GetConnectionString()
     {
