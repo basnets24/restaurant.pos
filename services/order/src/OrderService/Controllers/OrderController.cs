@@ -88,7 +88,7 @@ public class OrderController : ControllerBase
         await _orderRepo.CreateAsync(order);
         _logger.LogInformation("Order {OrderId} created", orderId);
         
-        
+        // trigger for saga 
         await _publishEndpoint.Publish(new OrderSubmitted(
             CorrelationId: correlationId,
             OrderId: order.Id,
