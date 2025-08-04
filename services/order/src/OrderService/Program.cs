@@ -16,7 +16,8 @@ builder.Host.UseSerilog();
 builder.Services.AddMongo()
     .AddMongoRepository<Order>("order")
     .AddMongoRepository<InventoryItem>("inventoryitems")
-    .AddMongoRepository<MenuItem>("menuitems");
+    .AddMongoRepository<MenuItem>("menuitems")
+   ;
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 
 builder.Services.AddControllers(options =>

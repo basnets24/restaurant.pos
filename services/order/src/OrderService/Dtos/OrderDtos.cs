@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using OrderService.Entities;
 
-namespace OrderService;
+namespace OrderService.Dtos;
 
 public record CreateOrderDto
 {

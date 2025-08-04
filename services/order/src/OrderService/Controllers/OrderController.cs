@@ -2,6 +2,7 @@ using Common.Library;
 using MassTransit;
 using Messaging.Contracts.Events.Order;
 using Microsoft.AspNetCore.Mvc;
+using OrderService.Dtos;
 using OrderService.Entities;
 
 namespace OrderService.Controllers;
