@@ -5,6 +5,8 @@ using OrderService.Entities;
 
 namespace OrderService.Controllers;
 
+[ApiController]
+[Route("tables")]
 public class TableController : ControllerBase
 {
     private readonly IRepository<DiningTable> _tableRepo;

@@ -3,18 +3,12 @@ using OrderService.Entities;
 
 namespace OrderService.Dtos;
 
-public record CreateOrderDto
+public record FinalizeOrderDto
 {
-    public List<OrderItemDto> Items { get; init; } = new();
+    public List<OrderItem> Items { get; init; } = new();
+    public decimal TotalAmount { get; init; }
 }
 
-public record OrderItemDto
-{
-    [Required]
-    public Guid MenuItemId { get; init; }
-    [Required, Range(1, 100)]
-    public int Quantity { get; init; }
-}
 
 public record OrderDto
 {

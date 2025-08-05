@@ -1,6 +1,7 @@
 using Common.Library;
 using MassTransit;
 using Messaging.Contracts.Events.Order;
+using OrderService.Clients;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Interfaces;
@@ -11,18 +12,23 @@ public class CartService : ICartService
 {
     private readonly IRepository<Cart> _cartRepo;
     private readonly IRepository<MenuItem> _menuRepo;
+    private readonly IRepository<Order> _orderRepo;
     private readonly IRepository<DiningTable> _tableRepo;
     private readonly IPublishEndpoint _publishEndpoint;
-
+    private readonly OrderClient _orderClient;
 
     public CartService(IRepository<Cart> cartRepo, 
         IRepository<MenuItem> menuRepo, 
         IRepository<DiningTable> tableRepo, 
-        IPublishEndpoint publishEndpoint)
+        IPublishEndpoint publishEndpoint, 
+        IRepository<Order> orderRepo, 
+        OrderClient orderClient)
     {
         _cartRepo = cartRepo;
         _menuRepo = menuRepo;
         _tableRepo = tableRepo;
+        _orderRepo = orderRepo;
+        _orderClient = orderClient;
         _publishEndpoint = publishEndpoint;
     }
 
@@ -86,17 +92,23 @@ public class CartService : ICartService
     public async Task<Guid> CheckoutAsync(Guid cartId)
     {
         var cart = await _cartRepo.GetAsync(cartId);
-        var orderId = Guid.NewGuid();
-        var correlationId = Guid.NewGuid();
+        if (cart == null) throw new InvalidOperationException("Cart not found.");
+        if (!cart.Items.Any()) throw new InvalidOperationException("Cannot checkout an empty cart.");
 
-        var orderSubmitted = new OrderSubmitted(
-            CorrelationId: correlationId,
-            OrderId: orderId,
-            Items: cart.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            TotalAmount: cart.Items.Sum(i => i.Quantity * i.UnitPrice)
-        );
+        var finalizeDto = new FinalizeOrderDto
+        {
+            Items = cart.Items.Select(i => new OrderItem
+            {
+                MenuItemId = i.MenuItemId,
+                MenuItemName = i.MenuItemName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice
+            }).ToList(),
+            TotalAmount = cart.Items.Sum(i => i.Quantity * i.UnitPrice)
+        };
 
-        await _publishEndpoint.Publish(orderSubmitted);
-        return orderId;
+        var order = await _orderClient.SubmitOrderAsync(finalizeDto);
+        return order.Id;
     }
+
 }

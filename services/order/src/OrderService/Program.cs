@@ -3,6 +3,9 @@ using Common.Library.MongoDB;
 using OrderService.Entities;
 using Microsoft.OpenApi.Models;
 using OrderService;
+using OrderService.Clients;
+using OrderService.Interfaces;
+using OrderService.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +23,13 @@ builder.Services.AddMongo()
     .AddMongoRepository<Cart>("carts")
     .AddMongoRepository<DiningTable>("diningtables");
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
+
+builder.Services.AddScoped<ICartService, CartService>();
+
+builder.Services.AddHttpClient<OrderClient>( client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5236"); // Adjust per your environment
+});
 
 builder.Services.AddControllers(options =>
 {
