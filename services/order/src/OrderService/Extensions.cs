@@ -4,6 +4,7 @@ using Common.Library.Settings;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Payment;
+using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Settings;
 using OrderService.StateMachines;
