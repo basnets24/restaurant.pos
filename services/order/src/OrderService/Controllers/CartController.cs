@@ -63,9 +63,9 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("{id}/checkout")]
-    public async Task<ActionResult<Guid>> Checkout(Guid id)
+    public async Task<ActionResult> Checkout(Guid id)
     {
         var orderId = await _cartService.CheckoutAsync(id);
-        return Ok(orderId);
+        return Ok(new { orderId });
     }
 } 
