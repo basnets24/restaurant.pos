@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace IdentityService;
 
 public record UserListItemDto(
-    string Id,
+    Guid Id,
     string Email,
     string? UserName,
     bool EmailConfirmed,
@@ -12,7 +12,7 @@ public record UserListItemDto(
 );
 
 public record UserDetailDto(
-    string Id,
+    Guid Id,
     string Email,
     string? UserName,
     bool EmailConfirmed,
