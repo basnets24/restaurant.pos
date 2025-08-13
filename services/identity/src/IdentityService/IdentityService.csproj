@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
+      <UserSecretsId>22f1f3e0-0db8-458f-bbdf-910fe1e9dbd1</UserSecretsId>
+  </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Duende.IdentityServer" Version="7.2.4" />
@@ -21,27 +22,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <_ContentIncludedByDefault Remove="wwwroot\css\site.css" />
-      <_ContentIncludedByDefault Remove="wwwroot\favicon.ico" />
-      <_ContentIncludedByDefault Remove="wwwroot\js\site.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\css\bootstrap.css" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\css\bootstrap.css.map" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\css\bootstrap.min.css" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\css\bootstrap.min.css.map" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\js\bootstrap.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\dist\js\bootstrap.min.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\bootstrap\LICENSE" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation-unobtrusive\jquery.validate.unobtrusive.min.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation\dist\additional-methods.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation\dist\additional-methods.min.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation\dist\jquery.validate.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation\dist\jquery.validate.min.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery-validation\LICENSE.md" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery\dist\jquery.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery\dist\jquery.min.js" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery\dist\jquery.min.map" />
-      <_ContentIncludedByDefault Remove="wwwroot\lib\jquery\LICENSE.txt" />
+      <ProjectReference Include="..\..\..\..\shared\Common.Library\Common.Library.csproj" />
     </ItemGroup>
+    
 
 </Project>

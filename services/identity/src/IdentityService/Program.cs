@@ -1,4 +1,5 @@
 using IdentityService.Extensions;
+using IdentityService.HostedServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
+builder.Services.AddControllers();
+builder.Services.AddHostedService<IdentitySeedHostedService>(); 
 
 var app = builder.Build();
 
