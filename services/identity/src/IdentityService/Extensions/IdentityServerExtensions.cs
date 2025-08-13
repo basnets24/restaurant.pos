@@ -6,7 +6,7 @@ namespace IdentityService.Extensions;
 
 public static class IdentityServerExtensions
 {
-    public static IServiceCollection AddRestaurantIdentityServer(
+    public static IServiceCollection AddRestaurantPosIdentityServer(
         this IServiceCollection services,
         IConfiguration configuration)
     {
@@ -19,8 +19,7 @@ public static class IdentityServerExtensions
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseInformationEvents = true;
                 options.Events.RaiseSuccessEvents = true;
-
-                options.EmitStaticAudienceClaim = true;
+                
 
                 // Persist & rotate signing keys here (ensure a writable path in container)
                 // options.KeyManagement.KeyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
