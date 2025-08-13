@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(postgresSettings!.GetConnectionString()));
         
-        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
                 // If you don’t want email confirmation while developing:
                 options.SignIn.RequireConfirmedAccount = false;

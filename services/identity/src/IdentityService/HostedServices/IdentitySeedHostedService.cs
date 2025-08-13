@@ -13,18 +13,18 @@ public class IdentitySeedHostedService : IHostedService
 
     public IdentitySeedHostedService(
         IServiceScopeFactory scopeFactory,
-        IOptions<IdentitySettings> settings,
+        IOptions<IdentitySettings> identityOptions,
         ILogger<IdentitySeedHostedService> logger)
     {
         _scopeFactory = scopeFactory;
-        _settings = settings.Value;
+        _settings = identityOptions.Value;
         _logger = logger;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         var roles = new[]
@@ -39,7 +39,7 @@ public class IdentitySeedHostedService : IHostedService
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
-                await roleManager.CreateAsync(new IdentityRole { Name = role });
+                await roleManager.CreateAsync(new ApplicationRole { Name = role });
         }
 
         var admin = await userManager.FindByEmailAsync(_settings.AdminUserEmail);

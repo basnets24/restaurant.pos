@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="Duende.IdentityServer" Version="7.2.4" />
+        <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.2.4" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.19" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.19" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
@@ -23,6 +24,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\..\shared\Common.Library\Common.Library.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Migrations\" />
     </ItemGroup>
     
 

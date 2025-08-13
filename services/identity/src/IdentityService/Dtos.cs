@@ -2,9 +2,16 @@ using System.ComponentModel.DataAnnotations;
 
 namespace IdentityService;
 
+public record UserDto(
+    Guid Id,
+    string? Email,
+    string? UserName,
+    IReadOnlyCollection<string> Roles
+);
+
 public record UserListItemDto(
     Guid Id,
-    string Email,
+    string? Email,
     string? UserName,
     bool EmailConfirmed,
     bool LockedOut,
@@ -13,7 +20,7 @@ public record UserListItemDto(
 
 public record UserDetailDto(
     Guid Id,
-    string Email,
+    string? Email,
     string? UserName,
     bool EmailConfirmed,
     bool LockedOut,
@@ -23,12 +30,11 @@ public record UserDetailDto(
 
 public class UserUpdateDto
 {
-    public string? UserName { get; set; }
+    public string? Email { get; set; }
+    public int? AccessCode { get; set; }
     public bool? LockoutEnabled { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
-
-    // Fallback for clients that don’t use ETag/If-Match
-    public string? ConcurrencyStamp { get; set; }
+    
 }
 
 public class AddRolesDto
