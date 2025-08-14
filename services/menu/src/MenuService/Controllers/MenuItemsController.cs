@@ -1,7 +1,9 @@
 using Common.Library;
 using MassTransit;
+using MenuService.Auth;
 using MenuService.Entities;
 using Messaging.Contracts.Events.Menu;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MenuService.Controllers;
@@ -21,6 +23,7 @@ public class MenuItemsController : Controller
     }
     
     [HttpGet]
+    [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
     public async Task<IEnumerable<MenuItemDto>> GetAsync()
     {
         // get the item, convert to dto, send 
@@ -40,6 +43,7 @@ public class MenuItemsController : Controller
     }
     
     [HttpPost]
+    [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult<MenuItemDto>> PostAsync(CreateMenuItemDto item)
     {
         var menuItem = new MenuItem
@@ -64,6 +68,7 @@ public class MenuItemsController : Controller
     }
     
     [HttpPut("{id}")]
+    [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult<MenuItemDto>> PutAsync(Guid id, UpdateMenuItemDto item)
     {
         var menuItem = await _repository.GetAsync(id);
@@ -100,6 +105,7 @@ public class MenuItemsController : Controller
     
     
     [HttpDelete("{id}")]
+    [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult> DeleteAsync(Guid id)
     {
         var menuItem = await _repository.GetAsync(id);

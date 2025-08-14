@@ -1,8 +1,10 @@
+using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MassTransit;
 using MenuService.Entities;
 using Common.Library.MongoDB;
 using MassTransit;
+using MenuService.Auth;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -16,6 +18,8 @@ builder.Services
     .AddMongo()
     .AddMongoRepository<MenuItem>("menuitems")
     .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)) );
+builder.Services.AddMenuPolicies()
+    .AddPosJwtBearer(); 
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
