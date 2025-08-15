@@ -9,7 +9,7 @@ public interface ICartService
     Task<Cart> CreateAsync(Guid? tableId, Guid? customerId);
     Task AddItemAsync(Guid cartId, AddCartItemDto itemDto);
     Task RemoveItemAsync(Guid cartId, Guid menuItemId);
-    Task<Guid> CheckoutAsync(Guid cartId);
+    Task<Guid> CheckoutAsync(Guid cartId, CancellationToken ct = default);
 }
 
 /*

@@ -1,4 +1,4 @@
-namespace IdentityService;
+namespace IdentityService.Auth;
 
 public static class Roles
 {

@@ -1,3 +1,4 @@
+using IdentityService.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using IdentityService.Entities;

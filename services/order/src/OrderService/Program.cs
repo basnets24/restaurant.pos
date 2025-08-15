@@ -1,9 +1,10 @@
+using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MongoDB;
 using OrderService.Entities;
 using Microsoft.OpenApi.Models;
 using OrderService;
-using OrderService.Clients;
+using OrderService.Auth;
 using OrderService.Interfaces;
 using OrderService.Services;
 using Serilog;
@@ -11,8 +12,6 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
-// Register Serilog first
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
@@ -23,13 +22,9 @@ builder.Services.AddMongo()
     .AddMongoRepository<Cart>("carts")
     .AddMongoRepository<DiningTable>("diningtables");
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
-
 builder.Services.AddScoped<ICartService, CartService>();
-
-builder.Services.AddHttpClient<OrderClient>( client =>
-{
-    client.BaseAddress = new Uri("http://localhost:5236"); // Adjust per your environment
-});
+builder.Services.AddScoped<IOrderService, FinalOrderService>();
+builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
 
 builder.Services.AddControllers(options =>
 {

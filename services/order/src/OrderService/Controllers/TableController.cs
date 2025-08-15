@@ -1,5 +1,7 @@
 using Common.Library;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrderService.Auth;
 using OrderService.Dtos;
 using OrderService.Entities;
 
@@ -17,6 +19,7 @@ public class TableController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<ActionResult<TableDto>> CreateAsync(CreateTableDto dto)
     {
         var table = new DiningTable
@@ -33,6 +36,7 @@ public class TableController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = OrderPolicyExtensions.Read)]
     public async Task<ActionResult<IEnumerable<TableDto>>> GetAllAsync()
     {
         var tables = await _tableRepo.GetAllAsync();
@@ -41,6 +45,7 @@ public class TableController : ControllerBase
     }
 
     [HttpPatch("{id}/status")]
+    [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] string status)
     {
         if (!DiningTable.AllowedStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
@@ -57,6 +62,7 @@ public class TableController : ControllerBase
     }
 
     [HttpPost("{id}/clear")]
+    [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<IActionResult> ClearAsync(Guid id)
     {
         var table = await _tableRepo.GetAsync(id);

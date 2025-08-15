@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Duende.IdentityServer;
+using IdentityService.Auth;
 using IdentityService.Entities;
 using IdentityService.Extensions;
 using Microsoft.AspNetCore.Authorization;

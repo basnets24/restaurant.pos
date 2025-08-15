@@ -1,9 +1,12 @@
 using Common.Library;
 using MassTransit;
 using Messaging.Contracts.Events.Order;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrderService.Auth;
 using OrderService.Dtos;
 using OrderService.Entities;
+using OrderService.Interfaces;
 
 namespace OrderService.Controllers;
 
@@ -11,21 +14,19 @@ namespace OrderService.Controllers;
 [Route("orders")]
 public class OrderController : ControllerBase
 {
-    private readonly ILogger<OrderController> _logger;
     private readonly IRepository<Order> _orderRepo;
-    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IOrderService _orders;
 
     public OrderController(
-        ILogger<OrderController> logger,
-        IRepository<Order> orderRepo,
-        IPublishEndpoint publishEndpoint)
+        IRepository<Order> orderRepo, 
+        IOrderService orders)
     {
-        _logger = logger;
         _orderRepo = orderRepo;
-        _publishEndpoint = publishEndpoint;
+        _orders = orders;
     }
 
     [HttpGet]
+    [Authorize(Policy = OrderPolicyExtensions.Read)]
     public async Task<ActionResult<IEnumerable<OrderDto>>> GetAsync()
     {
         var orders = await _orderRepo.GetAllAsync();
@@ -33,6 +34,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = OrderPolicyExtensions.Read)]
     public async Task<ActionResult<OrderDto>> GetByIdAsync(Guid id)
     {
         var order = await _orderRepo.GetAsync(id);
@@ -40,30 +42,13 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<OrderDto>> PostAsync([FromBody] FinalizeOrderDto dto)
+    [Authorize(Policy = OrderPolicyExtensions.Write)]
+    public async Task<ActionResult<OrderDto>> PostAsync(
+        [FromBody] FinalizeOrderDto dto
+        , [FromQuery] Guid? idempotencyKey, 
+        CancellationToken ct)
     {
-        var orderId = Guid.NewGuid();
-        var correlationId = Guid.NewGuid();
-
-        var order = new Order
-        {
-            Id = orderId,
-            Items = dto.Items,
-            TotalAmount = dto.TotalAmount,
-            Status = "Pending",
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-
-        await _orderRepo.CreateAsync(order);
-        _logger.LogInformation("Order {OrderId} created", orderId);
-
-        await _publishEndpoint.Publish(new OrderSubmitted(
-            CorrelationId: correlationId,
-            OrderId: order.Id,
-            Items: order.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            TotalAmount: order.TotalAmount
-        ));
-
+        var order = await _orders.FinalizeOrderAsync(dto, idempotencyKey, ct);
         return CreatedAtAction(nameof(GetByIdAsync), new { id = order.Id }, order.ToDto());
     }
 }
