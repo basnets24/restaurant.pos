@@ -1,6 +1,8 @@
+using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MassTransit;
 using Common.Library.MongoDB;
+using InventoryService.Auth;
 using InventoryService.Entities;
 using InventoryService.Services;
 using MassTransit;
@@ -19,7 +21,10 @@ builder.Host.UseSerilog();
 builder.Services.AddMongo()
     .AddMongoRepository<InventoryItem>("inventoryitems")
     .AddMongoRepository<MenuItem>("menuitems")
-    .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
+    .AddMassTransitWithRabbitMq( retryConfigurator => 
+        retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
+
+builder.Services.AddInventoryPolicies().AddPosJwtBearer(); 
 
 builder.Services.AddControllers(options =>
 {

@@ -1,46 +1,10 @@
 using System.Security.Claims;
+using Common.Library.Identity;
 using Microsoft.AspNetCore.Authorization;
 
 namespace IdentityService.Auth;
 
 // Require one of the space-delimited values in "scope" or array "scp"
-public sealed class ScopeRequirement : IAuthorizationRequirement
-{
-    public string RequiredScope { get; }
-    public ScopeRequirement(string scope) => RequiredScope = scope;
-}
-
-public sealed class ScopeHandler : AuthorizationHandler<ScopeRequirement>
-{
-    protected override Task HandleRequirementAsync(
-        AuthorizationHandlerContext context, ScopeRequirement requirement)
-    {
-        var user = context.User;
-
-        // "scp" claim (array or multiple) – commonly used by IdentityServer/AAD
-        var scpClaims = user.FindAll("scp").Select(c => c.Value);
-        if (scpClaims.Any(v => v.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                                .Contains(requirement.RequiredScope)))
-        {
-            context.Succeed(requirement);
-            return Task.CompletedTask;
-        }
-
-        // "scope" claim (space-delimited)
-        var scope = user.FindFirstValue("scope");
-        if (!string.IsNullOrWhiteSpace(scope))
-        {
-            var parts = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Contains(requirement.RequiredScope))
-            {
-                context.Succeed(requirement);
-                return Task.CompletedTask;
-            }
-        }
-
-        return Task.CompletedTask;
-    }
-}
 
 public static class ScopePolicyExtensions
 {
@@ -51,7 +15,6 @@ public static class ScopePolicyExtensions
     public static IServiceCollection AddScopePolicies(this IServiceCollection services)
     {
         services.AddSingleton<IAuthorizationHandler, ScopeHandler>();
-
         services.AddAuthorization(o =>
         {
             o.AddPolicy(ReadPolicy, p => p.Requirements.Add(new ScopeRequirement("identity.read")));

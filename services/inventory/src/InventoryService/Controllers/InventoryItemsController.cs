@@ -1,7 +1,8 @@
-
 using Common.Library;
+using InventoryService.Auth;
 using InventoryService.Entities;
 using InventoryService.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryService.Controllers;
@@ -23,6 +24,7 @@ public class InventoryItemsController : ControllerBase
 
     // GET /inventory-items
     [HttpGet]
+    [Authorize(Policy = InventoryPolicyExtensions.Read)]
     public async Task<ActionResult<IEnumerable<InventoryItemDto>>> GetAsync()
     {
         var items = await _repository.GetAllAsync();
@@ -31,6 +33,7 @@ public class InventoryItemsController : ControllerBase
 
     // GET /inventory-items/{id}
     [HttpGet("{id}")]
+    [Authorize(Policy = InventoryPolicyExtensions.Read)]
     public async Task<ActionResult<InventoryItemDto>> GetByIdAsync(Guid id)
     {
         var item = await _repository.GetAsync(id);
@@ -40,6 +43,7 @@ public class InventoryItemsController : ControllerBase
 
     
     [HttpPut("{id}")]
+    [Authorize(Policy = InventoryPolicyExtensions.Write)]
     public async Task<IActionResult> PutAsync(Guid id, UpdateInventoryItemDto dto)
     {
         await _inventoryManager.UpdateAsync(id, dto);
@@ -48,6 +52,7 @@ public class InventoryItemsController : ControllerBase
     
     // DELETE /inventory-items/{id}
     [HttpDelete("{id}")]
+    [Authorize(Policy = InventoryPolicyExtensions.Write)]
     public async Task<IActionResult> DeleteAsync(Guid id)
     {
         var item = await _repository.GetAsync(id);
