@@ -13,13 +13,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
-
 builder.Services
     .AddMongo()
     .AddMongoRepository<MenuItem>("menuitems")
     .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)) );
-builder.Services.AddMenuPolicies()
-    .AddPosJwtBearer(); 
+builder.Services.AddMenuPolicies().AddPosJwtBearer(); 
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
