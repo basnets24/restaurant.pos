@@ -7,6 +7,19 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+  
+  postgres:
+    image: postgres:15
+    container_name: identity-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Rest@urant12
+    volumes:
+      - 
+      - postgres-data:/var/lib/postgresql/data
 
   rabbitmq:
     image: rabbitmq:management
@@ -32,4 +45,5 @@ services:
 volumes:
   mongo_data:
   rabbitmq_data:
-  seq_data: 
+  seq_data:
+  postgres-data:

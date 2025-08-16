@@ -1,7 +1,4 @@
 using Common.Library;
-using MassTransit;
-using Messaging.Contracts.Events.Order;
-using OrderService.Clients;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Interfaces;
@@ -12,24 +9,19 @@ public class CartService : ICartService
 {
     private readonly IRepository<Cart> _cartRepo;
     private readonly IRepository<MenuItem> _menuRepo;
-    private readonly IRepository<Order> _orderRepo;
     private readonly IRepository<DiningTable> _tableRepo;
-    private readonly IPublishEndpoint _publishEndpoint;
-    private readonly OrderClient _orderClient;
+    
+    private readonly IOrderService _orderService;
 
     public CartService(IRepository<Cart> cartRepo, 
         IRepository<MenuItem> menuRepo, 
         IRepository<DiningTable> tableRepo, 
-        IPublishEndpoint publishEndpoint, 
-        IRepository<Order> orderRepo, 
-        OrderClient orderClient)
+        IOrderService orderService)
     {
         _cartRepo = cartRepo;
         _menuRepo = menuRepo;
         _tableRepo = tableRepo;
-        _orderRepo = orderRepo;
-        _orderClient = orderClient;
-        _publishEndpoint = publishEndpoint;
+        _orderService = orderService;
     }
 
     public async Task<Cart> GetAsync(Guid id) => await _cartRepo.GetAsync(id);
@@ -89,7 +81,7 @@ public class CartService : ICartService
         await _cartRepo.UpdateAsync(cart);
     }
 
-    public async Task<Guid> CheckoutAsync(Guid cartId)
+    public async Task<Guid> CheckoutAsync(Guid cartId, CancellationToken ct)
     {
         var cart = await _cartRepo.GetAsync(cartId);
         if (cart == null) throw new InvalidOperationException("Cart not found.");
@@ -106,9 +98,9 @@ public class CartService : ICartService
             }).ToList(),
             TotalAmount = cart.Items.Sum(i => i.Quantity * i.UnitPrice)
         };
-
-        var order = await _orderClient.SubmitOrderAsync(finalizeDto);
+        
+        // Using cartId as an idempotency key, so repeated checkouts don’t duplicate orders
+        var order = await _orderService.FinalizeOrderAsync(finalizeDto, idempotencyKey: cartId, ct);
         return order.Id;
     }
-
 }
