@@ -24,6 +24,8 @@ builder.Services.AddMongo()
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
+builder.Services.AddScoped<ITableService, TableService>();
+
 builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
 
 builder.Services.AddControllers(options =>
