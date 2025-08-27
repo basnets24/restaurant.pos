@@ -31,7 +31,7 @@ public static class OrderPolicyExtensions
             // Admin/Manager can assign/clear any server on any table
             o.AddPolicy(ManageTables, p =>
                 p.RequireAuthenticatedUser()
-                    .RequireRole("Admin", "Manager"));
+                    .RequireRole("Server", "Admin", "Manager"));
         });
         return services;
     }

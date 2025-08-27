@@ -96,7 +96,7 @@ public class TableController : ControllerBase
     }
 
     [HttpPost("{id:guid}/clear")]
-    [Authorize(Policy = OrderPolicyExtensions.ManageTables)] // or Write, your choice
+    [Authorize(Policy = OrderPolicyExtensions.Write)] // or Write, your choice
     public async Task<IActionResult> Clear(Guid id, CancellationToken ct)
     {
         try { await _tableService.ClearAsync(id, ct); return NoContent(); }
