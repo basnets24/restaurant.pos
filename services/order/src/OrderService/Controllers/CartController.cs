@@ -25,14 +25,20 @@ public class CartController : ControllerBase
     {
         var cart = await _cartService.CreateAsync(dto.TableId, dto.CustomerId);
         var dtoItems = cart.Items.Select(i => 
-            new CartItemDto(i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice))
+            new CartItemDto(i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes))
             .ToList();
         return Ok(new CartDto(
             cart.Id, 
             cart.TableId, 
             cart.CustomerId, 
+            cart.ServerId,
+            cart.GuestCount,
             dtoItems, 
-            cart.CreatedAt));
+            cart.CreatedAt,
+            cart.TipAmount,     // null at creation set to 0 
+            cart.AppliedTaxes,
+            cart.AppliedDiscounts,
+            cart.ServiceCharges));
     }
 
     [HttpGet("{id}")]
@@ -42,14 +48,20 @@ public class CartController : ControllerBase
         var cart = await _cartService.GetAsync(id);
         if (cart == null) return NotFound();
         var dtoItems = cart.Items.Select(i => 
-            new CartItemDto(i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice))
+            new CartItemDto(i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes))
             .ToList();
         return Ok(new CartDto(
             cart.Id, 
             cart.TableId, 
             cart.CustomerId, 
+            cart.ServerId,
+            cart.GuestCount,
             dtoItems, 
-            cart.CreatedAt));
+            cart.CreatedAt,
+            cart.TipAmount,     // null at creation set to 0 
+            cart.AppliedTaxes,
+            cart.AppliedDiscounts,
+            cart.ServiceCharges));
     }
 
     [HttpPost("{id}/items")]

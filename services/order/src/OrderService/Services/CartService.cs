@@ -68,8 +68,10 @@ public class CartService : ICartService
                 MenuItemId = menuItem.Id,
                 MenuItemName = menuItem.Name,
                 Quantity = itemDto.Quantity,
-                UnitPrice = menuItem.Price
+                UnitPrice = menuItem.Price, 
+                Notes = itemDto.Notes 
             });
+           
         }
         await _cartRepo.UpdateAsync(cart);
     }
@@ -94,9 +96,17 @@ public class CartService : ICartService
                 MenuItemId = i.MenuItemId,
                 MenuItemName = i.MenuItemName,
                 Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice
+                UnitPrice = i.UnitPrice,
+                Notes = i.Notes
             }).ToList(),
-            TotalAmount = cart.Items.Sum(i => i.Quantity * i.UnitPrice)
+            TotalAmount = cart.Items.Sum(i => i.Quantity * i.UnitPrice),
+            AppliedTaxes = cart.AppliedTaxes,
+            AppliedDiscounts = cart.AppliedDiscounts,
+            ServiceCharges = cart.ServiceCharges,
+            TipAmount = cart.TipAmount,
+            TableId = cart.TableId,
+            ServerId = cart.ServerId,
+            GuestCount = cart.GuestCount
         };
         
         // Using cartId as an idempotency key, so repeated checkouts don’t duplicate orders
