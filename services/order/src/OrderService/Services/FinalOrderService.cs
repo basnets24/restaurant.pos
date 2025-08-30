@@ -49,7 +49,8 @@ public class FinalOrderService : IOrderService
         // (non-stacking discounts,
         // taxable service charges,
         // multiple taxes)
-        var p = _pricingService.Calculate(subtotal, tip);
+        var p = _pricingService.Calculate(subtotal, tip, 
+            new PricingContext(dto.GuestCount, DineIn: dto.TableId != null));
         
         var order = new Order
         {
@@ -88,7 +89,7 @@ public class FinalOrderService : IOrderService
             correlationId,
             orderId,
             dto.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            dto.Subtotal
+            p.GrandTotal
         ), cancellationToken); 
         
         return order;

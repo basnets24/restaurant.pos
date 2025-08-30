@@ -34,7 +34,7 @@ public static class CartMappings
         }
 
         // Otherwise compute the estimate
-        var b = pricing.Calculate(subtotal);
+        var b = pricing.Calculate(subtotal, 0m, new PricingContext(cart.GuestCount, DineIn: cart.TableId != null));
         var estimate = new CartEstimateDto(
             Subtotal: b.Subtotal,
             DiscountTotal: b.DiscountTotal,

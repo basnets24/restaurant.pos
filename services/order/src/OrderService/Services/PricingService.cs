@@ -12,9 +12,14 @@ public interface IPricingService
     /// Discounts are NON-STACKING (best single rule). Taxes are non-compounding.
     /// All money rounded to 2 decimals (AwayFromZero).
     /// </summary>
-    PricingBreakdown Calculate(decimal subtotal, decimal tip = 0m);
+    PricingBreakdown Calculate(decimal subtotal, decimal tip = 0m, PricingContext? context = null);
 }
 
+// context type
+public record PricingContext(int? GuestCount, bool DineIn);
+
+
+// PricingService signature
 public record PricingBreakdown(
     decimal Subtotal,
     decimal DiscountTotal,
@@ -29,10 +34,11 @@ public record PricingBreakdown(
 
 public class PricingService : IPricingService
 {
+    private readonly int _minGuestLimit = 6;
     private readonly IOptionsMonitor<PricingSettings> _pricing;
     public PricingService(IOptionsMonitor<PricingSettings> pricing) => _pricing = pricing;
 
-    public PricingBreakdown Calculate(decimal subtotal, decimal tip = 0m)
+    public PricingBreakdown Calculate(decimal subtotal, decimal tip = 0m, PricingContext? ctx = null)
     {
         var cfg = _pricing.CurrentValue;
 
@@ -70,6 +76,9 @@ public class PricingService : IPricingService
 
         foreach (var sc in cfg.ServiceCharges )
         {
+            
+            if (sc.Name == "Auto Gratuity" && (ctx?.GuestCount ?? 0) < _minGuestLimit) continue;
+            
             var amt = Round((sc.Amount ?? 0m) + (subtotal * (sc.Percent ?? 0m) / 100m));
             if (amt <= 0m) continue;
 
