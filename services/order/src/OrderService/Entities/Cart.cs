@@ -13,11 +13,6 @@ public class Cart : IEntity
     public List<CartItem> Items { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
-    // Money (order level)
-    public decimal? TipAmount { get; set; }
-    public List<AppliedTax> AppliedTaxes { get; set; } = new();        // order-level
-    public List<AppliedDiscount> AppliedDiscounts { get; set; } = new(); // order-level
-    public List<ServiceCharge> ServiceCharges { get; set; } = new(); // delivery fee, surcharge, auto gratuity
 }
 
 public class CartItem

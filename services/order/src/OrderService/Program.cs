@@ -7,6 +7,7 @@ using OrderService;
 using OrderService.Auth;
 using OrderService.Interfaces;
 using OrderService.Services;
+using OrderService.Settings;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,9 +23,13 @@ builder.Services.AddMongo()
     .AddMongoRepository<Cart>("carts")
     .AddMongoRepository<DiningTable>("diningtables");
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
+builder.Services.Configure<PricingSettings>(
+    builder.Configuration.GetSection("Pricing"));
+
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
 builder.Services.AddScoped<ITableService, TableService>();
+builder.Services.AddSingleton<IPricingService, PricingService>();
 
 builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
 

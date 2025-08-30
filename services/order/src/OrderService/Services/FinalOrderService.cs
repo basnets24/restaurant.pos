@@ -12,15 +12,17 @@ public class FinalOrderService : IOrderService
     private readonly IRepository<Order> _orders;
     private readonly ILogger<FinalOrderService> _logger;
     private readonly IPublishEndpoint _publishEndpoint;
-    
+    private readonly IPricingService _pricingService;
     
     public FinalOrderService(IRepository<Order> orders, 
         ILogger<FinalOrderService> logger, 
-        IPublishEndpoint publishEndpoint)
+        IPublishEndpoint publishEndpoint, 
+        IPricingService pricingService)
     {
         _orders = orders;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
+        _pricingService = pricingService;
     }
 
 
@@ -33,34 +35,28 @@ public class FinalOrderService : IOrderService
         var correlationId = Guid.NewGuid();
         var existingOrder = await _orders.GetAsync(orderId);
         if ( existingOrder is not null ) return existingOrder;
-
-        var sub = dto.TotalAmount;
-        var discountTotal = (dto.AppliedDiscounts?.Sum(d => d.Amount ?? 0) +
-            (dto.AppliedDiscounts?.Sum(d => d.Percent ?? 0) * sub / 100) ?? 0); 
         
-        var serviceChargeTotal = (dto.ServiceCharges?.Sum(d => d.Amount ?? 0) +
-                                  dto.ServiceCharges?.Sum(d => d.Percent ?? 0) * sub / 100 ?? 0); 
         
-        // Tax base: after discounts + any taxable service charges
-        var taxableBase = (sub - discountTotal) +
-                          (dto.ServiceCharges?.Where(s => s.Taxable).Sum(s =>
-                              (s.Amount ?? 0) + ((s.Percent ?? 0) * sub / 100)) ?? 0);
-        
-        var taxTotal = (
-            (dto.AppliedTaxes?.Sum(t => t.Amount ?? 0) ?? 0) +
-            (dto.AppliedTaxes?.Sum(t => (t.RatePercent ?? 0) * taxableBase / 100) ?? 0)
-        );
-        
+        var subtotal = dto.Subtotal;
         var tip = dto.TipAmount ?? 0m;
-        var grand = sub - discountTotal + serviceChargeTotal + taxTotal + tip;
         
+        // NEW: config-driven pricing
+        // (non-stacking discounts,
+        // taxable service charges,
+        // multiple taxes)
+        var p = _pricingService.Calculate(subtotal, tip);
+
+        var discountTotal = p.DiscountTotal;
+        var serviceChargeTotal = p.ServiceChargeTotal;
+        var taxTotal = p.TaxTotal;
+        var grand = p.GrandTotal;
         
         var order = new Order
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Id = orderId,
             Items = dto.Items,
-            TotalAmount = dto.TotalAmount,
+            TotalAmount = dto.Subtotal,
             Status = "Pending",
             
             // Context
@@ -68,12 +64,17 @@ public class FinalOrderService : IOrderService
             ServerId = dto.ServerId,
             GuestCount = dto.GuestCount,
             
+            // order-level itemized lines (all are Scope="Order")
+            AppliedDiscounts = p.AppliedDiscounts.ToList(),
+            ServiceCharges   = p.ServiceCharges.ToList(),
+            AppliedTaxes     = p.AppliedTaxes.ToList(),
+            
             // Totals
-            Subtotal = sub,
+            Subtotal = subtotal,
             DiscountTotal = discountTotal,
             ServiceChargeTotal = serviceChargeTotal,
             TaxTotal = taxTotal,
-            TipAmount = dto.TipAmount,
+            TipAmount = tip,
             GrandTotal = grand,
             
         };
@@ -85,7 +86,7 @@ public class FinalOrderService : IOrderService
             correlationId,
             orderId,
             dto.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            dto.TotalAmount
+            dto.Subtotal
         ), cancellationToken); 
         
         return order;

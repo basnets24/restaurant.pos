@@ -9,12 +9,8 @@ public record FinalizeOrderDto
     public Guid? ServerId { get; set; }
     public int? GuestCount { get; set; }
     public decimal? TipAmount { get; set; }
-    
-    public List<AppliedTax> AppliedTaxes { get; set; } = new();          // order-level
-    public List<AppliedDiscount> AppliedDiscounts { get; set; } = new(); // order-level
-    public List<ServiceCharge> ServiceCharges { get; set; } = new();    // delivery fee, surcharge, auto gratuity
     public List<OrderItem> Items { get; init; } = new();
-    public decimal TotalAmount { get; init; }
+    public decimal Subtotal { get; init; }
 }
 
 

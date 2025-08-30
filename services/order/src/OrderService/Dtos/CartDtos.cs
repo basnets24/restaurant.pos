@@ -25,9 +25,5 @@ public record CartDto(
     Guid? ServerId, 
     int? GuestCount,
     List<CartItemDto> Items, 
-    DateTimeOffset CreatedAt,
-    decimal? TipAmount, 
-    List<AppliedTax> AppliedTaxes,
-    List<AppliedDiscount> AppliedDiscounts,
-    List<ServiceCharge> ServiceCharges
+    DateTimeOffset CreatedAt
     );

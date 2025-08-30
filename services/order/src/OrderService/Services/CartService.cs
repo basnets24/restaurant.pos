@@ -89,6 +89,9 @@ public class CartService : ICartService
         if (cart == null) throw new InvalidOperationException("Cart not found.");
         if (!cart.Items.Any()) throw new InvalidOperationException("Cannot checkout an empty cart.");
 
+        // Always recompute subtotal from cart items
+        var subtotal = cart.Items.Sum(i => i.Quantity * i.UnitPrice);
+        
         var finalizeDto = new FinalizeOrderDto
         {
             Items = cart.Items.Select(i => new OrderItem
@@ -99,11 +102,7 @@ public class CartService : ICartService
                 UnitPrice = i.UnitPrice,
                 Notes = i.Notes
             }).ToList(),
-            TotalAmount = cart.Items.Sum(i => i.Quantity * i.UnitPrice),
-            AppliedTaxes = cart.AppliedTaxes,
-            AppliedDiscounts = cart.AppliedDiscounts,
-            ServiceCharges = cart.ServiceCharges,
-            TipAmount = cart.TipAmount,
+            Subtotal = subtotal,
             TableId = cart.TableId,
             ServerId = cart.ServerId,
             GuestCount = cart.GuestCount
