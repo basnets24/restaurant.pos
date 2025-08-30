@@ -9,6 +9,8 @@ public class Order : IEntity
     // Context
     public Guid? TableId { get; set; }
     public Guid? ServerId { get; set; }
+    public string? ServerName { get; set; }
+    
     public Guid? CustomerId { get; set; }
     public int? GuestCount { get; set; }
     

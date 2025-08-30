@@ -30,13 +30,20 @@ public class CartService : ICartService
         return cart; 
     }
 
-    public async Task<Cart> CreateAsync(Guid? tableId, Guid? customerId, int? guestCount)
+    public async Task<Cart> CreateAsync(
+        Guid? tableId, 
+        Guid? customerId, 
+        Guid? serverId,
+        string? serverName,
+        int? guestCount)
     {
         var cart = new Cart
         {
             Id = Guid.NewGuid(),
             TableId = tableId,
             CustomerId = customerId,
+            ServerId = serverId,
+            ServerName = serverName,
             GuestCount = guestCount ?? 1,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -110,6 +117,7 @@ public class CartService : ICartService
             Subtotal = subtotal,
             TableId = cart.TableId,
             ServerId = cart.ServerId,
+            ServerName = cart.ServerName,
             GuestCount = cart.GuestCount,
         };
         

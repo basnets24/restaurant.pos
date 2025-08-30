@@ -61,6 +61,7 @@ public class FinalOrderService : IOrderService
             // Context
             TableId = dto.TableId,
             ServerId = dto.ServerId,
+            ServerName = dto.ServerName,
             GuestCount = dto.GuestCount,
             
             // order-level itemized lines (all are Scope="Order")
@@ -95,7 +96,7 @@ public class FinalOrderService : IOrderService
     
     public async Task MarkPaidAsync(Guid orderId, CancellationToken ct = default)
     {
-        var order = await _orders.GetAsync(orderId) ?? throw new("Order not found");
+        var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
         if (order.Status == "Paid") return;
 
         order.Status = "Paid";

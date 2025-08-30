@@ -22,6 +22,7 @@ public static class CartMappings
                 TableId: cart.TableId,
                 CustomerId: cart.CustomerId,
                 ServerId: cart.ServerId,
+                ServerName: cart.ServerName,
                 GuestCount: cart.GuestCount,
                 Items: cart.Items.Select(i => new CartItemDto(
                     i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes)).ToList(),
@@ -50,6 +51,7 @@ public static class CartMappings
             TableId: cart.TableId,
             CustomerId: cart.CustomerId,
             ServerId: cart.ServerId,
+            ServerName: cart.ServerName,
             GuestCount: cart.GuestCount,
             Items: cart.Items.Select(i => new CartItemDto(
                 i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes)).ToList(),

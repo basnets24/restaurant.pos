@@ -12,6 +12,7 @@ public static class OrderMappings
             Id = order.Id,
             TableId = order.TableId,
             ServerId = order.ServerId,
+            ServerName = order.ServerName,
             GuestCount = order.GuestCount,
             Items = order.Items,
             Status = order.Status,

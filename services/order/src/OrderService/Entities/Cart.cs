@@ -9,6 +9,7 @@ public class Cart : IEntity
     public Guid? TableId { get; set; }
     public Guid? CustomerId { get; set; }
     public Guid? ServerId { get; set; }
+    public string? ServerName { get; set; }
     public int? GuestCount { get; set; }
     public List<CartItem> Items { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

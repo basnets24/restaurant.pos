@@ -54,5 +54,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseApiProblemDetails();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.Run();

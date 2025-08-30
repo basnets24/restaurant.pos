@@ -34,6 +34,7 @@ public record CartDto(
     Guid? TableId,
     Guid? CustomerId,
     Guid? ServerId,
+    string? ServerName,
     int? GuestCount,
     List<CartItemDto> Items,
     DateTimeOffset CreatedAt)

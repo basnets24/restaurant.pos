@@ -7,6 +7,7 @@ public record FinalizeOrderDto
 {
     public Guid? TableId { get; set; }
     public Guid? ServerId { get; set; }
+    public string? ServerName { get; set; }
     public int? GuestCount { get; set; }
     public decimal? TipAmount { get; set; }
     public List<OrderItem> Items { get; init; } = new();
@@ -20,6 +21,7 @@ public record OrderDto
     
     public Guid? TableId { get; set; }
     public Guid? ServerId { get; set; }
+    public string? ServerName { get; set; }
     public int? GuestCount { get; set; }
     public List<OrderItem> Items { get; set; } = new();
     public string Status { get; set; } = "Pending";

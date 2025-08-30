@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Auth;
@@ -28,7 +29,11 @@ public class CartController : ControllerBase
     [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<ActionResult<CartDto>> CreateCart(CreateCartDto dto)
     {
-        var cart = await _cartService.CreateAsync(dto.TableId, dto.CustomerId, dto.GuestCount);
+        // find the server/manager with order write scope 
+        var serverId = Guid.Parse(User.FindFirstValue("sub")!); 
+        var serverName = User.FindFirstValue("name") ?? User.FindFirstValue("preferred_username") ?? "Server" ;
+        var cart = await _cartService.CreateAsync(dto.TableId, dto.CustomerId, 
+            serverId, serverName, dto.GuestCount);
         // determines the estimate 
         var newCartDto = cart.ToDto(_pricingService); 
         return Ok(newCartDto);
