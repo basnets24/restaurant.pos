@@ -10,7 +10,6 @@ public class CartService : ICartService
     private readonly IRepository<Cart> _cartRepo;
     private readonly IRepository<MenuItem> _menuRepo;
     private readonly IRepository<DiningTable> _tableRepo;
-    
     private readonly IOrderService _orderService;
 
     public CartService(IRepository<Cart> cartRepo, 
@@ -24,15 +23,21 @@ public class CartService : ICartService
         _orderService = orderService;
     }
 
-    public async Task<Cart> GetAsync(Guid id) => await _cartRepo.GetAsync(id);
+    public async Task<Cart> GetAsync(Guid id)
+    {
+        var cart = await _cartRepo.GetAsync(id);
+        if (cart is null) throw new KeyNotFoundException("Cart not found.");
+        return cart; 
+    }
 
-    public async Task<Cart> CreateAsync(Guid? tableId, Guid? customerId)
+    public async Task<Cart> CreateAsync(Guid? tableId, Guid? customerId, int? guestCount)
     {
         var cart = new Cart
         {
             Id = Guid.NewGuid(),
             TableId = tableId,
             CustomerId = customerId,
+            GuestCount = guestCount ?? 1,
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _cartRepo.CreateAsync(cart);
@@ -105,11 +110,13 @@ public class CartService : ICartService
             Subtotal = subtotal,
             TableId = cart.TableId,
             ServerId = cart.ServerId,
-            GuestCount = cart.GuestCount
+            GuestCount = cart.GuestCount,
         };
         
         // Using cartId as an idempotency key, so repeated checkouts don’t duplicate orders
         var order = await _orderService.FinalizeOrderAsync(finalizeDto, idempotencyKey: cartId, ct);
         return order.Id;
     }
+    
+
 }

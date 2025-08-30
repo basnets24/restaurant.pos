@@ -21,23 +21,18 @@ public record OrderDto
     public Guid? TableId { get; set; }
     public Guid? ServerId { get; set; }
     public int? GuestCount { get; set; }
-    
     public List<OrderItem> Items { get; set; } = new();
-    public decimal TotalAmount { get; set; }
     public string Status { get; set; } = "Pending";
     public DateTimeOffset CreatedAt { get; set; }
-    
     public List<AppliedDiscount> AppliedDiscounts { get; set; } = new();
     public List<AppliedTax> AppliedTaxes { get; set; } = new();
     public List<ServiceCharge> ServiceCharges { get; set; } = new();
     public decimal? TipAmount { get; set; }
-    
     public decimal Subtotal { get; set; }
     public decimal DiscountTotal { get; set; }
     public decimal ServiceChargeTotal { get; set; }
     public decimal TaxTotal { get; set; }
     public decimal GrandTotal { get; set; }
-    
     public string? ReceiptUrl { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
 

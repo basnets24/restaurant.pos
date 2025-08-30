@@ -12,17 +12,22 @@ public class FinalOrderService : IOrderService
     private readonly IRepository<Order> _orders;
     private readonly ILogger<FinalOrderService> _logger;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IRepository<DiningTable> _tables;
+    private readonly IRepository<Cart> _carts;
     private readonly IPricingService _pricingService;
     
     public FinalOrderService(IRepository<Order> orders, 
         ILogger<FinalOrderService> logger, 
         IPublishEndpoint publishEndpoint, 
-        IPricingService pricingService)
+        IPricingService pricingService, 
+        IRepository<DiningTable> tables, IRepository<Cart> carts)
     {
         _orders = orders;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
         _pricingService = pricingService;
+        _tables = tables;
+        _carts = carts;
     }
 
 
@@ -45,18 +50,12 @@ public class FinalOrderService : IOrderService
         // taxable service charges,
         // multiple taxes)
         var p = _pricingService.Calculate(subtotal, tip);
-
-        var discountTotal = p.DiscountTotal;
-        var serviceChargeTotal = p.ServiceChargeTotal;
-        var taxTotal = p.TaxTotal;
-        var grand = p.GrandTotal;
         
         var order = new Order
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Id = orderId,
             Items = dto.Items,
-            TotalAmount = dto.Subtotal,
             Status = "Pending",
             
             // Context
@@ -71,16 +70,18 @@ public class FinalOrderService : IOrderService
             
             // Totals
             Subtotal = subtotal,
-            DiscountTotal = discountTotal,
-            ServiceChargeTotal = serviceChargeTotal,
-            TaxTotal = taxTotal,
-            TipAmount = tip,
-            GrandTotal = grand,
+            DiscountTotal = p.DiscountTotal,
+            ServiceChargeTotal = p.ServiceChargeTotal,
+            TaxTotal = p.TaxTotal,
+            TipAmount = p.Tip,
+            GrandTotal = p.GrandTotal,
             
         };
         
         await _orders.CreateAsync(order);
         _logger.LogInformation("Order {OrderId} created", orderId);
+        _logger.LogInformation( "Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
+                                "grand total is {grandTotal}", subtotal, p.TaxTotal, p.ServiceChargeTotal, p.Tip, p.GrandTotal);;
 
         await _publishEndpoint.Publish(new OrderSubmitted(
             correlationId,
@@ -91,4 +92,25 @@ public class FinalOrderService : IOrderService
         
         return order;
     }
+    
+    public async Task MarkPaidAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var order = await _orders.GetAsync(orderId) ?? throw new("Order not found");
+        if (order.Status == "Paid") return;
+
+        order.Status = "Paid";
+        await _orders.UpdateAsync(order);
+
+        if (order.TableId is Guid tableId)
+        {
+            var table = await _tables.GetAsync(tableId);
+            if (table != null)
+            {
+                table.Status = "Available";
+                table.ActiveCartId = null;
+                await _tables.UpdateAsync(table);
+            }
+        }
+    }
+
 }

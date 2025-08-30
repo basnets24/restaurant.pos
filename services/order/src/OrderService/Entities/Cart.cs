@@ -13,6 +13,7 @@ public class Cart : IEntity
     public List<CartItem> Items { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
+    
 }
 
 public class CartItem

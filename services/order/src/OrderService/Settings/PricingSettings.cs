@@ -2,9 +2,9 @@ namespace OrderService.Settings;
 
 public class PricingSettings
 {
-    public List<AppliedTax> Taxes { get; set; } = new();
-    public List<ServiceCharge> ServiceCharges { get; set; } = new();
-    public List<AppliedDiscount> Discounts { get; set; } = new();
+    public List<TaxSetting> Taxes { get; set; } = new();
+    public List<ServiceChargeSetting> ServiceCharges { get; set; } = new();
+    public List<DiscountSetting> Discounts { get; set; } = new();
 }
 
 public class TaxSetting

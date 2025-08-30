@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using OrderService.Auth;
 using OrderService.Dtos;
 using OrderService.Interfaces;
+using OrderService.Mappers;
+using OrderService.Services;
 
 namespace OrderService.Controllers;
 
@@ -13,32 +15,23 @@ namespace OrderService.Controllers;
 public class CartController : ControllerBase
 {
     private readonly ICartService _cartService;
+    private readonly IPricingService _pricingService;
 
-    public CartController(ICartService cartService)
+    public CartController(ICartService cartService, 
+        IPricingService pricingService)
     {
         _cartService = cartService;
+        _pricingService = pricingService;
     }
 
     [HttpPost]
     [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<ActionResult<CartDto>> CreateCart(CreateCartDto dto)
     {
-        var cart = await _cartService.CreateAsync(dto.TableId, dto.CustomerId);
-        var dtoItems = cart.Items.Select(i => 
-            new CartItemDto(i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes))
-            .ToList();
-        return Ok(new CartDto(
-            cart.Id, 
-            cart.TableId, 
-            cart.CustomerId, 
-            cart.ServerId,
-            cart.GuestCount,
-            dtoItems, 
-            cart.CreatedAt,
-            cart.TipAmount,     // null at creation set to 0 
-            cart.AppliedTaxes,
-            cart.AppliedDiscounts,
-            cart.ServiceCharges));
+        var cart = await _cartService.CreateAsync(dto.TableId, dto.CustomerId, dto.GuestCount);
+        // determines the estimate 
+        var newCartDto = cart.ToDto(_pricingService); 
+        return Ok(newCartDto);
     }
 
     [HttpGet("{id}")]
@@ -47,21 +40,8 @@ public class CartController : ControllerBase
     {
         var cart = await _cartService.GetAsync(id);
         if (cart == null) return NotFound();
-        var dtoItems = cart.Items.Select(i => 
-            new CartItemDto(i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes))
-            .ToList();
-        return Ok(new CartDto(
-            cart.Id, 
-            cart.TableId, 
-            cart.CustomerId, 
-            cart.ServerId,
-            cart.GuestCount,
-            dtoItems, 
-            cart.CreatedAt,
-            cart.TipAmount,     // null at creation set to 0 
-            cart.AppliedTaxes,
-            cart.AppliedDiscounts,
-            cart.ServiceCharges));
+        var cartDto = cart.ToDto(_pricingService);
+        return Ok(cartDto);
     }
 
     [HttpPost("{id}/items")]
@@ -87,4 +67,5 @@ public class CartController : ControllerBase
         var orderId = await _cartService.CheckoutAsync(id);
         return Ok(new { orderId });
     }
+    
 } 

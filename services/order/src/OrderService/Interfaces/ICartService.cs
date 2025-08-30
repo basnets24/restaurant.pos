@@ -6,7 +6,7 @@ namespace OrderService.Interfaces;
 public interface ICartService
 {
     Task<Cart> GetAsync(Guid id);
-    Task<Cart> CreateAsync(Guid? tableId, Guid? customerId);
+    Task<Cart> CreateAsync(Guid? tableId, Guid? customerId, int? guestCount);
     Task AddItemAsync(Guid cartId, AddCartItemDto itemDto);
     Task RemoveItemAsync(Guid cartId, Guid menuItemId);
     Task<Guid> CheckoutAsync(Guid cartId, CancellationToken ct = default);
