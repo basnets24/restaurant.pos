@@ -82,7 +82,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                .Send( context => new PaymentRequested(
                    context.Saga.CorrelationId,
                    context.Saga.OrderId,
-                   context.Saga.OrderTotal
+                   AmountCents: (long) (context.Saga.OrderTotal * 100m ) 
                    ))
                .TransitionTo(PaymentPending), 
            When(InventoryReserveFaulted)
