@@ -1,2 +1,54 @@
 @import "tailwindcss";
 
+/* === Restaurant POS Light Theme (locked to light) === */
+:root {
+    /* page + text */
+    --app-bg: #e8f0d4;      /* soft mint */
+    --ink:    #2a1f20;      /* deep brown */
+
+    /* brand */
+    --brand:       #a3d977; /* logo block + hero right pane */
+    --brand-ink:   #2a1f20; /* strokes over brand color */
+    --hover-ink:   #6b7c32; /* nav hover */
+
+    /* surfaces */
+    --card:        #ffffff;
+    --card-border: rgba(255,255,255,.30);
+    --glass-border:rgba(255,255,255,.20);
+
+    /* radii & shadows */
+    --radius-xl: 1.5rem; /* ~ rounded-3xl */
+    --shadow:    0 20px 40px rgba(0,0,0,.10);
+}
+
+html, body, #root { height: 100%; }
+body {
+    background: var(--app-bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glass header container */
+.glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,.95);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 18px rgba(0,0,0,.06);
+}
+
+/* Hero card shell */
+.hero-slab {
+    background: var(--brand);
+    color: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow);
+}
+
+/* Animations */
+.animate-fade-in { animation: fadeIn .8s ease-out forwards; opacity: 0 }
+.animate-slide-up { animation: slideUp .8s ease-out forwards; opacity: 0; transform: translateY(20px) }
+.delay-200 { animation-delay: .2s }
+@keyframes fadeIn { to { opacity: 1 } }
+@keyframes slideUp { to { opacity: 1; transform: translateY(0) } }

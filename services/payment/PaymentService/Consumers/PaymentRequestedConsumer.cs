@@ -35,10 +35,10 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             Id = Guid.NewGuid(),
             OrderId = msg.OrderId,
             CorrelationId = msg.CorrelationId,
-            Amount = msg.Amount
+            Amount = msg.AmountCents
         };
         payment.UpdatedAt = DateTimeOffset.UtcNow;
-        _logger.LogInformation("Received payment request for Order {OrderId} (Amount: {Amount})", msg.OrderId, msg.Amount);;
+        _logger.LogInformation("Received payment request for Order {OrderId} (Amount: {Amount})", msg.OrderId, msg.AmountCents);;
 
         
         // DEMO: auto-approve after a tiny delay

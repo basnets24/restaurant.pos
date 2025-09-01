@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import Button from "../components/ui/Button.tsx";
-import DeviceShowcaseCard from "../DeviceShowcaseCard.tsx";
-
+import Button from "../components/ui/Button";
+import DeviceShowcaseCard from "../DeviceShowcaseCard";
+import CheckoutButton from "../components/CheckoutButton";
 
 export default function Home() {
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -16,9 +16,9 @@ export default function Home() {
                     <Link to="/" className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-[var(--brand)] grid place-items-center">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M6 2v8M10 2v8M8 2v8" stroke="var(--brand-ink)" strokeWidth="2" strokeLinecap="round"/>
-                                <path d="M14 2v7a3 3 0 0 0 6 0V2" stroke="var(--brand-ink)" strokeWidth="2" strokeLinecap="round"/>
-                                <path d="M6 22V10M18 22V12" stroke="var(--brand-ink)" strokeWidth="2" strokeLinecap="round"/>
+                                <path d="M6 2v8M10 2v8M8 2v8" stroke="var(--brand-ink)" strokeWidth="2" strokeLinecap="round" />
+                                <path d="M14 2v7a3 3 0 0 0 6 0V2" stroke="var(--brand-ink)" strokeWidth="2" strokeLinecap="round" />
+                                <path d="M6 22V10M18 22V12" stroke="var(--brand-ink)" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                         </div>
                         <span className="font-semibold tracking-tight text-lg">Restaurant POS</span>
@@ -59,20 +59,34 @@ export default function Home() {
                     {/* Copy */}
                     <div className="p-8 sm:p-12 lg:p-16">
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl leading-tight font-medium tracking-tight">
-                            Next-Gen<br/>Restaurant<br/>Point of Sale
+                            Next-Gen<br />Restaurant<br />Point of Sale
                         </h1>
                         <p className="mt-6 text-[#5a5a5a] max-w-md text-lg leading-relaxed">
                             Speedy table service, real-time menu availability, and a UI your staff will love.
                         </p>
+
                         <div className="mt-8 flex flex-wrap gap-4">
-                            <Button to="/catalog" size="lg">Start New Order</Button>
+                            {/* Stripe checkout (sessionId + stripe-js) */}
+                            <CheckoutButton />
                             <Button to="/register" variant="outline" size="lg">Create Account</Button>
+
+                            {/* Optional: quick way to test cancel route */}
+                            <Link
+                                to="/checkout/cancel"
+                                className="rounded-xl border border-black/10 px-4 py-2.5 hover:bg-black/[.04]"
+                            >
+                                Simulate cancel
+                            </Link>
                         </div>
                     </div>
 
                     {/* Visual Pane (brand) */}
                     <div className="relative bg-[var(--brand)] flex items-center justify-center p-6 rounded-3xl">
-                        <DeviceShowcaseCard ipadSrc="/images/screens/ipad.png" monitorSrc="/images/screens/monitor.png" hoverIntensity={6}/> */
+                        <DeviceShowcaseCard
+                            ipadSrc="/images/screens/ipad.png"
+                            monitorSrc="/images/screens/monitor.png"
+                            hoverIntensity={6}
+                        />
                     </div>
                 </div>
             </section>
