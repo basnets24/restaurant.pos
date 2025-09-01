@@ -1,4 +1,5 @@
 using Common.Library;
+using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
 using PaymentService.Entities;
@@ -9,14 +10,14 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
 {
     private readonly IRepository<Payment> _paymentsRepo;
     private readonly ILogger<PaymentRequestedConsumer> _logger;
-    private readonly IConfiguration _config;
+    private readonly ITenantContext _tenant;
 
     public PaymentRequestedConsumer(ILogger<PaymentRequestedConsumer> logger,
-        IConfiguration config, IRepository<Payment> repository)
+        IRepository<Payment> repository, ITenantContext tenant)
     {
         _logger = logger;
-        _config = config;
         _paymentsRepo = repository;
+        _tenant = tenant;
     }
 
     public async Task Consume(ConsumeContext<PaymentRequested> context)
@@ -51,6 +52,7 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         else await _paymentsRepo.UpdateAsync(payment);
 
         _logger.LogInformation("Payment Succeeded for Order {OrderId}", msg.OrderId);
-        await context.Publish(new PaymentSucceeded(msg.CorrelationId, msg.OrderId));
+        await context.Publish(new PaymentSucceeded(msg.CorrelationId, msg.OrderId,  
+            _tenant.RestaurantId, _tenant.LocationId));
     }
 }

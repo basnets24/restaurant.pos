@@ -1,4 +1,5 @@
 using Common.Library;
+using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Order;
 using OrderService.Dtos;
@@ -13,21 +14,22 @@ public class FinalOrderService : IOrderService
     private readonly ILogger<FinalOrderService> _logger;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly IRepository<DiningTable> _tables;
-    private readonly IRepository<Cart> _carts;
     private readonly IPricingService _pricingService;
+    private readonly ITenantContext _tenant;
     
     public FinalOrderService(IRepository<Order> orders, 
         ILogger<FinalOrderService> logger, 
         IPublishEndpoint publishEndpoint, 
         IPricingService pricingService, 
-        IRepository<DiningTable> tables, IRepository<Cart> carts)
+        IRepository<DiningTable> tables, 
+        ITenantContext tenant)
     {
         _orders = orders;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
         _pricingService = pricingService;
         _tables = tables;
-        _carts = carts;
+        _tenant = tenant;
     }
 
 
@@ -89,7 +91,8 @@ public class FinalOrderService : IOrderService
             correlationId,
             orderId,
             dto.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            p.GrandTotal
+            p.GrandTotal, 
+            _tenant.RestaurantId, _tenant.LocationId
         ), cancellationToken); 
         
         return order;

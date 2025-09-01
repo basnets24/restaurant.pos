@@ -1,10 +1,14 @@
 using Common.Library;
+using Common.Library.Tenancy;
 
 namespace OrderService.Entities;
 
-public class Order : IEntity
+public class Order : IEntity, ITenantEntity 
 {
     public Guid Id { get; set; }
+    
+    public string RestaurantId { get; set; } = default!;
+    public string LocationId { get; set; } = default!;
     
     // Context
     public Guid? TableId { get; set; }

@@ -1,3 +1,4 @@
+using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Order;
@@ -19,11 +20,14 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
     public Event<PaymentFailed> PaymentFailed { get; private set; } = null!;
     
     private readonly ILogger<OrderStateMachine> _logger;
+    private readonly ITenantContext _tenant;
 
-    public OrderStateMachine(ILogger<OrderStateMachine> logger)
+    public OrderStateMachine(ILogger<OrderStateMachine> logger, 
+        ITenantContext tenant)
     {
         _logger = logger;
-        
+        _tenant = tenant;
+
         InstanceState(x => x.CurrentState);
         
         ConfigureEvents();
@@ -62,7 +66,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                     new ReserveInventory(
                         context.Saga.CorrelationId,
                         context.Saga.OrderId,
-                        context.Saga.Items))
+                        context.Saga.Items,
+                        _tenant.RestaurantId,
+                        _tenant.LocationId))
                 .TransitionTo(InventoryPending)
         ); 
     }
@@ -82,7 +88,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                .Send( context => new PaymentRequested(
                    context.Saga.CorrelationId,
                    context.Saga.OrderId,
-                   AmountCents: (long) (context.Saga.OrderTotal * 100m ) 
+                   AmountCents: (long) (context.Saga.OrderTotal * 100m ),
+                   _tenant.RestaurantId, _tenant.LocationId
                    ))
                .TransitionTo(PaymentPending), 
            When(InventoryReserveFaulted)
@@ -123,7 +130,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                     new ReleaseInventory(
                         context.Saga.CorrelationId,
                         context.Saga.OrderId,
-                        context.Saga.Items))
+                        context.Saga.Items,
+                        _tenant.RestaurantId, 
+                        _tenant.LocationId))
             .TransitionTo(Rejected)
             );
     }

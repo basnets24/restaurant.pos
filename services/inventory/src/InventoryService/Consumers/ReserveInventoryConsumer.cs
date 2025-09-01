@@ -1,4 +1,5 @@
 using Common.Library;
+using Common.Library.Tenancy;
 using MassTransit;
 using InventoryService.Entities;
 using InventoryService.Exceptions;
@@ -11,13 +12,16 @@ public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
 {
     private readonly IRepository<InventoryItem> _inventoryRepository;
     private readonly ILogger<ReserveInventoryConsumer> _logger;
+    private readonly ITenantContext _tenant;
 
     public ReserveInventoryConsumer(
         IRepository<InventoryItem> inventoryRepository,
-        ILogger<ReserveInventoryConsumer> logger)
+        ILogger<ReserveInventoryConsumer> logger,
+        ITenantContext tenant)
     {
         _inventoryRepository = inventoryRepository;
         _logger = logger;
+        _tenant = tenant;
     }
 
     public async Task Consume(ConsumeContext<ReserveInventory> context)
@@ -48,7 +52,9 @@ public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
 
             await context.Publish(new InventoryReserved(
                 correlationId,
-                orderId
+                orderId,
+                _tenant.RestaurantId,
+                _tenant.LocationId
             ));
 
             _logger.LogInformation("Inventory reserved for order {OrderId}", orderId);
@@ -60,7 +66,9 @@ public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
             await context.Publish(new InventoryReserveFaulted(
                 correlationId,
                 orderId,
-                ex.Message
+                ex.Message,
+                _tenant.RestaurantId,
+                _tenant.LocationId
             ));
         }
     }

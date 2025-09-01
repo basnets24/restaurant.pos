@@ -1,5 +1,6 @@
 using Common.Library.MassTransit;
 using Common.Library.MongoDB;
+using Common.Library.Tenancy;
 using PaymentService.Entities;
 using PaymentService.Settings;
 using Stripe;
@@ -30,8 +31,9 @@ builder.Services.AddCors(options =>
 });
 
 // Persistence / bus
-builder.Services.AddMongo()
-    .AddMongoRepository<Payment>("payments");
+builder.Services.AddMongo();
+builder.Services.AddTenancy();
+builder.Services.AddTenantMongoRepository<Payment>("payments"); 
 
 builder.Services.AddMassTransitWithRabbitMq();
 
@@ -51,7 +53,7 @@ app.UseHttpsRedirection();
 
 // CORS BEFORE controllers
 app.UseCors(CorsPolicy);
-
+app.UseTenancy(); 
 app.MapControllers();
 
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }));

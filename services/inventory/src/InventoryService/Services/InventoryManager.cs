@@ -1,4 +1,5 @@
 using Common.Library;
+using Common.Library.Tenancy;
 using InventoryService.Entities;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
@@ -11,16 +12,19 @@ public class InventoryManager
     private readonly IRepository<InventoryItem> _repository;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<InventoryManager> _logger;
+    private readonly ITenantContext _tenant;
 
     public InventoryManager(
         IRepository<InventoryItem> repository,
         
         IPublishEndpoint publishEndpoint,
-        ILogger<InventoryManager> logger)
+        ILogger<InventoryManager> logger, 
+        ITenantContext tenant)
     {
         _repository = repository;
         _publishEndpoint = publishEndpoint;
         _logger = logger;
+        _tenant = tenant;
     }
     
     public async Task UpdateAsync(Guid id, UpdateInventoryItemDto dto)
@@ -41,17 +45,20 @@ public class InventoryManager
     {
         if (previous.Quantity == 0 && current.Quantity > 0)
         {
-            await _publishEndpoint.Publish(new InventoryItemRestocked(current.MenuItemId, current.Quantity, current.IsAvailable));
+            await _publishEndpoint.Publish(new InventoryItemRestocked(current.MenuItemId, current.Quantity, current.IsAvailable, 
+                _tenant.RestaurantId, _tenant.LocationId ));
             _logger.LogInformation("Published InventoryItemRestocked for MenuItemId {MenuItemId}", current.MenuItemId);
         }
         else if (previous.Quantity > 0 && current.Quantity == 0)
         {
-            await _publishEndpoint.Publish(new InventoryItemDepleted(current.MenuItemId, current.Quantity, current.IsAvailable));
+            await _publishEndpoint.Publish(new InventoryItemDepleted(current.MenuItemId, current.Quantity, current.IsAvailable, 
+                _tenant.RestaurantId, _tenant.LocationId));
             _logger.LogInformation("Published InventoryItemDepleted for MenuItemId {MenuItemId}", current.MenuItemId);
         }
         else if (previous.Quantity != current.Quantity || previous.IsAvailable != current.IsAvailable)
         {
-            await _publishEndpoint.Publish(new InventoryItemUpdated(current.MenuItemId, current.Quantity, current.IsAvailable));
+            await _publishEndpoint.Publish(new InventoryItemUpdated(current.MenuItemId, current.Quantity, current.IsAvailable,
+                _tenant.RestaurantId, _tenant.LocationId));
             _logger.LogInformation("Published InventoryItemUpdated for MenuItemId {MenuItemId}", current.MenuItemId);
         }
         else

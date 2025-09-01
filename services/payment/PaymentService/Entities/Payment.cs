@@ -1,8 +1,9 @@
 using Common.Library;
+using Common.Library.Tenancy;
 
 namespace PaymentService.Entities;
 
-public class Payment : IEntity
+public class Payment : IEntity, ITenantEntity
 {
     public Guid Id { get; set; }
     public Guid OrderId { get; set; }
@@ -15,4 +16,6 @@ public class Payment : IEntity
     public string? ErrorMessage { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public string RestaurantId { get; set; } = default!;
+    public string LocationId { get; set; } = default!;
 }
