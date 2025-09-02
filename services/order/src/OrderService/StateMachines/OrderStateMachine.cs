@@ -3,6 +3,7 @@ using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Order;
 using Messaging.Contracts.Events.Payment;
+using Messaging.Contracts.Events.Sagas;
 
 namespace OrderService.StateMachines;
 
@@ -19,17 +20,20 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
     public Event<PaymentSucceeded> PaymentSucceeded { get; private set; } = null!;
     public Event<PaymentFailed> PaymentFailed { get; private set; } = null!;
     
+    public Schedule<OrderState, PaymentTimeoutExpired> PaymentTimeout { get; private set; } = null!;
+    
     private readonly ILogger<OrderStateMachine> _logger;
-    private readonly ITenantContext _tenant;
+    
 
-    public OrderStateMachine(ILogger<OrderStateMachine> logger, 
-        ITenantContext tenant)
+    public OrderStateMachine(ILogger<OrderStateMachine> logger
+        )
     {
         _logger = logger;
-        _tenant = tenant;
+       
 
         InstanceState(x => x.CurrentState);
         
+        Schedule(() => PaymentTimeout, x => x.PaymentTimeoutTokenId);
         ConfigureEvents();
         ConfigureInitial();
         ConfigureInventoryPending();
@@ -67,8 +71,8 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         context.Saga.CorrelationId,
                         context.Saga.OrderId,
                         context.Saga.Items,
-                        _tenant.RestaurantId,
-                        _tenant.LocationId))
+                        context.Saga.RestaurantId,
+                        context.Saga.LocationId))
                 .TransitionTo(InventoryPending)
         ); 
     }
@@ -89,9 +93,13 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                    context.Saga.CorrelationId,
                    context.Saga.OrderId,
                    AmountCents: (long) (context.Saga.OrderTotal * 100m ),
-                   _tenant.RestaurantId, _tenant.LocationId
-                   ))
-               .TransitionTo(PaymentPending), 
+                   context.Saga.RestaurantId, context.Saga.LocationId)
+               )
+               .Schedule(
+                   PaymentTimeout,
+                   ctx => new PaymentTimeoutExpired { CorrelationId = ctx.Saga.CorrelationId },
+                   ctx => TimeSpan.FromMinutes(2)  // <= duration as a lambda
+               ).TransitionTo(PaymentPending),
            When(InventoryReserveFaulted)
                .Then(context =>
                {
@@ -110,6 +118,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
             Ignore(OrderSubmitted),
             Ignore(InventoryReserved),
             When(PaymentSucceeded)
+                .Unschedule(PaymentTimeout)
                 .Then(context =>
                     {
                         context.Saga.LastUpdated = DateTimeOffset.UtcNow;
@@ -118,6 +127,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                     })
                 .TransitionTo(Completed),
             When(PaymentFailed)
+                .Unschedule(PaymentTimeout)                 // cancel timeout timer
                 .Then(context =>
                 {
                     context.Saga.LastUpdated = DateTimeOffset.UtcNow;
@@ -131,9 +141,24 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         context.Saga.CorrelationId,
                         context.Saga.OrderId,
                         context.Saga.Items,
-                        _tenant.RestaurantId, 
-                        _tenant.LocationId))
-            .TransitionTo(Rejected)
+                        context.Saga.RestaurantId, 
+                        context.Saga.LocationId))
+            .TransitionTo(Rejected), 
+            
+            When(PaymentTimeout.Received)
+                .Then(ctx =>
+                {
+                    ctx.Saga.LastUpdated = DateTimeOffset.UtcNow;
+                    ctx.Saga.ErrorMessage = "Payment timed out";
+                    _logger.LogWarning("Payment timed out for OrderId {OrderId}", ctx.Saga.OrderId);
+                })
+                .Send(ctx => new ReleaseInventory(
+                    ctx.Saga.CorrelationId,
+                    ctx.Saga.OrderId,
+                    ctx.Saga.Items,
+                    ctx.Saga.RestaurantId,
+                    ctx.Saga.LocationId))
+                .TransitionTo(Rejected)
             );
     }
     
