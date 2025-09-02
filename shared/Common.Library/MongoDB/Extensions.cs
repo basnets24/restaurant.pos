@@ -1,4 +1,5 @@
 using Common.Library.Settings;
+using Common.Library.Tenancy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -42,6 +43,19 @@ public static class Extensions
             var database = serviceProvider.GetRequiredService<IMongoDatabase>();
             return new MongoRepository<T>(database, collectionName);
         }); 
+        return services;
+    }
+    
+    public static IServiceCollection AddTenantMongoRepository<T>(this IServiceCollection services, 
+        string collectionName)
+        where T : class, IEntity, ITenantEntity
+    {
+        services.AddScoped<IRepository<T>>(sp =>
+        {
+            var db = sp.GetRequiredService<IMongoDatabase>();
+            var tenant = sp.GetRequiredService<ITenantContext>();
+            return new TenantMongoRepository<T>(db, tenant, collectionName);
+        });
         return services;
     }
 }

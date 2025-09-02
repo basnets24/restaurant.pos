@@ -17,7 +17,10 @@ public class UsersController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly ILogger<UsersController> _logger;
-    public UsersController(UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager, ILogger<UsersController> logger)
+    
+    public UsersController(UserManager<ApplicationUser> userManager, 
+        RoleManager<ApplicationRole> roleManager, 
+        ILogger<UsersController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
@@ -84,7 +87,7 @@ public class UsersController : ControllerBase
     }
     
     // GET /users/{id}
-    [HttpGet("{id}")]
+    [HttpGet("{userId:guid}")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<ActionResult<UserDetailDto>> GetByIdAsync([FromRoute] Guid id)
     {
@@ -95,37 +98,37 @@ public class UsersController : ControllerBase
         return Ok(user.ToDto(roles));
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{userId:guid}")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> PutAsync(Guid id, UserUpdateDto dto)
     {
         var user = await _userManager.FindByIdAsync(id.ToString());
-        if (user == null)
-        {
-            return NotFound();
-        }
-        user.Email = dto.Email;
-        user.AccessCode = dto.AccessCode;
-        
-        if (dto.LockoutEnabled is not null) // null means "don't change"
-        {
-            user.LockoutEnabled = dto.LockoutEnabled.Value; 
-        }
-        if (dto.LockoutEnd is not null)
-        {
-            user.LockoutEnd = dto.LockoutEnd.Value;
-        } // null means "don't change"
+        if (user is null) return NotFound();
+
+        if (dto.Email is not null)       user.Email = dto.Email;
+        if (dto.AccessCode is not null)  user.AccessCode = dto.AccessCode;
+        if (dto.LockoutEnabled.HasValue) user.LockoutEnabled = dto.LockoutEnabled.Value;
+        if (dto.LockoutEnd.HasValue)     user.LockoutEnd = dto.LockoutEnd.Value;
+
+        var result = await _userManager.UpdateAsync(user);   // <- persist changes
+        if (!result.Succeeded)
+            return BadRequest(result.Errors.Select(e => e.Description));
         return NoContent();
     }
 
     // DELETE /users/{id} → prefer lock/disable instead of hard delete
-    [HttpDelete("{id}")]
+    [HttpDelete("{userId:guid}")]
     [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> DisableAsync([FromRoute] Guid id)
     {
         var user = await _userManager.FindByIdAsync(id.ToString());
         if (user is null) return NotFound();
-
+        
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains(Roles.Admin))
+        {
+            return BadRequest("Cannot delete admin user.");
+        }
         user.LockoutEnabled = true;
         user.LockoutEnd = DateTimeOffset.MaxValue;
 
@@ -141,56 +144,50 @@ public class UsersController : ControllerBase
     // =============================
     // ROLE endpoints (admin only)
     // =============================
-    // GET /api/roles → list roles
-    [HttpGet("roles")] // explicit absolute path
+    // GET users/id/roles → list roles
+    [HttpGet("{userId:guid}/roles")]
     [Authorize(Roles = Roles.Admin)]
-    public ActionResult<IReadOnlyCollection<string>> GetRoles()
+    public async Task<ActionResult<IReadOnlyCollection<string>>> GetUserRoles([FromRoute] Guid userId)
     {
-        var roles = _roleManager.Roles.Select(r => r.Name!).OrderBy(n => n).ToArray();
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return NotFound();
+        var roles = await _userManager.GetRolesAsync(user);
         return Ok(roles);
     }
-    
-    [HttpPost("{id}/roles")]
+
+    // POST /users/{userId}/roles  (body: { "roles": ["Manager","Chef"] })
+    [HttpPost("{userId:guid}/roles")]
     [Authorize(Roles = Roles.Admin)]
-    public async Task<IActionResult> AddRolesToUser(Guid id, [FromBody] AddRolesDto dto)
+    public async Task<IActionResult> AddRoles([FromRoute] Guid userId, [FromBody] AddRolesDto dto)
     {
-        var user = await _userManager.FindByIdAsync(id.ToString());
+        var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null) return NotFound();
 
+        // validate role names exist
         foreach (var role in dto.Roles)
-        {
             if (!await _roleManager.RoleExistsAsync(role))
                 return BadRequest($"Role '{role}' does not exist.");
-        }
 
         var result = await _userManager.AddToRolesAsync(user, dto.Roles);
-        if (!result.Succeeded)
-            return BadRequest(result.Errors);
-
-        return NoContent();
+        if (!result.Succeeded) return BadRequest(result.Errors);
+        return NoContent(); // or return Ok(await _userManager.GetRolesAsync(user));
     }
-    
-    [HttpDelete("{id}/roles/{role}")]
+
+    // DELETE /admin/users/{userId}/roles/{role}
+    [HttpDelete("{userId:guid}/roles/{role}")]
     [Authorize(Roles = Roles.Admin)]
-    public async Task<IActionResult> RemoveRoleFromUser(Guid id, string role)
+    public async Task<IActionResult> RemoveRole([FromRoute] Guid userId, [FromRoute] string role)
     {
-        var user = await _userManager.FindByIdAsync(id.ToString());
+        var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user is null) return NotFound();
 
         if (!await _roleManager.RoleExistsAsync(role))
             return BadRequest($"Role '{role}' does not exist.");
 
         var result = await _userManager.RemoveFromRoleAsync(user, role);
-        if (!result.Succeeded)
-            return BadRequest(result.Errors);
-
+        if (!result.Succeeded) return BadRequest(result.Errors);
         return NoContent();
     }
-    
-    
-
-
-    
     
 
 }

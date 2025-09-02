@@ -1,28 +1,30 @@
+using Common.Library.Logging;
 using IdentityService.Extensions;
 using IdentityService.HostedServices;
 using IdentityService.Settings;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+//services 
+builder.Services.AddSeqLogging(builder.Configuration);
+
 builder.Services.AddPostgresWithIdentity(builder.Configuration);
 builder.Services.AddRestaurantPosIdentityServer(builder.Configuration);
 builder.Services.AddRazorPages();
-    
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
 builder.Services.AddLocalApiAuthentication(); 
 builder.Services.AddControllers();
-builder.Services.Configure<IdentitySettings>(
-    builder.Configuration.GetSection("IdentitySettings"));
+builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
 builder.Services.AddHostedService<IdentitySeedHostedService>(); 
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+
+//the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

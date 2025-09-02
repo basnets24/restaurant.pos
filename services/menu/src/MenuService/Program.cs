@@ -3,6 +3,7 @@ using Common.Library.Logging;
 using Common.Library.MassTransit;
 using MenuService.Entities;
 using Common.Library.MongoDB;
+using Common.Library.Tenancy;
 using MassTransit;
 using MenuService.Auth;
 using Microsoft.OpenApi.Models;
@@ -13,13 +14,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
-
 builder.Services
     .AddMongo()
-    .AddMongoRepository<MenuItem>("menuitems")
     .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)) );
-builder.Services.AddMenuPolicies()
-    .AddPosJwtBearer(); 
+builder.Services.AddTenancy();
+builder.Services.AddTenantMongoRepository<MenuItem>("menuitems");
+
+builder.Services.AddMenuPolicies().AddPosJwtBearer(); 
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
@@ -40,9 +41,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//  if using authentication in the future
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseHttpsRedirection();
+app.UseTenancy();
 app.MapControllers();
 app.Run();

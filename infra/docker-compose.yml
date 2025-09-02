@@ -18,11 +18,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Rest@urant12
     volumes:
-      - 
       - postgres-data:/var/lib/postgresql/data
 
   rabbitmq:
-    image: rabbitmq:management
+    image: masstransit/rabbitmq:latest
     container_name: restaurant-rabbitmq
     ports:
       - 5672:5672

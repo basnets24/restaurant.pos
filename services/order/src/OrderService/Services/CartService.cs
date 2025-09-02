@@ -10,7 +10,6 @@ public class CartService : ICartService
     private readonly IRepository<Cart> _cartRepo;
     private readonly IRepository<MenuItem> _menuRepo;
     private readonly IRepository<DiningTable> _tableRepo;
-    
     private readonly IOrderService _orderService;
 
     public CartService(IRepository<Cart> cartRepo, 
@@ -24,15 +23,28 @@ public class CartService : ICartService
         _orderService = orderService;
     }
 
-    public async Task<Cart> GetAsync(Guid id) => await _cartRepo.GetAsync(id);
+    public async Task<Cart> GetAsync(Guid id)
+    {
+        var cart = await _cartRepo.GetAsync(id);
+        if (cart is null) throw new KeyNotFoundException("Cart not found.");
+        return cart; 
+    }
 
-    public async Task<Cart> CreateAsync(Guid? tableId, Guid? customerId)
+    public async Task<Cart> CreateAsync(
+        Guid? tableId, 
+        Guid? customerId, 
+        Guid? serverId,
+        string? serverName,
+        int? guestCount)
     {
         var cart = new Cart
         {
             Id = Guid.NewGuid(),
             TableId = tableId,
             CustomerId = customerId,
+            ServerId = serverId,
+            ServerName = serverName,
+            GuestCount = guestCount ?? 1,
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _cartRepo.CreateAsync(cart);
@@ -68,8 +80,10 @@ public class CartService : ICartService
                 MenuItemId = menuItem.Id,
                 MenuItemName = menuItem.Name,
                 Quantity = itemDto.Quantity,
-                UnitPrice = menuItem.Price
+                UnitPrice = menuItem.Price, 
+                Notes = itemDto.Notes 
             });
+           
         }
         await _cartRepo.UpdateAsync(cart);
     }
@@ -87,6 +101,9 @@ public class CartService : ICartService
         if (cart == null) throw new InvalidOperationException("Cart not found.");
         if (!cart.Items.Any()) throw new InvalidOperationException("Cannot checkout an empty cart.");
 
+        // Always recompute subtotal from cart items
+        var subtotal = cart.Items.Sum(i => i.Quantity * i.UnitPrice);
+        
         var finalizeDto = new FinalizeOrderDto
         {
             Items = cart.Items.Select(i => new OrderItem
@@ -94,13 +111,20 @@ public class CartService : ICartService
                 MenuItemId = i.MenuItemId,
                 MenuItemName = i.MenuItemName,
                 Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice
+                UnitPrice = i.UnitPrice,
+                Notes = i.Notes
             }).ToList(),
-            TotalAmount = cart.Items.Sum(i => i.Quantity * i.UnitPrice)
+            Subtotal = subtotal,
+            TableId = cart.TableId,
+            ServerId = cart.ServerId,
+            ServerName = cart.ServerName,
+            GuestCount = cart.GuestCount,
         };
         
         // Using cartId as an idempotency key, so repeated checkouts don’t duplicate orders
         var order = await _orderService.FinalizeOrderAsync(finalizeDto, idempotencyKey: cartId, ct);
         return order.Id;
     }
+    
+
 }

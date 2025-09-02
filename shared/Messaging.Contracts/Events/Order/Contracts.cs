@@ -4,7 +4,9 @@ public record OrderSubmitted(
     Guid CorrelationId,
     Guid OrderId,
     List<OrderItemMessage> Items,
-    decimal TotalAmount
+    decimal TotalAmount,
+    string RestaurantId,
+    string LocationId
 );
 
 public record OrderItemMessage(

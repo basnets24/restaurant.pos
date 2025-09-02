@@ -1,4 +1,5 @@
 using Common.Library;
+using Common.Library.Tenancy;
 using MassTransit;
 using MenuService.Auth;
 using MenuService.Entities;
@@ -15,11 +16,15 @@ public class MenuItemsController : Controller
 {
     private readonly IRepository<MenuItem> _repository;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ITenantContext _tenant;
 
-    public MenuItemsController(IRepository<MenuItem> repository, IPublishEndpoint publishEndpoint)
+    public MenuItemsController(IRepository<MenuItem> repository, 
+        IPublishEndpoint publishEndpoint, 
+        ITenantContext tenant)
     {
         _repository = repository;
         _publishEndpoint = publishEndpoint;
+        _tenant = tenant;
     }
     
     [HttpGet]
@@ -62,7 +67,10 @@ public class MenuItemsController : Controller
             menuItem.Description,
             menuItem.Price,
             menuItem.Category,
-            menuItem.IsAvailable)); 
+            menuItem.IsAvailable,
+            _tenant.RestaurantId,
+            _tenant.LocationId
+            )); 
         
         return CreatedAtAction(nameof(GetByIdAsync), new {id = menuItem.Id}, menuItem.ToDto());
     }
@@ -98,7 +106,9 @@ public class MenuItemsController : Controller
             menuItem.Description,
             menuItem.Price,
             menuItem.Category,
-            menuItem.IsAvailable
+            menuItem.IsAvailable,
+            _tenant.RestaurantId,
+            _tenant.LocationId
         ));
         return Ok(menuItem.ToDto());
     }
@@ -114,7 +124,9 @@ public class MenuItemsController : Controller
             return NotFound();
         }
         await _repository.DeleteAsync(id);
-        await _publishEndpoint.Publish(new MenuItemDeleted(id));
+        await _publishEndpoint.Publish(new MenuItemDeleted(id, 
+            _tenant.RestaurantId,
+            _tenant.LocationId));
         return NoContent();
     }
 }

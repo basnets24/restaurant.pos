@@ -7,6 +7,7 @@ using OrderService.Auth;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Interfaces;
+using OrderService.Mappers;
 
 namespace OrderService.Controllers;
 
