@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Users } from "../services/identity.users";
-import type { Paged, UserListItemDto } from "../services/types";
+import { Users } from "@/domain/identity/service";
+import type { Paged, UserListItemDto } from "@/domain/identity/types";
+import { IdentityKeys } from "@/domain/identity/keys";
 
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Badge } from "./ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Users as UsersIcon } from "lucide-react";
 
 export default function StaffUsersCard() {
@@ -19,8 +20,8 @@ export default function StaffUsersCard() {
     const [pageSize, setPageSize] = useState(25);
 
     // Data
-    const roles = useQuery({ queryKey: ["roles", "all"], queryFn: Users.roles.all });
-    const queryKey = useMemo(() => ["users", { username, role, page, pageSize }], [username, role, page, pageSize]);
+    const roles = useQuery({ queryKey: IdentityKeys.roles.all, queryFn: Users.roles.all });
+    const queryKey = useMemo(() => IdentityKeys.users({ username, role, page, pageSize }), [username, role, page, pageSize]);
     const { data, isLoading, refetch } = useQuery<Paged<UserListItemDto>>({
         queryKey,
         queryFn: () => Users.list({ username, role, page, pageSize }),

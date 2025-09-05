@@ -1,6 +1,6 @@
 // src/services/inventory.items.ts
-import { http } from "../lib/http";
-import { InventoryAPI } from "../config/api.inventory";
+import { http } from "@/lib/http";
+import { InventoryAPI } from "@/config/api.inventory";
 
 // --- DTOs mirrored from backend ---
 export interface InventoryItemDto {

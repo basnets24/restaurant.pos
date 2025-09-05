@@ -11,13 +11,21 @@ import {
     Clock, CheckCircle, ArrowRight, Star, Zap, Shield, Globe,
 } from "lucide-react";
 import { useTables } from "../hooks/useTables";
+import { useAuth } from "@/api-authorization/AuthProvider";
 
 interface LandingPageProps { onGetStarted?: () => void; }
 
 export default function LandingView({ onGetStarted }: LandingPageProps) {
     const navigate = useNavigate();
+    const { isAuthenticated, signIn } = useAuth();
     const { tables } = useTables();
-    const go = () => (onGetStarted ? onGetStarted() : navigate("/pos/tables"));
+    const go = () => {
+        if (onGetStarted) return onGetStarted();
+        if (isAuthenticated) return navigate("/home");
+        const desired = "/home"; // return to home after login when unauthenticated
+        const returnUrl = `${window.location.origin}${desired}`;
+        void signIn(returnUrl);
+    };
 
     const features = [
         { icon: Users, title: "Interactive Table Management", description: "Drag-and-drop floor plan editor with real-time table status tracking. Manage reservations, seating, and capacity with intuitive visual controls.", highlight: "Visual Floor Plan" },

@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Users } from "../services/identity.users";
-import type { Paged, UserListItemDto } from "../services/types";
+import { Users } from "@/domain/identity/service";
+import type { Paged, UserListItemDto } from "@/domain/identity/types";
+import { IdentityKeys } from "@/domain/identity/keys";
 
 
 export interface UseUsersParams { username?: string; role?: string; page?: number; pageSize?: number }
@@ -8,7 +9,7 @@ export interface UseUsersParams { username?: string; role?: string; page?: numbe
 
 export function useUsers(params: UseUsersParams) {
     return useQuery<Paged<UserListItemDto>>({
-        queryKey: ["users", params],
+        queryKey: IdentityKeys.users(params),
         queryFn: () => Users.list(params),
         placeholderData: keepPreviousData,
     });
@@ -17,7 +18,7 @@ export function useUsers(params: UseUsersParams) {
 
 export function useAllRoles() {
     return useQuery<string[]>({
-        queryKey: ["roles", "all"],
+        queryKey: IdentityKeys.roles.all,
         queryFn: Users.roles.all,
     });
 }

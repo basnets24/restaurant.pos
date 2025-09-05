@@ -102,7 +102,7 @@ public class MenuItemsController : Controller
     
     [HttpPatch("{id}")]
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
-    public async Task<ActionResult<MenuItemDto>> PutAsync(Guid id, UpdateMenuItemDto item)
+    public async Task<ActionResult<MenuItemDto>> PatchAsync(Guid id, UpdateMenuItemDto item)
     {
         var menuItem = await _repository.GetAsync(id);
         if (menuItem == null)
@@ -153,6 +153,22 @@ public class MenuItemsController : Controller
             _tenant.RestaurantId,
             _tenant.LocationId));
         return NoContent();
+    }
+    
+    // GET /menu-items/categories
+    [HttpGet("categories")]
+    [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
+    [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<string>>> GetCategoriesAsync()
+    {
+        var all = await _repository.GetAllAsync();
+        var cats = all
+            .Select(m => m.Category?.Trim())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return Ok(cats);
     }
     
     [HttpPost("{id:guid}:availability")]

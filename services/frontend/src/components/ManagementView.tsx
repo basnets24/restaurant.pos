@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import StaffUsersCard from "./StaffUsersCard";
 import InventoryStockCard from "./InventoryStockCard.tsx";
+import MenuItemsCard from "./MenuItemsCard.tsx";
 interface ManagementViewProps {
     userData: any;
     onBackToDashboard?: () => void;
@@ -54,9 +55,7 @@ export default function ManagementView({
         customers: { today: 156, week: 1024, month: 4280, change: 15.2 },
     };
 
-   
     
-
     const reservationsData = [
         { id: 1, name: "Johnson Party", time: "7:00 PM", party: 4, table: "A2", status: "confirmed" },
         { id: 2, name: "Smith Anniversary", time: "7:30 PM", party: 2, table: "B5", status: "confirmed" },
@@ -283,6 +282,11 @@ export default function ManagementView({
                                 </CardContent>
                             </Card>
                         </div>
+                    </TabsContent>
+
+                    <TabsContent value="menu" className="space-y-8">
+                        <h2 className="text-2xl font-bold">Menu</h2>
+                        <MenuItemsCard canWrite />
                     </TabsContent>
 
                     {/* Inventory */}
