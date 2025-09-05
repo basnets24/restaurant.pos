@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using OrderService.Entities;
+using OrderService.Pricing;
 
 namespace OrderService.Dtos;
 

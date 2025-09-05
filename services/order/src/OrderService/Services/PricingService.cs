@@ -1,6 +1,6 @@
 // Services/PricingService.cs
 using Microsoft.Extensions.Options;
-using OrderService;            // AppliedDiscount, AppliedTax, ServiceCharge (outputs)
+using OrderService.Pricing; // AppliedDiscount, AppliedTax, ServiceCharge (outputs)
 using OrderService.Settings;   // DiscountSetting, TaxSetting, ServiceChargeSetting (inputs)
 
 namespace OrderService.Services;

@@ -31,4 +31,19 @@ namespace InventoryService;
         public bool IsAvailable { get; init; }
         public DateTimeOffset AcquiredDate { get; init; }
     }
+    
+    public record InventoryQuery(
+        string? Name = null,
+        bool? Available = null,
+        int? MinQty = null,
+        int Page = 1,
+        int PageSize = 25
+    );
+
+    public record PageResult<T>(
+        IReadOnlyList<T> Items,
+        int Page,
+        int PageSize,
+        long Total
+    );
 

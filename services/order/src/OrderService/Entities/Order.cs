@@ -1,5 +1,6 @@
 using Common.Library;
 using Common.Library.Tenancy;
+using OrderService.Pricing;
 
 namespace OrderService.Entities;
 

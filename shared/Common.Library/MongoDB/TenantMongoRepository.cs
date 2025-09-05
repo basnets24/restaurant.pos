@@ -12,7 +12,9 @@ public class TenantMongoRepository<T> : IRepository<T> where T : IEntity, ITenan
     private readonly FilterDefinitionBuilder<T> _f = Builders<T>.Filter;
     private readonly ITenantContext _tenant;
 
-    public TenantMongoRepository(IMongoDatabase db, ITenantContext tenant, string collectionName)
+    public TenantMongoRepository(IMongoDatabase db, 
+        ITenantContext tenant, 
+        string collectionName)
     {
         _col = db.GetCollection<T>(collectionName);
         _tenant = tenant;
@@ -26,6 +28,7 @@ public class TenantMongoRepository<T> : IRepository<T> where T : IEntity, ITenan
     {
         var scope = _f.Eq(x => x.RestaurantId, _tenant.RestaurantId) &
                     _f.Eq(x => x.LocationId, _tenant.LocationId);
+        // if extra filter(id) is null, just return the scope 
         return extra is null ? scope : scope & extra;
     }
 
