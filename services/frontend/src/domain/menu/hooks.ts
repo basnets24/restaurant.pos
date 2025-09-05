@@ -7,6 +7,8 @@ export function useMenuCategories() {
   return useQuery<string[]>({
     queryKey: MenuKeys.categories,
     queryFn: MenuItems.categories,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -61,4 +63,3 @@ export function useRemoveMenuItem() {
     },
   });
 }
-

@@ -1,4 +1,5 @@
 
+using System.Collections.Immutable;
 using Common.Library;
 using Common.Library.Tenancy;
 
@@ -18,4 +19,16 @@ public class MenuItem : IEntity, ITenantEntity
     public string RestaurantId { get; set; } = default!;
     public string LocationId { get; set; } = default!;
     
+}
+
+public static class MenuCategories
+{
+    public static readonly IImmutableList<string> All = new[]
+    {
+        "Appetizers", "Mains", "Sides", "Desserts", "Drinks", "Kids", "Specials"
+    }.ToImmutableList();
+
+    public static string? Normalize(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null
+            : All.FirstOrDefault(c => string.Equals(c, v.Trim(), StringComparison.OrdinalIgnoreCase));
 }

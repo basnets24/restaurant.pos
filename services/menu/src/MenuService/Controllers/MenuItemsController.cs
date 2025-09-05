@@ -74,12 +74,15 @@ public class MenuItemsController : Controller
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult<MenuItemDto>> PostAsync(CreateMenuItemDto item)
     {
+        var normalized = MenuCategories.Normalize(item.Category);
+        if (normalized is null)
+            return BadRequest(new { error = "Invalid category", allowed = MenuCategories.All });
         var menuItem = new MenuItem
         {
             Name = item.Name,
             Description = item.Description,
             Price = item.Price,
-            Category = item.Category,
+            Category = normalized,
             IsAvailable = false,
             CreatedAt = DateTimeOffset.UtcNow,
             RestaurantId = _tenant.RestaurantId,
@@ -91,7 +94,7 @@ public class MenuItemsController : Controller
             menuItem.Name,
             menuItem.Description,
             menuItem.Price,
-            menuItem.Category,
+            normalized,
             menuItem.IsAvailable,
             _tenant.RestaurantId,
             _tenant.LocationId
@@ -119,10 +122,13 @@ public class MenuItemsController : Controller
 
         if (item.Price is not null)
             menuItem.Price = item.Price.Value;
+    
+        var normalized = MenuCategories.Normalize(item.Category);
+        if (normalized is null)
+            return BadRequest(new { error = "Invalid category", allowed = MenuCategories.All });
+        menuItem.Category = normalized;
 
-        if (item.Category is not null)
-            menuItem.Category = item.Category;
-        
+
 
         await _repository.UpdateAsync(menuItem);
         await _publishEndpoint.Publish(new MenuItemUpdated(
@@ -130,7 +136,7 @@ public class MenuItemsController : Controller
             menuItem.Name,
             menuItem.Description,
             menuItem.Price,
-            menuItem.Category,
+            normalized,
             menuItem.IsAvailable,
             _tenant.RestaurantId,
             _tenant.LocationId
@@ -161,14 +167,7 @@ public class MenuItemsController : Controller
     [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<string>>> GetCategoriesAsync()
     {
-        var all = await _repository.GetAllAsync();
-        var cats = all
-            .Select(m => m.Category?.Trim())
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        return Ok(cats);
+        return Ok(MenuCategories.All);
     }
     
     [HttpPost("{id:guid}:availability")]

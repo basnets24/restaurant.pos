@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult } from "@/domain/menu/types";
+import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto } from "@/domain/menu/types";
 import { useMenuCategories, useMenuList, useToggleMenuAvailability, usePatchMenuItem, useCreateMenuItem, useRemoveMenuItem } from "@/domain/menu/hooks";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +22,6 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
     const [available, setAvailable] = useState<string>("all"); // "all" | "true" | "false"
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
-
-    const qc = useQueryClient();
 
     const categories = useMenuCategories();
 
@@ -135,7 +132,15 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                                         {canWrite && (
                                             <>
                                                 <Button size="sm" variant="outline" onClick={() => { setEditing(m); setEditOpen(true); }}><Pencil className="h-4 w-4 mr-1"/>Edit</Button>
-                                                <Button size="sm" variant="destructive" onClick={() => mDelete.mutate(m.id)}><Trash2 className="h-4 w-4 mr-1"/>Delete</Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="outline"
+                                                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                    onClick={() => mDelete.mutate(m.id)}
+                                                    aria-label="Delete menu item"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </>
                                         )}
                                     </TableCell>
@@ -163,17 +168,21 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
             </CardContent>
 
             {/* Create dialog */}
-            <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={(dto) => mCreate.mutate(dto, { onSuccess: () => setCreateOpen(false) })} categories={categories.data ?? []} disabled={!canWrite} />
+            <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={(dto) => mCreate.mutate(dto, { onSuccess: () => setCreateOpen(false) })} disabled={!canWrite} />
 
             {/* Edit dialog */}
-            <EditDialog open={editOpen} onOpenChange={setEditOpen} item={editing} onSave={(id, dto) => mPatch.mutate({ id, dto })} categories={categories.data ?? []} disabled={!canWrite} />
+            <EditDialog open={editOpen} onOpenChange={setEditOpen} item={editing} onSave={(id, dto) => mPatch.mutate({ id, dto })} disabled={!canWrite} />
         </Card>
     );
 }
 
-function CreateDialog({ open, onOpenChange, onCreate, categories, disabled }: {
-    open: boolean; onOpenChange: (v: boolean) => void; onCreate: (dto: CreateMenuItemDto) => void; categories: string[]; disabled: boolean;
+import { useMenuCategories as useMenuCats } from "@/domain/menu/hooks";
+
+function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
+    open: boolean; onOpenChange: (v: boolean) => void; onCreate: (dto: CreateMenuItemDto) => void; disabled: boolean;
 }) {
+    const categoriesQuery = useMenuCats();
+    const categories = categoriesQuery.data ?? [];
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("0.00");
@@ -228,9 +237,11 @@ function CreateDialog({ open, onOpenChange, onCreate, categories, disabled }: {
     );
 }
 
-function EditDialog({ open, onOpenChange, item, onSave, categories, disabled }: {
-    open: boolean; onOpenChange: (v: boolean) => void; item: MenuItemDto | null; onSave: (id: string, dto: UpdateMenuItemDto) => void; categories: string[]; disabled: boolean;
+function EditDialog({ open, onOpenChange, item, onSave, disabled }: {
+    open: boolean; onOpenChange: (v: boolean) => void; item: MenuItemDto | null; onSave: (id: string, dto: UpdateMenuItemDto) => void; disabled: boolean;
 }) {
+    const categoriesQuery = useMenuCats();
+    const categories = categoriesQuery.data ?? [];
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("0.00");
