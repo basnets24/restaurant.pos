@@ -25,11 +25,11 @@ import {
     DollarSign,
     ArrowLeft,
     Home,
-    AlertTriangle,
     User,
     Building2,
 } from "lucide-react";
 import StaffUsersCard from "./StaffUsersCard";
+import InventoryStockCard from "./InventoryStockCard.tsx";
 interface ManagementViewProps {
     userData: any;
     onBackToDashboard?: () => void;
@@ -55,13 +55,7 @@ export default function ManagementView({
     };
 
    
-
-    const inventoryData = [
-        { item: "Chicken Breast", current: 5, unit: "lbs", minimum: 10, status: "low" },
-        { item: "Fresh Basil", current: 2, unit: "bunches", minimum: 5, status: "critical" },
-        { item: "Tomatoes", current: 25, unit: "lbs", minimum: 15, status: "good" },
-        { item: "Mozzarella", current: 8, unit: "lbs", minimum: 10, status: "low" },
-    ];
+    
 
     const reservationsData = [
         { id: 1, name: "Johnson Party", time: "7:00 PM", party: 4, table: "A2", status: "confirmed" },
@@ -302,30 +296,7 @@ export default function ManagementView({
                                     <CardDescription>Monitor inventory levels and receive low stock alerts</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-4">
-                                        {inventoryData.map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                                                        <Package className="h-5 w-5 text-primary" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-medium text-foreground">{item.item}</h4>
-                                                        <p className="text-sm text-muted-foreground">Minimum: {item.minimum} {item.unit}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-4">
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-medium">{item.current} {item.unit}</p>
-                                                        <p className="text-sm text-muted-foreground">Available</p>
-                                                    </div>
-                                                    <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-                                                    {item.status === "critical" && <AlertTriangle className="h-5 w-5 text-red-500" />}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <InventoryStockCard />
                                 </CardContent>
                             </Card>
                         </div>

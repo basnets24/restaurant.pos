@@ -29,14 +29,37 @@ public class MenuItemsController : Controller
     
     [HttpGet]
     [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
-    public async Task<IEnumerable<MenuItemDto>> GetAsync()
+    [ProducesResponseType(typeof(PageResult<MenuItemDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PageResult<MenuItemDto>>> GetAsync([FromQuery] MenuQuery q)
     {
-        // get the item, convert to dto, send 
-       var menuItems = ( await _repository.GetAllAsync()).Select(item => item.ToDto());
-        return menuItems; 
+        var all = await _repository.GetAllAsync(); // repo doesn’t expose skip/take; in-memory page for now
+        var query = all.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q.Name))
+        {
+            var term = q.Name.Trim();
+            query = query.Where(m => (m.Name ?? "").Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
+        if (!string.IsNullOrWhiteSpace(q.Category))
+            query = query.Where(m => string.Equals(m.Category, q.Category, StringComparison.OrdinalIgnoreCase));
+        if (q.Available.HasValue)
+            query = query.Where(m => m.IsAvailable == q.Available.Value);
+        if (q.MinPrice.HasValue) query = query.Where(m => m.Price >= q.MinPrice.Value);
+        if (q.MaxPrice.HasValue) query = query.Where(m => m.Price <= q.MaxPrice.Value);
+
+        var total = query.LongCount();
+        var page = Math.Max(1, q.Page);
+        var size = Math.Clamp(q.PageSize, 1, 200);
+
+        var items = query.OrderBy(m => m.Category).ThenBy(m => m.Name)
+            .Skip((page - 1) * size).Take(size)
+            .Select(m => m.ToDto()).ToList();
+
+        return Ok(new PageResult<MenuItemDto>(items, page, size, total));
     }
     
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
+    [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
     public async Task<ActionResult<MenuItemDto>> GetByIdAsync(Guid id)
     {
         var menuItem = await _repository.GetAsync(id);
@@ -58,7 +81,9 @@ public class MenuItemsController : Controller
             Price = item.Price,
             Category = item.Category,
             IsAvailable = false,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            RestaurantId = _tenant.RestaurantId,
+            LocationId = _tenant.LocationId
         };
         await _repository.CreateAsync(menuItem);
         await _publishEndpoint.Publish(new MenuItemCreated(
@@ -75,7 +100,7 @@ public class MenuItemsController : Controller
         return CreatedAtAction(nameof(GetByIdAsync), new {id = menuItem.Id}, menuItem.ToDto());
     }
     
-    [HttpPut("{id}")]
+    [HttpPatch("{id}")]
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult<MenuItemDto>> PutAsync(Guid id, UpdateMenuItemDto item)
     {
@@ -127,6 +152,23 @@ public class MenuItemsController : Controller
         await _publishEndpoint.Publish(new MenuItemDeleted(id, 
             _tenant.RestaurantId,
             _tenant.LocationId));
+        return NoContent();
+    }
+    
+    [HttpPost("{id:guid}:availability")]
+    [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
+    public async Task<IActionResult> SetAvailabilityAsync(Guid id, [FromBody] bool isAvailable)
+    {
+        var menuItem = await _repository.GetAsync(id);
+        if (menuItem is null) return NotFound();
+
+        menuItem.IsAvailable = isAvailable;
+        await _repository.UpdateAsync(menuItem);
+
+        await _publishEndpoint.Publish(new MenuItemUpdated(
+            menuItem.Id, menuItem.Name, menuItem.Description, menuItem.Price, menuItem.Category,
+            menuItem.IsAvailable, _tenant.RestaurantId, _tenant.LocationId));
+
         return NoContent();
     }
 }

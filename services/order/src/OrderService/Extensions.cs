@@ -26,8 +26,7 @@ public static class Extensions
             opt.AddPolicy("pos-ui", b => b
                 .WithOrigins(
                     "http://localhost:5173", // Vite/Next dev
-                    "http://localhost:3000",
-                    "https://your-ui.example.com" // TODO replace
+                    "http://localhost:3000"
                 )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
