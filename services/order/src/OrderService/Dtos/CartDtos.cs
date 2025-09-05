@@ -1,3 +1,5 @@
+using OrderService.Pricing;
+
 namespace OrderService.Dtos;
 
 public record CreateCartDto(

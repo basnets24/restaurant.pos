@@ -1,25 +1,63 @@
-import { createBrowserRouter } from "react-router-dom";
-import Shell from "./Shell";
-import Home from "../routes/Home";
-import Cart from "../routes/Cart";
-import CheckoutSuccess from "../routes/CheckoutSuccess";
-import CheckoutCancel from "../routes/CheckoutCancel";
-import NotFound from "../routes/NotFound";
-import Orders from "../routes/Orders";
-import Tables from "../routes/Tables";
+// src/app/router.tsx
+import {
+    createBrowserRouter,
+    RouterProvider,
+} from "react-router-dom";
+import { AuthorizationPaths} from "../api-authorization/ApiAuthorizationConstants.ts";
+import {ProtectedRoute} from "../api-authorization/ProtectedRoute.tsx";
 
-export const router = createBrowserRouter([
+import LoginPage from "../api-authorization/LoginPage.tsx";
+import LogoutPage from "../api-authorization/LogoutPage.tsx";
+import LogoutCallbackPage from "../api-authorization/LogoutCallbackPage.tsx";
+import LoginCallbackPage from "../api-authorization/LoginCallback.tsx";
+import POSShell from "../shell/POSShell.tsx";
+import LandingView from "../components/LandingView";
+import HomeView from "../components/HomeView";
+import ManagementView from "../components/ManagementView";
+
+import TablesView from "../components/TableManagementView";
+
+
+
+const user = { restaurantName: "Your Restaurant", firstName: "Alex", lastName: "Doe" };
+
+const router = createBrowserRouter([
+    
+    
+    // 1) Landing / marketing page
+    { path: "/", element: <LandingView /> },
+
+    // public + auth plumbing
+    { path: AuthorizationPaths.Login, element: <LoginPage /> },
+    { path: AuthorizationPaths.LoginCallback, element: <LoginCallbackPage /> },
+    { path: AuthorizationPaths.LogOut, element: <LogoutPage /> },
+    { path: AuthorizationPaths.LogOutCallback, element: <LogoutCallbackPage /> },
+
+    // protected area
+
+
     {
-        path: "/",
-        element: <Shell />,
+        element: <ProtectedRoute/>,
         children: [
-            { index: true, element: <Home /> },
-            { path: "cart", element: <Cart /> },
-            { path: "orders", element: <Orders /> },
-            { path: "tables", element: <Tables /> },
-            { path: "checkout/success", element: <CheckoutSuccess /> },
-            { path: "checkout/cancel", element: <CheckoutCancel /> },
-            { path: "*", element: <NotFound /> },
+            { path: "/home", element: <HomeView /> },   // 2) Home selector (POS or Management)
+            {
+                path: "/pos", element : <POSShell userData={user} onBackToDashboard={function(): void {
+                    throw new Error("Function not implemented.");
+                } } />,
+                children: [
+                    // { path: "menu", element: <MenuView /> },
+                    { path: "tables", element: <TablesView /> },
+                    // { path: "checkout", element: <CheckoutView /> },
+                ],
+            },
+            {  path: "/management", element: <ManagementView userData={user} >
+                </ManagementView> },
         ],
     },
 ]);
+
+
+
+export function AppRouter() {
+    return <RouterProvider router={router} />;
+}

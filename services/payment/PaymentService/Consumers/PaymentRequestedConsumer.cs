@@ -12,8 +12,10 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
     private readonly ILogger<PaymentRequestedConsumer> _logger;
     private readonly ITenantContext _tenant;
 
-    public PaymentRequestedConsumer(ILogger<PaymentRequestedConsumer> logger,
-        IRepository<Payment> repository, ITenantContext tenant)
+    public PaymentRequestedConsumer(
+        ILogger<PaymentRequestedConsumer> logger,
+        IRepository<Payment> repository, 
+        ITenantContext tenant)
     {
         _logger = logger;
         _paymentsRepo = repository;

@@ -26,15 +26,14 @@ builder.Services.AddTenantMongoRepository<DiningTable>("diningtables");
 builder.Services.AddTenantMongoRepository<InventoryItem>("inventoryitems");
 builder.Services.AddTenantMongoRepository<MenuItem>("menuitems");
 builder.Services.AddTenantMongoRepository<Order>("orders");
-builder.Services.AddTenantMongoRepository<PricingProfile>("pricing_profiles");
-
+builder.Services.AddTablesModule();
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(
     builder.Configuration.GetSection("Pricing"));
 
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
-builder.Services.AddScoped<ITableService, TableService>();
+builder.Services.AddScoped<IDiningTableService, DiningTableService>(); 
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
@@ -43,6 +42,7 @@ builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
 });
+builder.Services.AddSignalR();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -65,4 +65,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
 app.MapControllers();
+app.MapTablesModule();
 app.Run();

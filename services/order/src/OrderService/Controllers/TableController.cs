@@ -4,110 +4,151 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Auth;
 using OrderService.Dtos;
+using OrderService.Interfaces;
+
+namespace OrderService.Controllers;
 
 [ApiController]
-[Route("tables")]
+[Route("api/tables")]
 public class TableController : ControllerBase
 {
-    private readonly ITableService _tableService;
+    private readonly IDiningTableService _svc;
+    private readonly ILogger<TableController> _log;
 
-    public TableController(ITableService svc) => _tableService = svc;
 
-    [HttpPost]
-    [Authorize(Policy = OrderPolicyExtensions.Write)]
-    public async Task<ActionResult<TableDto>> CreateAsync([FromBody] CreateTableDto dto, CancellationToken ct)
+    public TableController(IDiningTableService svc, ILogger<TableController> log)
     {
-        try
-        {
-            var created = await _tableService.CreateAsync(dto, ct);
-            return CreatedAtAction(nameof(GetByIdAsync), new { id = created.Id }, created);
-        }
-        catch (InvalidOperationException ex) // duplicate number
-        {
-            return Conflict(ex.Message);
-        }
+        _svc = svc;
+        _log = log;
     }
 
+    // --------- Reads ---------
     [HttpGet]
-    [Authorize(Policy = OrderPolicyExtensions.Read)]
-    public async Task<ActionResult<IEnumerable<TableDto>>> GetAllAsync(
-        [FromQuery] string? status, 
-        [FromQuery] bool? hasServer, 
-        CancellationToken ct)
-        => Ok(await _tableService.GetAsync(status, hasServer, ct));
+    [Authorize] // adjust policy/roles
+    [ProducesResponseType(typeof(IReadOnlyList<TableViewDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
+        => Ok(await _svc.GetAllAsync(ct));
 
-    
-    [HttpGet("{id:guid}")]
-    [Authorize(Policy = OrderPolicyExtensions.Read)]
-    public async Task<ActionResult<TableDto>> GetByIdAsync(Guid id, CancellationToken ct)
+
+    [HttpGet("{id}")]
+    [Authorize]
+    [ProducesResponseType(typeof(TableViewDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var dto = await _tableService.GetByIdAsync(id, ct);
-        return dto is null ? NotFound() : Ok(dto);
+        var t = await _svc.GetByIdAsync(id, ct);
+        return t is null ? NotFound() : Ok(t);
     }
 
-    [HttpGet("{id:guid}/status")]
-    [Authorize(Policy = OrderPolicyExtensions.Read)]
-    public async Task<ActionResult<TableStatusDto>> GetStatusAsync(Guid id, CancellationToken ct)
+    // --------- Runtime ops ---------
+    [HttpPatch("{id}/status")]
+    [Authorize] // Server/Host
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetTableStatusDto body, CancellationToken ct)
     {
-        try { return Ok(await _tableService.GetStatusAsync(id, ct)); }
-        catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+        await _svc.SetStatusAsync(id, body, ct);
+        return NoContent();
     }
 
-    [HttpPatch("{id:guid}/status")]
-    [Authorize(Policy = OrderPolicyExtensions.Write)]
-    public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] string status, CancellationToken ct)
+
+    [HttpPost("{id}/seat")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Seat(Guid id, [FromBody] SeatPartyDto body, CancellationToken ct)
     {
-        try { await _tableService.UpdateStatusAsync(id, status, ct); return NoContent(); }
-        catch (KeyNotFoundException) { return NotFound(); }
-        catch (ArgumentException ex) { return BadRequest(ex.Message); }
+        await _svc.SetStatusAsync(id, new SetTableStatusDto("occupied", body.PartySize), ct);
+        return NoContent();
     }
 
-    [HttpPatch("{id:guid}/server")]
-    [Authorize(Policy = OrderPolicyExtensions.ManageTables)] // admin/manager
-    public async Task<IActionResult> AssignServer(Guid id, [FromBody] AssignServerDto dto, CancellationToken ct)
-    {
-        try { await _tableService.AssignServerAsync(id, dto.ServerId, ct); return NoContent(); }
-        catch (KeyNotFoundException) { return NotFound(); }
-    }
 
-    [HttpPost("{id:guid}/assign-self")]
-    [Authorize(Policy = OrderPolicyExtensions.AssignSelf)] // servers
-    public async Task<IActionResult> AssignSelf(Guid id, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId == Guid.Empty) return Forbid();
-
-        try { await _tableService.AssignSelfAsync(id, userId, ct); return NoContent(); }
-        catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return Conflict(ex.Message); }
-    }
-
-    [HttpPost("{id:guid}/unassign-self")]
-    [Authorize(Policy = OrderPolicyExtensions.AssignSelf)] // servers
-    public async Task<IActionResult> UnassignSelf(Guid id, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId == Guid.Empty) return Forbid();
-
-        try { await _tableService.UnassignSelfAsync(id, userId, ct); return NoContent(); }
-        catch (KeyNotFoundException) { return NotFound(); }
-        catch (InvalidOperationException ex) { return Conflict(ex.Message); }
-    }
-
-    [HttpPost("{id:guid}/clear")]
-    [Authorize(Policy = OrderPolicyExtensions.Write)] // or Write, your choice
+    [HttpPost("{id}/clear")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Clear(Guid id, CancellationToken ct)
     {
-        try { await _tableService.ClearAsync(id, ct); return NoContent(); }
-        catch (KeyNotFoundException) { return NotFound(); }
+        await _svc.ClearAsync(id, ct);
+        return NoContent();
     }
 
-    private Guid GetUserId()
+    [HttpPost("{id}/link-order")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> LinkOrder(Guid id, [FromBody] LinkOrderDto body, CancellationToken ct)
     {
-        var v = User.FindFirstValue("sub")
-             ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-             ?? User.FindFirstValue("uid");
-        return Guid.TryParse(v, out var id) ? id : Guid.Empty;
+        await _svc.LinkOrderAsync(id, body.OrderId, ct);
+        return NoContent();
     }
+
+
+    [HttpPost("{id}/unlink-order")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UnlinkOrder(Guid id, [FromBody] LinkOrderDto body, CancellationToken ct)
+    {
+        await _svc.UnlinkOrderAsync(id, body.OrderId, ct);
+        return NoContent();
+    }
+
+    // --------- Layout / Designer ---------
+
+    [HttpPost]
+    [Authorize(Roles = "Admin,Manager")] // adjust
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    public async Task<IActionResult> Create([FromBody] CreateTableDto body, CancellationToken ct)
+    {
+        var id = await _svc.CreateAsync(body, ct);
+        return CreatedAtAction(nameof(GetById), new { id }, null);
+    }
+
+
+    [HttpPatch("{id}/layout")]
+    [Authorize(Roles = "Admin,Manager")] // adjust
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UpdateLayout(Guid id, [FromBody] UpdateTableLayoutDto body, CancellationToken ct)
+    {
+        await _svc.UpdateLayoutAsync(id, body, ct);
+        return NoContent();
+    }
+
+
+    [HttpPost("layout/bulk")]
+    [Authorize(Roles = "Admin,Manager")] // adjust
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> BulkLayout([FromBody] BulkLayoutUpdateDto body, CancellationToken ct)
+    {
+        await _svc.BulkUpdateLayoutAsync(body, ct);
+        return NoContent();
+    }
+
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin,Manager")] // adjust
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Delete( Guid id, CancellationToken ct)
+    {
+        await _svc.DeleteAsync(id, ct);
+        return NoContent();
+    }
+
+    // --------- Join / Split (optional) ---------
+    [HttpPost("join")]
+    [Authorize(Roles = "Admin,Manager")] // adjust
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Join([FromBody] JoinTablesDto body, CancellationToken ct)
+    {
+        var groupId = await _svc.JoinAsync(body, ct);
+        return Ok(new { groupId });
+    }
+
+
+    [HttpPost("split")]
+    [Authorize(Roles = "Admin,Manager")] // adjust
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Split([FromBody] SplitTablesDto body, CancellationToken ct)
+    {
+        await _svc.SplitAsync(body, ct);
+        return NoContent();
+    }
+
+
+
 }

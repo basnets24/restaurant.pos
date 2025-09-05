@@ -1,54 +1,523 @@
 @import "tailwindcss";
 
-/* === Restaurant POS Light Theme (locked to light) === */
+@custom-variant dark (&:is(.dark *));
+
 :root {
-    /* page + text */
-    --app-bg: #e8f0d4;      /* soft mint */
-    --ink:    #2a1f20;      /* deep brown */
+    /* Custom Restaurant Brand Colors */
+    --app-bg: #e8f0d4; /* soft mint */
+    --ink: #2a1f20; /* deep brown */
+    --brand: #a3d977; /* logo block + hero right pane */
+    --brand-ink: #2a1f20; /* strokes over brand color */
+    --hover-ink: #6b7c32; /* nav hover */
 
-    /* brand */
-    --brand:       #a3d977; /* logo block + hero right pane */
-    --brand-ink:   #2a1f20; /* strokes over brand color */
-    --hover-ink:   #6b7c32; /* nav hover */
+    /* Derived colors */
+    --ink-muted: #5a4f50; /* lighter brown for muted text */
+    --mint-light: #f4f8ea; /* lighter mint for cards */
+    --mint-dark: #d4e2bd; /* darker mint for borders */
+    --brand-light: #c8e8a3; /* lighter brand for accents */
+    --brand-dark: #7ba857; /* darker brand for hover states */
 
-    /* surfaces */
-    --card:        #ffffff;
-    --card-border: rgba(255,255,255,.30);
-    --glass-border:rgba(255,255,255,.20);
+    /* Table Status Colors */
+    --table-available: #10b981; /* green */
+    --table-available-border: #059669;
+    --table-occupied: #ef4444; /* red */
+    --table-occupied-border: #dc2626;
+    --table-reserved: #f59e0b; /* amber */
+    --table-reserved-border: #d97706;
+    --table-dirty: #6b7280; /* gray */
+    --table-dirty-border: #4b5563;
 
-    /* radii & shadows */
-    --radius-xl: 1.5rem; /* ~ rounded-3xl */
-    --shadow:    0 20px 40px rgba(0,0,0,.10);
+    /* System Colors */
+    --font-size: 16px;
+    --background: var(--app-bg);
+    --foreground: var(--ink);
+    --card: var(--mint-light);
+    --card-foreground: var(--ink);
+    --popover: var(--mint-light);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-ink);
+    --secondary: var(--mint-dark);
+    --secondary-foreground: var(--ink);
+    --muted: var(--mint-dark);
+    --muted-foreground: var(--ink-muted);
+    --accent: var(--brand-light);
+    --accent-foreground: var(--hover-ink);
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: var(--mint-dark);
+    --input: transparent;
+    --input-background: var(--mint-light);
+    --switch-background: var(--mint-dark);
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
+    --ring: var(--brand);
+    --chart-1: var(--brand);
+    --chart-2: var(--brand-dark);
+    --chart-3: var(--hover-ink);
+    --chart-4: var(--ink-muted);
+    --chart-5: var(--ink);
+    --radius: 0.5rem;
+    --sidebar: var(--mint-light);
+    --sidebar-foreground: var(--ink);
+    --sidebar-primary: var(--brand);
+    --sidebar-primary-foreground: var(--brand-ink);
+    --sidebar-accent: var(--app-bg);
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-border: var(--mint-dark);
+    --sidebar-ring: var(--brand);
 }
 
-html, body, #root { height: 100%; }
-body {
-    background: var(--app-bg);
-    color: var(--ink);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+.dark {
+    /* Dark mode adaptations of custom palette */
+    --app-bg: #1a1512; /* very dark brown */
+    --ink: #f4f8ea; /* light mint for text */
+    --brand: #a3d977; /* keep brand color */
+    --brand-ink: #1a1512; /* dark brown over brand */
+    --hover-ink: #8fb05c; /* lighter green for hover */
+
+    /* Dark derived colors */
+    --ink-muted: #c4c8bb; /* muted light text */
+    --mint-light: #2a251f; /* dark brown for cards */
+    --mint-dark: #3a3228; /* slightly lighter brown for borders */
+    --brand-light: #7ba857; /* darker brand for accents */
+    --brand-dark: #c8e8a3; /* lighter brand for hover */
+
+    --background: var(--app-bg);
+    --foreground: var(--ink);
+    --card: var(--mint-light);
+    --card-foreground: var(--ink);
+    --popover: var(--mint-light);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-ink);
+    --secondary: var(--mint-dark);
+    --secondary-foreground: var(--ink);
+    --muted: var(--mint-dark);
+    --muted-foreground: var(--ink-muted);
+    --accent: var(--brand-light);
+    --accent-foreground: var(--ink);
+    --destructive: #ef4444;
+    --destructive-foreground: var(--ink);
+    --border: var(--mint-dark);
+    --input: var(--mint-dark);
+    --input-background: var(--mint-light);
+    --ring: var(--brand);
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
+    --chart-1: var(--brand);
+    --chart-2: var(--brand-dark);
+    --chart-3: var(--hover-ink);
+    --chart-4: var(--ink-muted);
+    --chart-5: var(--ink);
+    --sidebar: var(--mint-light);
+    --sidebar-foreground: var(--ink);
+    --sidebar-primary: var(--brand);
+    --sidebar-primary-foreground: var(--brand-ink);
+    --sidebar-accent: var(--mint-dark);
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-border: var(--mint-dark);
+    --sidebar-ring: var(--brand);
 }
 
-/* Glass header container */
-.glass {
-    backdrop-filter: blur(12px);
-    background: rgba(255,255,255,.95);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 8px 18px rgba(0,0,0,.06);
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-input-background: var(--input-background);
+    --color-switch-background: var(--switch-background);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(
+            --sidebar-primary-foreground
+    );
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(
+            --sidebar-accent-foreground
+    );
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Table Status Colors for Tailwind */
+    --color-table-available: var(--table-available);
+    --color-table-available-border: var(--table-available-border);
+    --color-table-occupied: var(--table-occupied);
+    --color-table-occupied-border: var(--table-occupied-border);
+    --color-table-reserved: var(--table-reserved);
+    --color-table-reserved-border: var(--table-reserved-border);
+    --color-table-dirty: var(--table-dirty);
+    --color-table-dirty-border: var(--table-dirty-border);
 }
 
-/* Hero card shell */
-.hero-slab {
-    background: var(--brand);
-    color: white;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow);
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
 }
 
-/* Animations */
-.animate-fade-in { animation: fadeIn .8s ease-out forwards; opacity: 0 }
-.animate-slide-up { animation: slideUp .8s ease-out forwards; opacity: 0; transform: translateY(20px) }
-.delay-200 { animation-delay: .2s }
-@keyframes fadeIn { to { opacity: 1 } }
-@keyframes slideUp { to { opacity: 1; transform: translateY(0) } }
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+    :where(
+    :not(:has([class*=" text-"]), :not(:has([class^="text-"])))
+  ) {
+        h1 {
+            font-size: var(--text-2xl);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.5;
+        }
+
+        h2 {
+            font-size: var(--text-xl);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.5;
+        }
+
+        h3 {
+            font-size: var(--text-lg);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.5;
+        }
+
+        h4 {
+            font-size: var(--text-base);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.5;
+        }
+
+        p {
+            font-size: var(--text-base);
+            font-weight: var(--font-weight-normal);
+            line-height: 1.5;
+        }
+
+        label {
+            font-size: var(--text-base);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.5;
+        }
+
+        button {
+            font-size: var(--text-base);
+            font-weight: var(--font-weight-medium);
+            line-height: 1.5;
+        }
+
+        input {
+            font-size: var(--text-base);
+            font-weight: var(--font-weight-normal);
+            line-height: 1.5;
+        }
+    }
+}
+
+html {
+    font-size: var(--font-size);
+}
+
+/* Drag and Drop Animations */
+@keyframes snapToGrid {
+    0% {
+        transform: scale(1.05) rotate(5deg);
+    }
+    50% {
+        transform: scale(1.1) rotate(0deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes dragStart {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+    100% {
+        transform: scale(1.05) rotate(5deg);
+    }
+}
+
+@keyframes dragEnd {
+    0% {
+        transform: scale(1.05) rotate(5deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+.table-dragging {
+    animation: dragStart 0.2s ease-out;
+    z-index: 1000 !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.table-snapping {
+    animation: snapToGrid 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.table-design-mode {
+    cursor: move !important;
+    border: 2px dashed var(--primary) !important;
+    border-opacity: 0.5;
+}
+
+.table-design-mode:hover {
+    border-opacity: 1;
+    box-shadow: 0 0 20px var(--primary);
+}
+
+.floor-plan-container {
+    position: relative;
+    background-image: linear-gradient(
+            to right,
+            var(--border) 1px,
+            transparent 1px
+    ),
+    linear-gradient(
+            to bottom,
+            var(--border) 1px,
+            transparent 1px
+    );
+    background-size: 20px 20px;
+}
+
+.floor-plan-container.design-mode {
+    background-opacity: 0.1;
+}
+
+.floor-plan-container.drag-over {
+    background-color: var(--primary);
+    background-opacity: 0.05;
+    border-color: var(--primary);
+    box-shadow: inset 0 0 20px var(--primary);
+}
+
+/* Grid overlay styling */
+.grid-overlay {
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+.grid-overlay.visible {
+    opacity: 0.6;
+}
+
+/* Snap indicators */
+.snap-indicator {
+    position: absolute;
+    border: 2px dashed var(--primary);
+    background-color: var(--primary);
+    background-opacity: 0.1;
+    border-radius: 8px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Zoom and pan controls */
+.zoom-controls {
+    position: sticky;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Touch-friendly drag handles for mobile */
+@media (max-width: 768px) {
+    .table-design-mode::after {
+        content: "⋮⋮";
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        font-size: 12px;
+        color: var(--primary);
+        opacity: 0.7;
+    }
+}
+
+/* Order Sidebar Styles */
+.order-sidebar {
+    backdrop-filter: blur(8px);
+    background-color: var(--card);
+    background-color: color-mix(
+            in srgb,
+            var(--card) 95%,
+            transparent
+    );
+}
+
+.order-sidebar-floating {
+    box-shadow:
+            0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04),
+            0 0 0 1px var(--border);
+}
+
+.order-sidebar-item-row {
+    transition: all 0.2s ease;
+}
+
+.order-sidebar-item-row:hover {
+    background-color: var(--accent);
+    background-color: color-mix(
+            in srgb,
+            var(--accent) 30%,
+            transparent
+    );
+}
+
+/* Floating Action Button */
+.floating-order-btn {
+    box-shadow:
+            0 10px 15px -3px rgba(0, 0, 0, 0.1),
+            0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(8px);
+}
+
+.floating-order-btn:hover {
+    transform: scale(1.05);
+    box-shadow:
+            0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Smooth transitions for main content */
+.main-content-with-sidebar {
+    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+    .order-sidebar {
+        width: 100vw !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .order-sidebar {
+        width: 20rem !important; /* 320px */
+    }
+}
+
+@media (min-width: 1024px) {
+    .order-sidebar {
+        width: 24rem !important; /* 384px */
+    }
+}
+
+/* Order status animations */
+@keyframes orderAdded {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.order-item-added {
+    animation: orderAdded 0.3s ease-out;
+}
+
+/* Slide-in animation for order total preview */
+@keyframes slide-in-right {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .order-sidebar-mobile {
+        background-color: var(--background);
+    }
+
+    .floating-order-btn {
+        bottom: 1rem;
+        right: 1rem;
+        width: 3rem !important;
+        height: 3rem !important;
+    }
+
+    /* Ensure mobile menu buttons are full width */
+    .mobile-menu-button {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* Tablet-specific adjustments */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .floating-order-btn {
+        width: 3.5rem;
+        height: 3.5rem;
+    }
+}
+
+/* Desktop styles */
+@media (min-width: 1024px) {
+    .floating-order-btn {
+        width: 3.5rem;
+        height: 3.5rem;
+    }
+}
