@@ -1,4 +1,4 @@
-import InventoryStockCard from "../../../components/InventoryStockCard";
+import InventoryStockCard from "@/features/management/components/InventoryCard";
 export default function InventoryTab() {
     return (
         <>

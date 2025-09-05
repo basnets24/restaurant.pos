@@ -1,8 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Users } from "@/domain/identity/service";
-import type { Paged, UserListItemDto } from "@/domain/identity/types";
-import { IdentityKeys } from "@/domain/identity/keys";
+import { useState } from "react";
+import { useUsers, useAllRoles, useDisableUser } from "@/domain/identity/hooks";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +16,10 @@ export default function StaffUsersCard() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
 
-    // Data
-    const roles = useQuery({ queryKey: IdentityKeys.roles.all, queryFn: Users.roles.all });
-    const queryKey = useMemo(() => IdentityKeys.users({ username, role, page, pageSize }), [username, role, page, pageSize]);
-    const { data, isLoading, refetch } = useQuery<Paged<UserListItemDto>>({
-        queryKey,
-        queryFn: () => Users.list({ username, role, page, pageSize }),
-        placeholderData: keepPreviousData,
-    });
+    // Data via hooks
+    const roles = useAllRoles();
+    const { data, isLoading } = useUsers({ username, role, page, pageSize });
+    const disable = useDisableUser();
 
     const items = data?.items ?? [];
     const total = data?.total ?? 0;
@@ -99,10 +92,7 @@ export default function StaffUsersCard() {
                                     <TableCell className="text-right space-x-2">
                                         {/* Hook up edit sheet later if desired */}
                                         {/* <Button size="sm" variant="outline" onClick={() => openEdit(u.id)}>Edit</Button> */}
-                                        <Button size="sm" variant="destructive" onClick={async () => {
-                                            await Users.disable(u.id);
-                                            refetch();
-                                        }}>Disable</Button>
+                                        <Button size="sm" variant="destructive" onClick={() => disable.mutate(u.id)} disabled={disable.isPending}>Disable</Button>
                                     </TableCell>
                                 </TableRow>
                             ))}

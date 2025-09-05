@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MenuItems, type MenuItemDto, type CreateMenuItemDto, type UpdateMenuItemDto, type PageResult } from "../services/menu.items";
+import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult } from "@/domain/menu/types";
+import { useMenuCategories, useMenuList, useToggleMenuAvailability, usePatchMenuItem, useCreateMenuItem, useRemoveMenuItem } from "@/domain/menu/hooks";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Badge } from "./ui/badge";
-import { Switch } from "./ui/switch";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Utensils, Plus, Pencil, Trash2 } from "lucide-react";
 
 // Props are optional; you can pass canWrite to disable create/edit when the user lacks rights
@@ -25,10 +26,7 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
 
     const qc = useQueryClient();
 
-    const categories = useQuery<string[]>({
-        queryKey: ["menu", "categories"],
-        queryFn: MenuItems.categories,
-    });
+    const categories = useMenuCategories();
 
     const listParams = useMemo(() => ({
         name: name || undefined,
@@ -38,39 +36,20 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
         pageSize,
     }), [name, category, available, page, pageSize]);
 
-    const list = useQuery<PageResult<MenuItemDto>>({
-        queryKey: ["menu", "list", listParams],
-        queryFn: () => MenuItems.list(listParams),
-        placeholderData: keepPreviousData,
-    });
+    const list = useMenuList(listParams);
 
     const items = list.data?.items ?? [];
     const total = list.data?.total ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     // Mutations
-    const mToggle = useMutation({
-        mutationFn: async ({ id, value }: { id: string; value: boolean }) => MenuItems.setAvailability(id, value),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["menu", "list"] }),
-    });
+    const mToggle = useToggleMenuAvailability();
 
-    const mPatch = useMutation({
-        mutationFn: async ({ id, dto }: { id: string; dto: UpdateMenuItemDto }) => MenuItems.patch(id, dto),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["menu", "list"] }),
-    });
+    const mPatch = usePatchMenuItem();
 
-    const mCreate = useMutation({
-        mutationFn: async (dto: CreateMenuItemDto) => MenuItems.create(dto),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ["menu", "list"] });
-            setCreateOpen(false);
-        },
-    });
+    const mCreate = useCreateMenuItem();
 
-    const mDelete = useMutation({
-        mutationFn: async (id: string) => MenuItems.remove(id),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["menu", "list"] }),
-    });
+    const mDelete = useRemoveMenuItem();
 
     // Dialog state (create/edit)
     const [createOpen, setCreateOpen] = useState(false);
@@ -184,7 +163,7 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
             </CardContent>
 
             {/* Create dialog */}
-            <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={(dto) => mCreate.mutate(dto)} categories={categories.data ?? []} disabled={!canWrite} />
+            <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={(dto) => mCreate.mutate(dto, { onSuccess: () => setCreateOpen(false) })} categories={categories.data ?? []} disabled={!canWrite} />
 
             {/* Edit dialog */}
             <EditDialog open={editOpen} onOpenChange={setEditOpen} item={editing} onSave={(id, dto) => mPatch.mutate({ id, dto })} categories={categories.data ?? []} disabled={!canWrite} />

@@ -1,32 +1,21 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { InventoryItems, type InventoryItemDto } from "../services/inventory.items";
+import type { InventoryItemDto } from "@/domain/inventory/types";
+import { useInventoryItems, useUpdateInventoryItem } from "@/domain/inventory/hooks";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Switch } from "./ui/switch";
-import { Badge } from "./ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Package } from "lucide-react";
 
 export default function InventoryStockCard() {
-    const qc = useQueryClient();
-
-    const { data, isLoading } = useQuery<InventoryItemDto[]>({
-        queryKey: ["inventory", "items"],
-        queryFn: InventoryItems.list,
-        placeholderData: keepPreviousData,
-    });
+    const { data, isLoading } = useInventoryItems();
 
     const items = data ?? [];
 
-    const updateMut = useMutation({
-        mutationFn: async ({ id, dto }: { id: string; dto: { quantity?: number; isAvailable?: boolean } }) => {
-            await InventoryItems.update(id, dto);
-        },
-        onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory", "items"] }),
-    });
+    const updateMut = useUpdateInventoryItem();
 
     return (
         <Card>

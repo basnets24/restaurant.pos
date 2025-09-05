@@ -1,4 +1,4 @@
-import MenuItemsCard from "../../../components/MenuItemsCard";
+import MenuItemsCard from "@/features/management/components/MenuCard";
 export default function MenuTab() {
     return (
         <>
