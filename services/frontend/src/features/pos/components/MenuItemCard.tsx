@@ -39,9 +39,19 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
     const incrementQuantity = () => setQuantity((q) => Math.min(99, q + 1));
     const decrementQuantity = () => setQuantity((q) => Math.max(1, q - 1));
 
+    const handleQuickAdd = async () => {
+        if (isLoading) return;
+        setIsLoading(true);
+        try {
+            await onAddToOrder(item, 1);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <Card className="menu-item-card hover:shadow-lg transition-all duration-200 border-border bg-card group">
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 sm:p-6 cursor-pointer" onClick={handleQuickAdd}>
                 <div className="mb-3 sm:mb-4">
                     <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 sm:mb-3 leading-tight">
                         {item.name}

@@ -66,8 +66,9 @@ export interface SeatPartyDto {
   partySize: number;
 }
 
+// this is cart id
 export interface LinkOrderDto {
-  orderId: string;
+  cartId: string;
 }
 
 export interface JoinTablesDto {

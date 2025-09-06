@@ -115,6 +115,7 @@ export default function TablesPage() {
 }
 
 function TableNode({ t, onOpen }: { t: TableViewDto; onOpen: (id: string) => void }) {
+  const navigate = useNavigate();
   const seat = useSeat(t.id);
   const setStatus = useSetTableStatus(t.id);
   const clear = useClear(t.id);
@@ -159,7 +160,12 @@ function TableNode({ t, onOpen }: { t: TableViewDto; onOpen: (id: string) => voi
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSeatOpen(false)}>Cancel</Button>
-            <Button onClick={() => { seat.mutate(Math.max(1, Math.min(t.seats, parseInt(party || "1")))); setSeatOpen(false); }}>Seat</Button>
+            <Button onClick={async () => {
+              const size = Math.max(1, Math.min(t.seats, parseInt(party || "1")));
+              try { await seat.mutateAsync(size); } catch {}
+              setSeatOpen(false);
+              navigate(`/pos/table/${t.id}/menu`, { state: { partySize: size } });
+            }}>Seat</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

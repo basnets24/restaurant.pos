@@ -172,7 +172,7 @@ export function useClear(id: string) {
 export function useLinkOrder(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (orderId: string) => TablesApi.linkOrder(id, { orderId }),
+    mutationFn: (cartId: string) => TablesApi.linkOrder(id, { cartId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: tableKeys.all });
     }
@@ -182,7 +182,7 @@ export function useLinkOrder(id: string) {
 export function useUnlinkOrder(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (orderId: string) => TablesApi.unlinkOrder(id, { orderId }),
+    mutationFn: (cartId: string) => TablesApi.unlinkOrder(id, { cartId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: tableKeys.all });
     }
