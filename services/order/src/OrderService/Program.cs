@@ -37,13 +37,21 @@ builder.Services.AddScoped<IDiningTableService, DiningTableService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
-
+const string corsPolicy = "frontend";
+builder.Services.AddCors(options =>
+{
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+    options.AddPolicy(corsPolicy, p =>
+        p.WithOrigins(origins) // include http & https in appsettings.json
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
 });
 builder.Services.AddSignalR();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -57,9 +65,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors(corsPolicy);
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
 app.UseApiProblemDetails();
 app.UseAuthentication();
 app.UseAuthorization();

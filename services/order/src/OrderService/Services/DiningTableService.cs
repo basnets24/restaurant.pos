@@ -40,7 +40,7 @@ public class DiningTableService : IDiningTableService
 
     private static TableViewDto ToView(DiningTable t) => new(
         Id:           t.Id,
-        Number:       t.Number.ToString() ,
+        Number:       t.Number ,
         Section:      t.Section ?? string.Empty,
         Seats:        t.Seats,
         Shape:        t.Shape ?? "square",
@@ -137,7 +137,7 @@ public class DiningTableService : IDiningTableService
     // ===========================
     public async Task<string> CreateAsync(CreateTableDto dto, CancellationToken ct)
     {
-        // Accept either Number (string) or TableNumber (int) depending on your DTO
+        // Accept either Number (string), depending on your DTO
         var numberString = !string.IsNullOrWhiteSpace(dto.Number);
 
         var t = new DiningTable
@@ -145,7 +145,7 @@ public class DiningTableService : IDiningTableService
             Id           = Guid.NewGuid(),
             RestaurantId = _tenant.RestaurantId!,
             LocationId   = _tenant.LocationId!,
-            Number       = int.Parse(dto.Number),
+            Number       = dto.Number,
             Section      = dto.Section ?? string.Empty,
             Seats        = dto.Seats <= 0 ? 4 : dto.Seats,
             Shape        = dto.Shape ?? "square",

@@ -2,16 +2,16 @@ import type {
     Order as POSOrder,
     Table as DiningTable,
     OrderItem as POSOrderItem,
-} from "../types/pos";
+} from "../../../types/pos";
 
-import { Card } from "./ui/card";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
+import { Card } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Badge } from "../../../components/ui/badge";
+import { Separator } from "../../../components/ui/separator";
 import {
     Sheet,
     SheetContent,
-} from "./ui/sheet";
+} from "../../../components/ui/sheet";
 import {
     X,
     ShoppingCart,

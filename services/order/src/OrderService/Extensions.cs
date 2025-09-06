@@ -23,10 +23,9 @@ public static class Extensions
     // CORS for SignalR (allow your UI origins)
         services.AddCors(opt =>
         {
-            opt.AddPolicy("pos-ui", b => b
+            opt.AddPolicy("frontend", b => b
                 .WithOrigins(
-                    "http://localhost:5173", // Vite/Next dev
-                    "http://localhost:3000"
+                    "http://localhost:5173" // Vite/Next dev
                 )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
@@ -56,8 +55,7 @@ public static class Extensions
     {
     // Ensure app.UseRouting() / app.UseAuthentication() / app.UseAuthorization() is configured in Program.cs
     // Apply CORS to the hub endpoint
-        app.MapHub<FloorHub>("/hubs/floor").RequireCors("pos-ui");
-    // Controllers are discovered via MinimalHosting defaults
+        app.MapHub<FloorHub>("/hubs/floor").RequireCors("frontend");
     }
     
     public static IServiceCollection AddMassTransitWithSaga(this IServiceCollection services, 

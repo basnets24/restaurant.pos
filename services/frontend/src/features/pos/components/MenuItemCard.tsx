@@ -1,10 +1,10 @@
-import type { MenuItem as POSMenuItem } from "../types/pos"; // ← update path if yours differs
-import { Card, CardContent, CardFooter } from "./ui/card";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { Badge } from "./ui/badge";
+import type { MenuItem as POSMenuItem } from "../../../types/pos"; // ← update path if yours differs
+import { Card, CardContent, CardFooter } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Textarea } from "../../../components/ui/textarea";
+import { Badge } from "../../../components/ui/badge";
 import { Plus, Minus } from "lucide-react";
-import {useState} from "react";
+import { useState } from "react";
 
 interface MenuItemCardProps {
     item: POSMenuItem;
@@ -73,8 +73,8 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                             <Minus className="h-3 w-3" />
                         </Button>
                         <span className="text-sm font-medium min-w-[2ch] text-center">
-              {quantity}
-            </span>
+                            {quantity}
+                        </span>
                         <Button
                             variant="outline"
                             size="sm"

@@ -9,7 +9,7 @@ public class DiningTable : IEntity, ITenantEntity
     public string RestaurantId { get; set; } = default!;
     public string LocationId { get; set; } = default!;
     
-    public int Number { get; set; } = default!; // e.g., "7"
+    public string Number { get; set; } = default!; // e.g., "7"
     public string Section { get; set; } = ""; // e.g., "Center"
     public int Seats { get; set; }
 

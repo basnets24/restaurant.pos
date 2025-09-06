@@ -1,6 +1,6 @@
-import  { useState } from "react";
+import { useState } from "react";
 import type { MenuItem as POSMenuItem } from "../types/pos"; // ← use your shared POS types
-import { MenuItemCard } from "./MenuItemCard";
+import { MenuItemCard } from "../features/pos/components/MenuItemCard";
 import { Button } from "./ui/button";
 
 interface MenuViewProps {
@@ -178,12 +178,12 @@ export function MenuView({ onAddToOrder }: MenuViewProps) {
                             className="flex items-center gap-2 px-3 py-2 sm:px-6 sm:py-3 text-sm sm:text-base min-h-[44px]"
                             size="sm"
                         >
-              <span className="text-base sm:text-lg" role="img" aria-label={category.name}>
-                {category.icon}
-              </span>
+                            <span className="text-base sm:text-lg" role="img" aria-label={category.name}>
+                                {category.icon}
+                            </span>
                             <span className="font-medium whitespace-nowrap">
-                {category.name}
-              </span>
+                                {category.name}
+                            </span>
                         </Button>
                     ))}
                 </div>

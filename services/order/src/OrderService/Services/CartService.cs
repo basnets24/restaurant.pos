@@ -54,7 +54,7 @@ public class CartService : ICartService
             var table = await _tableRepo.GetAsync(tableId.Value);
             if (table.Status == "Occupied" && table.ActiveCartId != null)
             {
-                throw new InvalidOperationException($"Table {table.Number} is already in use.");
+                throw new InvalidOperationException($" {table.Number} is already in use.");
             }
 
             table.Status = "Occupied";
