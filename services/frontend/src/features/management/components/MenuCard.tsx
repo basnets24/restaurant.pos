@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Utensils, Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Props are optional; you can pass canWrite to disable create/edit when the user lacks rights
 export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean }) {
@@ -136,7 +137,12 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                                                     size="icon"
                                                     variant="outline"
                                                     className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                                    onClick={() => mDelete.mutate(m.id)}
+                                                    onClick={() =>
+                                                        mDelete.mutate(m.id, {
+                                                            onSuccess: () => toast.success("Menu item deleted"),
+                                                        })
+                                                    }
+                                                    disabled={mDelete.isPending}
                                                     aria-label="Delete menu item"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -171,7 +177,24 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
             <CreateDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={(dto) => mCreate.mutate(dto, { onSuccess: () => setCreateOpen(false) })} disabled={!canWrite} />
 
             {/* Edit dialog */}
-            <EditDialog open={editOpen} onOpenChange={setEditOpen} item={editing} onSave={(id, dto) => mPatch.mutate({ id, dto })} disabled={!canWrite} />
+            <EditDialog
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                item={editing}
+                saving={mPatch.isPending}
+                onSave={(id, dto) =>
+                    mPatch.mutate(
+                        { id, dto },
+                        {
+                            onSuccess: () => {
+                                setEditOpen(false);
+                                toast.success("Menu item updated");
+                            },
+                        }
+                    )
+                }
+                disabled={!canWrite}
+            />
         </Card>
     );
 }
@@ -192,7 +215,11 @@ function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
         if (!open) { setName(""); setDescription(""); setPrice("0.00"); setCategory(""); }
     }, [open]);
 
-    const canSubmit = name.trim().length > 0 && Number(price) > 0 && category.trim().length > 0;
+    const canSubmit =
+        name.trim().length > 0 &&
+        description.trim().length > 0 &&
+        Number(price) > 0 &&
+        category.trim().length > 0;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -207,7 +234,10 @@ function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
                     </div>
                     <div className="grid gap-2">
                         <Label>Description</Label>
-                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add a short description" />
+                        {description.trim().length === 0 && (
+                            <span className="text-xs text-red-500">Description is required</span>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="grid gap-2">
@@ -230,15 +260,20 @@ function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button disabled={!canSubmit || disabled} onClick={() => onCreate({ name: name.trim(), description: description.trim() || undefined, price: Number(price), category: category.trim() })}>Create</Button>
+                    <Button
+                        disabled={!canSubmit || disabled}
+                        onClick={() => onCreate({ name: name.trim(), description: description.trim(), price: Number(price), category: category.trim() })}
+                    >
+                        Create
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
 
-function EditDialog({ open, onOpenChange, item, onSave, disabled }: {
-    open: boolean; onOpenChange: (v: boolean) => void; item: MenuItemDto | null; onSave: (id: string, dto: UpdateMenuItemDto) => void; disabled: boolean;
+function EditDialog({ open, onOpenChange, item, onSave, saving, disabled }: {
+    open: boolean; onOpenChange: (v: boolean) => void; item: MenuItemDto | null; onSave: (id: string, dto: UpdateMenuItemDto) => void; saving?: boolean; disabled: boolean;
 }) {
     const categoriesQuery = useMenuCats();
     const categories = categoriesQuery.data ?? [];
@@ -298,7 +333,7 @@ function EditDialog({ open, onOpenChange, item, onSave, disabled }: {
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button disabled={!canSubmit || disabled} onClick={() => item && onSave(item.id, { name: name.trim(), description: description.trim() || undefined, price: Number(price), category: category.trim() })}>Save</Button>
+                    <Button disabled={!canSubmit || disabled || !!saving} onClick={() => item && onSave(item.id, { name: name.trim(), description: description.trim() || undefined, price: Number(price), category: category.trim() })}>Save</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

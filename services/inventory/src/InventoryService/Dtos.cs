@@ -17,9 +17,19 @@ namespace InventoryService;
 
     public record UpdateInventoryItemDto
     {
+        // Absolute quantity (0..int.MaxValue). Optional.
         [Range(0, int.MaxValue, ErrorMessage = "Quantity must be non-negative.")]
         public int? Quantity { get; init; }
-        public bool? IsAvailable { get; set; }
+
+        // Explicit availability override. Optional.
+        public bool? IsAvailable { get; init; }
+    }
+
+// For signed adjustments (deltas can be negative or positive)
+    public record AdjustInventoryQuantityDto
+    {
+        // e.g., +5 to add 5, -2 to subtract 2
+        public int Delta { get; init; }
     }
 
     public record InventoryItemDto

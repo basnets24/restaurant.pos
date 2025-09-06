@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { InventoryItemDto } from "@/domain/inventory/types";
-import { useInventoryItems, useUpdateInventoryItem } from "@/domain/inventory/hooks";
+import { useInventoryItems, useUpdateInventoryItem, useAdjustInventoryQuantity } from "@/domain/inventory/hooks";
+import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,9 +14,14 @@ import { Package } from "lucide-react";
 export default function InventoryStockCard() {
     const { data, isLoading } = useInventoryItems();
 
-    const items = data ?? [];
+    const items: InventoryItemDto[] = Array.isArray(data)
+        ? data
+        : Array.isArray((data as any)?.items)
+        ? ((data as any).items as InventoryItemDto[])
+        : [];
 
     const updateMut = useUpdateInventoryItem();
+    const adjustMut = useAdjustInventoryQuantity();
 
     return (
         <Card>
@@ -41,7 +47,35 @@ export default function InventoryStockCard() {
                             {isLoading && <TableRow><TableCell colSpan={5}>Loading…</TableCell></TableRow>}
                             {!isLoading && items.length === 0 && <TableRow><TableCell colSpan={5}>No inventory items</TableCell></TableRow>}
                             {items.map((it) => (
-                                <InventoryRow key={it.id} it={it} onUpdate={(dto) => updateMut.mutate({ id: it.id, dto })} />
+                                <InventoryRow
+                                    key={it.id}
+                                    it={it}
+                                    busy={updateMut.isPending || adjustMut.isPending}
+                                    onUpdate={(dto) =>
+                                        updateMut.mutate(
+                                            { id: it.id, dto, menuItemId: it.menuItemId },
+                                            {
+                                                onSuccess: () => {
+                                                    const msg =
+                                                        dto.quantity !== undefined
+                                                            ? `Quantity set to ${dto.quantity}`
+                                                            : dto.isAvailable !== undefined
+                                                            ? `Marked as ${dto.isAvailable ? "Available" : "Hidden"}`
+                                                            : "Inventory updated";
+                                                    toast.success(msg);
+                                                },
+                                            }
+                                        )
+                                    }
+                                    onAdjust={(delta) =>
+                                        adjustMut.mutate(
+                                            { id: it.id, delta, menuItemId: it.menuItemId },
+                                            {
+                                                onSuccess: () => toast.success(delta > 0 ? "Quantity +1" : "Quantity −1"),
+                                            }
+                                        )
+                                    }
+                                />
                             ))}
                         </TableBody>
                     </Table>
@@ -51,8 +85,17 @@ export default function InventoryStockCard() {
     );
 }
 
-function InventoryRow({ it, onUpdate }: { it: InventoryItemDto; onUpdate: (dto: { quantity?: number; isAvailable?: boolean }) => void }) {
+function InventoryRow({ it, onUpdate, onAdjust, busy }: {
+    it: InventoryItemDto;
+    onUpdate: (dto: { quantity?: number; isAvailable?: boolean }) => void;
+    onAdjust: (delta: number) => void;
+    busy?: boolean;
+}) {
     const [qtyEdit, setQtyEdit] = useState<string>(String(it.quantity ?? 0));
+    // Keep input in sync with server updates
+    useEffect(() => {
+        setQtyEdit(String(it.quantity ?? 0));
+    }, [it.quantity]);
     const qty = Number.isFinite(Number(qtyEdit)) ? Math.max(0, Number(qtyEdit)) : it.quantity;
 
     return (
@@ -63,21 +106,21 @@ function InventoryRow({ it, onUpdate }: { it: InventoryItemDto; onUpdate: (dto: 
             </TableCell>
             <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                    <Button size="icon" variant="outline" onClick={() => onUpdate({ quantity: Math.max(0, it.quantity - 1) })}>−</Button>
+                    <Button size="icon" variant="outline" onClick={() => onAdjust(-1)} disabled={busy} aria-label="Decrease quantity">−</Button>
                     <Input className="w-16 text-right" value={qtyEdit} onChange={(e) => setQtyEdit(e.target.value)} />
-                    <Button size="icon" variant="outline" onClick={() => onUpdate({ quantity: (it.quantity ?? 0) + 1 })}>+</Button>
+                    <Button size="icon" variant="outline" onClick={() => onAdjust(1)} disabled={busy} aria-label="Increase quantity">+</Button>
                 </div>
             </TableCell>
             <TableCell>
                 <div className="flex items-center gap-2">
-                    <Switch checked={it.isAvailable} onCheckedChange={(v) => onUpdate({ isAvailable: v })} />
+                    <Switch checked={it.isAvailable} onCheckedChange={(v) => onUpdate({ isAvailable: v })} disabled={busy} />
                     <Badge variant={it.isAvailable ? "default" : "secondary"}>{it.isAvailable ? "Available" : "Hidden"}</Badge>
                 </div>
             </TableCell>
             <TableCell>{new Date(it.acquiredDate).toLocaleString()}</TableCell>
             <TableCell className="text-right space-x-2">
-                <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: qty })}>Set</Button>
-                <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: 0 })}>Zero</Button>
+                <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: qty })} disabled={busy}>Set</Button>
+                <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: 0 })} disabled={busy}>Zero</Button>
             </TableCell>
         </TableRow>
     );

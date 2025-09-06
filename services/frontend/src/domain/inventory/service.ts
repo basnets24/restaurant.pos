@@ -11,6 +11,7 @@ export const InventoryItems = {
     const { data } = await http.get(InventoryAPI.items.byId(id));
     return data;
   },
+  // update accepts partials; Note: server treats Quantity as DELTA
   update: async (id: string, dto: UpdateInventoryItemDto): Promise<void> => {
     await http.put(InventoryAPI.items.byId(id), dto);
   },
@@ -19,15 +20,18 @@ export const InventoryItems = {
   },
   // Helpers
   setQuantity: async (id: string, qty: number) => {
-    await http.put(InventoryAPI.items.byId(id), { quantity: Math.max(0, qty) });
+    const item = await InventoryItems.get(id);
+    const current = Math.max(0, item.quantity ?? 0);
+    const desired = Math.max(0, qty);
+    const delta = desired - current;
+    if (delta === 0) return;
+    await http.put(InventoryAPI.items.byId(id), { quantity: delta });
   },
   adjustQuantity: async (id: string, delta: number) => {
-    const item = await InventoryItems.get(id);
-    const next = Math.max(0, (item.quantity ?? 0) + delta);
-    await InventoryItems.setQuantity(id, next);
+    if (!Number.isFinite(delta) || delta === 0) return;
+    await http.put(InventoryAPI.items.byId(id), { quantity: delta });
   },
   setAvailability: async (id: string, value: boolean) => {
     await http.put(InventoryAPI.items.byId(id), { isAvailable: value });
   },
 };
-
