@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { ArrowLeft, Home, BarChart3, Users, Package, Calendar, Settings, Utensils } from "lucide-react";
+import { ArrowLeft, Home, BarChart3, Users, Package, Calendar, Utensils } from "lucide-react";
 
-type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations" | "settings";
+type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations";
 
 const TAB_LIST: { value: ManagementTab; label: string; Icon: any }[] = [
     { value: "analytics",    label: "Analytics",    Icon: BarChart3 },
@@ -13,7 +13,6 @@ const TAB_LIST: { value: ManagementTab; label: string; Icon: any }[] = [
     { value: "inventory",    label: "Inventory",    Icon: Package },
     { value: "menu",         label: "Menu",         Icon: Utensils },
     { value: "reservations", label: "Reservations", Icon: Calendar },
-    { value: "settings",     label: "Settings",     Icon: Settings },
 ];
 
 export type ManagementOutletContext = { userData: any };
@@ -29,7 +28,7 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
 
     const go = (to: string) => navigate(to);
     const backToDashboard = () => navigate("/home");
-    const backToLanding = () => navigate("/");
+    const backToLanding = () => navigate("/home");
 
     return (
         <div className="min-h-screen bg-background">
@@ -68,7 +67,7 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
             <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div className="overflow-x-auto">
                     <Tabs value={activeTab} onValueChange={(v) => go(`/management/${v}`)} className="space-y-8">
-                        <TabsList className="grid min-w-max grid-cols-6 gap-2 rounded-2xl p-2 md:w-full md:grid-cols-6">
+                        <TabsList className="grid min-w-max grid-cols-5 gap-2 rounded-2xl p-2 md:w-full md:grid-cols-5">
                             {TAB_LIST.map(({ value, label, Icon }) => (
                                 <TabsTrigger key={value} value={value} className="flex items-center gap-2 px-4 py-3 text-base">
                                     <Icon className="h-5 w-5" />

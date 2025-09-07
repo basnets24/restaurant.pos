@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace OrderService;
+namespace OrderService.Extensions;
 
 public static class ExceptionHandlingExtensions
 {

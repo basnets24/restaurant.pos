@@ -124,18 +124,18 @@ export function PosHeader({
               variantActive="solid"
             />
             <NavButton
-              to={routes.orders}
+              to={routes.current}
               icon={<ReceiptText className="h-4 w-4" />}
+              label="Current Orders"
+              badge={counts?.current}
+              disabled={!!disabled?.current}
+            />
+            <NavButton
+              to={routes.orders}
+              icon={<ShoppingCart className="h-4 w-4" />}
               label="Orders"
               badge={counts?.orders}
               disabled={!!disabled?.orders}
-            />
-            <NavButton
-              to={routes.current}
-              icon={<ShoppingCart className="h-4 w-4" />}
-              label="Current Order"
-              badge={counts?.current}
-              disabled={!!disabled?.current}
             />
             <NavButton
               to={routes.checkout}
@@ -166,11 +166,11 @@ export function PosHeader({
           <NavChip to={routes.dashboard} label="Dashboard" />
           <NavChip to={routes.tables} label="Tables" />
           <NavChip to={routes.menu} label="Menu" active />
-          <NavChip to={routes.orders} label="Orders" disabled={!!disabled?.orders} />
+          <NavChip to={routes.current} label="Current Orders" disabled={!!disabled?.current} />
           <NavChip
-            to={routes.current}
-            label={`Current${counts?.current ? ` (${counts.current})` : ""}`}
-            disabled={!!disabled?.current}
+            to={routes.orders}
+            label={`Orders${counts?.orders ? ` (${counts.orders})` : ""}`}
+            disabled={!!disabled?.orders}
           />
           <NavChip to={routes.checkout} label="Checkout" disabled={!!disabled?.checkout} />
         </div>

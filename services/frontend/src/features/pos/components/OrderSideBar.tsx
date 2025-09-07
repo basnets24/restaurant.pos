@@ -23,6 +23,9 @@ import {
     Receipt,
     Clock,
 } from "lucide-react";
+import { Flame, Check } from "lucide-react";
+import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
+import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -141,6 +144,8 @@ function OrderSidebarContent({
 
     const hasCreatedAt =
         !!order && (order as any).createdAt instanceof Date;
+    const kitchen = useKitchen();
+    const isFired = order ? kitchen.isFired(order.id) : false;
 
     const formatTime = (date: Date) =>
         new Intl.DateTimeFormat("en-US", {
@@ -243,9 +248,39 @@ function OrderSidebarContent({
                 )}
             </div>
 
-            {/* Order Summary & Checkout */}
+            {/* Fire to Kitchen + Order Summary & Checkout */}
             {order && order.items.length > 0 && (
                 <div className="border-t border-border p-4 bg-card">
+                    {/* Fire to Kitchen */}
+                    <div className="mb-3">
+                        <Button
+                            type="button"
+                            variant={isFired ? "outline" : "default"}
+                            disabled={isFired || order.items.length === 0}
+                            onClick={() => {
+                                if (!table || !order) return;
+                                kitchen.fire({
+                                    id: order.id,
+                                    tableId: (table as any).id ?? String(table.number ?? ""),
+                                    tableNumber: String(table.number ?? ""),
+                                    items: order.items.map(i => ({ name: i.menuItem.name, quantity: i.quantity })),
+                                    firedAt: Date.now(),
+                                });
+                                toast.success("Fired to kitchen");
+                            }}
+                            className="w-full"
+                        >
+                            {isFired ? (
+                                <>
+                                    <Check className="h-4 w-4 mr-2" /> Fired ✓
+                                </>
+                            ) : (
+                                <>
+                                    <Flame className="h-4 w-4 mr-2" /> Fire to Kitchen
+                                </>
+                            )}
+                        </Button>
+                    </div>
                     <div className="space-y-2 mb-4">
                         <div className="flex justify-between text-sm">
                             <span>Subtotal</span>

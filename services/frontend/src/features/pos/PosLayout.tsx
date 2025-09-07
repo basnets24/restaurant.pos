@@ -1,19 +1,26 @@
 import { Outlet, useParams } from "react-router-dom";
 import { useAuth } from "@/api-authorization/AuthProvider";
-import { useTable } from "@/domain/tables/hooks";
 import { PosHeader } from "@/features/pos/components/PosHeader";
+import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 
 export default function PosLayout() {
   const { profile } = useAuth();
   const restaurantName =
     (profile as any)?.restaurant_name || (profile as any)?.restaurantName || "Restaurant POS";
   const { tableId } = useParams();
-  const table = tableId ? useTable(tableId).data : undefined;
+  const kitchen = useKitchen();
+  const activeOrdersCount = kitchen.active().length;
 
   const headerTo = {
     dashboard: "/home",
     tables: "/pos/tables",
-    menu: tableId ? `/pos/table/${tableId}/menu` : "/pos/tables",
+    menu: (() => {
+      if (tableId) return `/pos/table/${tableId}/menu`;
+      const target = kitchen.defaultMenuTarget?.();
+      if (target) return `/pos/table/${target.tableId}/menu?cartId=${encodeURIComponent(target.cartId)}`;
+      return "/pos/tables";
+    })(),
+    // Swap: current = active (local KDS), orders = server history (TBD)
     orders: "/pos/orders",
     current: "/pos/current",
     checkout: "/pos/checkout",
@@ -23,10 +30,11 @@ export default function PosLayout() {
     <div className="min-h-dvh flex flex-col">
       <PosHeader
         restaurantName={restaurantName}
-        tableLabel={table ? `Table ${table.number}` : undefined}
-        areaLabel={table?.section ?? undefined}
+        tableLabel={undefined}
+        areaLabel={undefined}
         to={headerTo}
-        disabled={{ orders: true, current: true, checkout: true }}
+        disabled={{ checkout: true }}
+        counts={{ current: activeOrdersCount || undefined }}
       />
       <main className="flex-1">
         <Outlet />

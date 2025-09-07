@@ -73,7 +73,7 @@ export default function AdminLayout() {
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/home")}
                 className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
               >
                 <Home className="h-4 w-4" />

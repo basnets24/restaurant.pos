@@ -47,6 +47,8 @@ const TableRoute    = lazy(() => import("@/features/pos/routes/TableRoute"));
 const MenuPage      = lazy(() => import("@/features/pos/routes/MenuPage"));
 const OrderPage     = lazy(() => import("@/features/pos/routes/OrderPage"));
 const CheckoutPage  = lazy(() => import("@/features/pos/routes/CheckoutPage"));
+const ActiveOrdersPage = lazy(() => import("@/features/pos/routes/ActiveOrdersPage"));
+const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
@@ -133,6 +135,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="tables" replace /> },
       { path: "tables", element: <Suspense fallback={<Fallback />}><TablesPage /></Suspense> },
+      { path: "current", element: <Suspense fallback={<Fallback />}><ActiveOrdersPage /></Suspense> },
+      { path: "orders", element: <Suspense fallback={<Fallback />}><OrdersPage /></Suspense> },
       {
         path: "table/:tableId",
         element: <Suspense fallback={<Fallback />}><TableRoute /></Suspense>,

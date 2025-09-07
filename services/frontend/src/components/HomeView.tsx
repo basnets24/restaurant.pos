@@ -7,15 +7,18 @@ import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstan
 // UI (shadcn)
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card";
+import { CardGrid } from "@/components/primitives/CardGrid";
+import { StatCard } from "@/components/primitives/StatCard";
 
 // Icons (lucide-react)
 import {
     ShoppingCart, CreditCard, Clock, BarChart3, Users, Package,
-    Calendar, Settings, TrendingUp, User, ArrowRight, LogOut
+    Calendar, Settings, TrendingUp, User, ArrowRight, LogOut, Shield
 } from "lucide-react";
 
 // Your data hook (adjust the import path to match your project)
-import { useTables } from "../hooks/useTables";
+// Prefer domain tables API via React Query
+import { useTables as useDomainTables } from "@/domain/tables/hooks";
 
 function getDisplayName(p?: Record<string, unknown>) {
     if (!p) return "User";
@@ -71,15 +74,20 @@ export function Dashboard({
                               onSelectManagement,
                               onLogout,
                           }: DashboardProps) {
-    const { tables } = useTables(); // make sure this hook internally waits for auth (enabled flag) or returns []
+    const navigate = useNavigate();
+    const { profile } = useAuth();
+    const rawRoles = (profile as any)?.role as string | string[] | undefined;
+    const roles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
+    const canAccessAdmin = roles.includes("Admin") || roles.includes("Manager");
+    const { data: tablesData } = useDomainTables();
 
     const stats = useMemo(() => {
-        const list = tables ?? [];
+        const list = tablesData ?? [];
         const total = list.length;
         const occupied = list.filter((t: any) => t.status === "occupied").length;
         const capacityPct = total ? Math.round((occupied / total) * 100) : 0;
         return { total, occupied, capacityText: `${capacityPct}% capacity` };
-    }, [tables]);
+    }, [tablesData]);
 
     const quickStats = [
         { label: "Today's Sales", value: "$2,847.50", change: "+12.5%", trend: "up" as const },
@@ -126,6 +134,12 @@ export function Dashboard({
                   {userData.firstName} {userData.lastName}
                 </span>
                             </div>
+                            {canAccessAdmin && (
+                                <Button variant="outline" onClick={() => navigate("/admin")} size="sm">
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    Admin
+                                </Button>
+                            )}
                             <Button variant="outline" onClick={onLogout} size="sm">
                                 <LogOut className="h-4 w-4 mr-2" />
                                 Logout
@@ -147,32 +161,18 @@ export function Dashboard({
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    {quickStats.map((stat, i) => (
-                        <Card key={i}>
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                                        <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                                        <p
-                                            className={`text-sm ${
-                                                stat.trend === "up"
-                                                    ? "text-green-600"
-                                                    : stat.trend === "down"
-                                                        ? "text-red-600"
-                                                        : "text-muted-foreground"
-                                            }`}
-                                        >
-                                            {stat.change}
-                                        </p>
-                                    </div>
-                                    {stat.trend === "up" && <TrendingUp className="h-8 w-8 text-green-600" />}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                <CardGrid cols={{ base: 1, sm: 2, lg: 4 }} gap="gap-6" className="mb-12">
+                  {quickStats.map((s, i) => (
+                    <StatCard
+                      key={i}
+                      label={s.label}
+                      value={s.value}
+                      change={s.change}
+                      trend={s.trend}
+                      icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-green-600" /> : undefined}
+                    />
+                  ))}
+                </CardGrid>
 
                 {/* Main Action Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">

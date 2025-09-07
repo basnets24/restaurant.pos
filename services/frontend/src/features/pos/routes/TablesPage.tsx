@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import type { TableViewDto, TableStatus } from "@/domain/tables/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardGrid } from "@/components/primitives/CardGrid";
+import { StatCard } from "@/components/primitives/StatCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Users, Clock, AlertTriangle, ZoomIn, ZoomOut } from "lucide-react";
@@ -69,12 +71,12 @@ export default function TablesPage() {
         <p className="text-sm text-muted-foreground">Right-click tables to manage seating and status</p>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Available" value={counts.available} icon={CheckCircle} className="text-emerald-600" />
-        <Stat label="Occupied" value={counts.occupied} icon={Users} className="text-rose-600" />
-        <Stat label="Reserved" value={counts.reserved} icon={Clock} className="text-amber-600" />
-        <Stat label="Need Cleaning" value={counts.dirty} icon={AlertTriangle} className="text-zinc-600" />
-      </div>
+      <CardGrid cols={{ base: 2, md: 4 }} gap="gap-3" className="mb-0">
+        <StatCard label="Available" value={counts.available} icon={<CheckCircle className="h-5 w-5 text-emerald-600" />} trend="neutral" />
+        <StatCard label="Occupied" value={counts.occupied} icon={<Users className="h-5 w-5 text-rose-600" />} trend="neutral" />
+        <StatCard label="Reserved" value={counts.reserved} icon={<Clock className="h-5 w-5 text-amber-600" />} trend="neutral" />
+        <StatCard label="Need Cleaning" value={counts.dirty} icon={<AlertTriangle className="h-5 w-5 text-zinc-600" />} trend="neutral" />
+      </CardGrid>
 
       <Card>
         <CardHeader className="flex items-center justify-between py-3">
@@ -179,16 +181,4 @@ function countByStatus(tables: TableViewDto[]) {
   return res;
 }
 
-function Stat({ label, value, icon: Icon, className }: { label: string; value: number; icon: React.ComponentType<{ className?: string }>; className?: string }) {
-  return (
-    <Card>
-      <CardContent className="py-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Icon className={`h-4 w-4 ${className ?? ""}`} />
-          <span>{label}</span>
-          <span className="ml-auto font-semibold">{value}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// Stat component replaced by shared StatCard

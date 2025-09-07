@@ -71,6 +71,8 @@ export default function MenuPage() {
   const { tableId = "" } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
   const location = useLocation() as { state?: { partySize?: number; cartId?: string } };
+  const search = new URLSearchParams(location.search);
+  const cartIdFromQuery = search.get("cartId") || undefined;
   const store = useStore();
 
   // Sidebar visibility
@@ -82,7 +84,7 @@ export default function MenuPage() {
   // Create or reuse a cart for this table
   const initialSession = store.getTableSession(tableId);
   const [cartId, setCartId] = useState<string | null>(
-    location.state?.cartId ?? initialSession?.cartId ?? null
+    location.state?.cartId ?? cartIdFromQuery ?? initialSession?.cartId ?? null
   );
   const createCart = useCreateCart();
   const linkOrder = useLinkOrder(tableId);

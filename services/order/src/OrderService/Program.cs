@@ -6,6 +6,7 @@ using OrderService.Entities;
 using Microsoft.OpenApi.Models;
 using OrderService;
 using OrderService.Auth;
+using OrderService.Extensions;
 using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
@@ -21,6 +22,7 @@ builder.Host.UseSerilog();
 builder.Services.AddMongo();
 builder.Services.AddTenancy();
 
+builder.Services.AddPosCatalogReadModel();
 builder.Services.AddTenantMongoRepository<Cart>("carts");
 builder.Services.AddTenantMongoRepository<DiningTable>("diningtables");
 builder.Services.AddTenantMongoRepository<InventoryItem>("inventoryitems");
