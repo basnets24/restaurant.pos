@@ -3,6 +3,9 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/api-authorization/AuthProvider";
+import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 import {
   LayoutDashboard,
   Table2,
@@ -50,6 +53,14 @@ export function PosHeader({
   rightExtra,
 }: PosHeaderProps) {
   const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
+  const displayName =
+    (profile as any)?.name ||
+    [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") ||
+    (profile as any)?.preferred_username ||
+    (profile as any)?.email ||
+    "User";
+  const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
   const routes = useMemo(
     () => ({
       dashboard: to?.dashboard ?? "/home",
@@ -149,17 +160,24 @@ export function PosHeader({
           <div className="flex items-center gap-2 sm:gap-3">
             {rightExtra}
             <Separator orientation="vertical" className="h-6 hidden sm:block" />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2"
-              onClick={() => navigate("/settings/account")}
-            >
-              <CircleUserRound className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <CircleUserRound className="h-4 w-4" />
+                  <span className="hidden sm:inline">{displayName}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
+                <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/settings/account")}>Profile</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </div>
+      </div>
 
         {/* Mobile nav row */}
         <div className="md:hidden pt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">

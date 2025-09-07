@@ -4,6 +4,10 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ArrowLeft, Home, BarChart3, Users, Package, Calendar, Utensils } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CircleUserRound } from "lucide-react";
+import { useAuth } from "@/api-authorization/AuthProvider";
+import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 
 type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations";
 
@@ -20,6 +24,14 @@ export type ManagementOutletContext = { userData: any };
 export default function ManagementLayout({ userData }: { userData?: any }) {
     const navigate = useNavigate();
     const { pathname } = useLocation();
+    const { profile, signOut } = useAuth();
+    const displayName =
+      (profile as any)?.name ||
+      [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") ||
+      (profile as any)?.preferred_username ||
+      (profile as any)?.email ||
+      "User";
+    const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
 
     // derive the active tab from the path: /management/<tab>
     const active = (pathname.split("/")[2] as ManagementTab) ?? "analytics";
@@ -53,11 +65,27 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" onClick={backToLanding} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-                                <Home className="h-4 w-4" />
-                                Home
-                            </Button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" onClick={backToLanding} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                              <Home className="h-4 w-4" />
+                              Home
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="gap-2">
+                                <CircleUserRound className="h-4 w-4" />
+                                <span className="hidden sm:inline">{displayName}</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
+                              <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => navigate("/settings/account")}>Profile</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                     </div>
                 </div>

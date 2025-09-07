@@ -8,12 +8,23 @@ import { fetchTables, setStatus, seatParty, saveLayout } from "../api/table";
 export function useTables() {
     const [tables, setTables] = useState<Table[]>([]);
     const connRef = useRef<HubConnection | null>(null);
+    const tenant = (window as any)?.POS_SHELL_AUTH?.getTenant?.();
 
-    useEffect(() => { fetchTables().then(setTables).catch(console.error); }, []);
+    // Only load tables after tenant context is available
+    useEffect(() => {
+        if (!tenant?.restaurantId) return;
+        fetchTables().then(setTables).catch(console.error);
+    }, [tenant?.restaurantId]);
 
     useEffect(() => {
+        if (!tenant?.restaurantId) return;
+
+        const params = new URLSearchParams();
+        params.set("restaurantId", tenant.restaurantId);
+        if (tenant.locationId) params.set("locationId", tenant.locationId);
+
         const c = new HubConnectionBuilder()
-            .withUrl(`${API_BASE}/hubs/floor`, { accessTokenFactory: () => getToken(), withCredentials: true })
+            .withUrl(`${API_BASE}/hubs/floor?${params.toString()}`, { accessTokenFactory: () => getToken(), withCredentials: true })
             .withAutomaticReconnect()
             .configureLogging(LogLevel.Warning)
             .build();
@@ -39,7 +50,7 @@ export function useTables() {
         c.start().catch(console.error);
         connRef.current = c;
         return () => { c.stop().catch(() => {}); connRef.current = null; };
-    }, []);
+    }, [tenant?.restaurantId, tenant?.locationId]);
 
     const updateStatus = useCallback(async (id: string, status: Table["status"], partySize?: number) => {
         await setStatus(id, status, partySize);

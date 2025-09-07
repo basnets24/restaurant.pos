@@ -30,6 +30,4 @@ export const ENV = {
 } as const;
 
 export const getToken = (): string | undefined =>
-    window.POS_SHELL_AUTH?.getToken?.() ??
-    localStorage.getItem("token") ??
-    undefined;
+    window.POS_SHELL_AUTH?.getToken?.() ?? undefined;

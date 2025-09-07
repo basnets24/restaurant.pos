@@ -15,6 +15,12 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
     if (!isReady) return null;
     if (!isAuthenticated) return <Navigate to={loginUrl} replace />;
 
+    // Tenant onboarding gate: if no restaurant claim, push to /join (except when already there)
+    const hasRestaurant = !!((profile as any)?.restaurant_id ?? (profile as any)?.restaurantId);
+    if (!hasRestaurant && loc.pathname !== "/join") {
+        return <Navigate to="/join" replace />;
+    }
+
     // Optional role gating
     if (roles && roles.length > 0) {
         const raw = (profile as any)?.role as string | string[] | undefined;

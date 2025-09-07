@@ -107,11 +107,11 @@ export default function SecurityPage() {
           </DialogHeader>
           <div className="grid gap-2 py-1">
             <label className="text-xs">Current Password</label>
-            <Input type="password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} />
+            <Input size="lg" type="password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} />
             <label className="text-xs">New Password</label>
-            <Input type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} />
+            <Input size="lg" type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} />
             <label className="text-xs">Confirm New Password</label>
-            <Input type="password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} />
+            <Input size="lg" type="password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPwOpen(false)}>Cancel</Button>

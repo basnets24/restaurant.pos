@@ -17,7 +17,7 @@ export const userManager = new UserManager({
     redirect_uri: `${origin}${AuthorizationPaths.LoginCallback}`,
     response_type: 'code',
     scope:
-        'openid profile menu.read menu.write inventory.read inventory.write order.read order.write payment.read payment.charge ' +
+        'openid profile tenancy menu.read menu.write inventory.read inventory.write order.read order.write payment.read payment.charge ' +
         'payment.refund IdentityServerApi roles',
     post_logout_redirect_uri: `${origin}${AuthorizationPaths.LogOutCallback}`,
     automaticSilentRenew: true,

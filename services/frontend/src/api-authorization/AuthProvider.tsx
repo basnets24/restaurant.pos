@@ -80,14 +80,23 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     const signIn = async (returnUrl?: string) => {
         try {
-            // Try silent first (if already logged in at the IdP)
-            const u = await userManager.signinSilent();
-            setFromUser(u);
-            if (returnUrl) window.location.replace(returnUrl);
+            // If we recently signed out, skip silent once to avoid auto SSO login via back button
+            const skipSilent = sessionStorage.getItem("auth.skipSilentOnce") === "1";
+            if (!skipSilent) {
+                // Try silent first (if already logged in at the IdP)
+                const u = await userManager.signinSilent();
+                setFromUser(u);
+                if (returnUrl) window.location.replace(returnUrl);
+                return;
+            } else {
+                sessionStorage.removeItem("auth.skipSilentOnce");
+            }
+            // Fall through to interactive login
         } catch {
             // Fall back to redirect; carry returnUrl in `state`
             await userManager.signinRedirect({
                 state: { returnUrl },
+                prompt: "login",
                 redirect_uri: `${window.location.origin}${AuthorizationPaths.LoginCallback}`,
             });
         }
@@ -103,6 +112,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     const signOut = async (returnUrl?: string) => {
+        // Signal to the next login attempt to skip silent once
+        try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch {}
         await userManager.signoutRedirect({
             state: { returnUrl },
             post_logout_redirect_uri: `${window.location.origin}${AuthorizationPaths.LogOutCallback}`,
@@ -113,6 +124,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const res = await userManager.signoutCallback(window.location.href);
         // clear local session
         setFromUser(undefined);
+        try { localStorage.removeItem('token'); } catch {}
 
         const to =
             (res?.state as any)?.returnUrl ??
@@ -126,8 +138,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     useEffect(() => {
-        window.POS_SHELL_AUTH = { getToken: () => accessToken };
-    }, [accessToken]);
+        window.POS_SHELL_AUTH = {
+            getToken: () => accessToken,
+            getTenant: () => {
+                const rid = (profile as any)?.restaurant_id ?? (profile as any)?.restaurantId;
+                const lid = (profile as any)?.location_id ?? (profile as any)?.locationId;
+                return rid ? { restaurantId: rid as string, locationId: (lid as string | undefined) } : undefined;
+            }
+        };
+    }, [accessToken, profile]);
     
 
     const value = useMemo<AuthState>(
@@ -149,8 +168,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 };
 
-export const useAuth = () => {
+export function useAuth() {
     const ctx = useContext(AuthCtx);
     if (!ctx) throw new Error('useAuth must be used within AuthProvider');
     return ctx;
-};
+}

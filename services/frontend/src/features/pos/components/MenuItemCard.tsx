@@ -51,8 +51,8 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
 
     return (
         <Card className="menu-item-card hover:shadow-lg transition-all duration-200 border-border bg-card group">
-            <CardContent className="p-4 sm:p-6 cursor-pointer" onClick={handleQuickAdd}>
-                <div className="mb-3 sm:mb-4">
+            <CardContent className="p-5 sm:p-7 cursor-pointer" onClick={handleQuickAdd}>
+                <div className="mb-4 sm:mb-5">
                     <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 sm:mb-3 leading-tight">
                         {item.name}
                     </h3>
@@ -68,7 +68,7 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                 )}
             </CardContent>
 
-            <CardFooter className="p-4 sm:p-6 pt-0 flex flex-col gap-3">
+            <CardFooter className="p-5 sm:p-7 pt-0 flex flex-col gap-4">
                 {/* Quantity Selector */}
                 <div className="flex items-center justify-between w-full">
                     <span className="text-sm text-muted-foreground">Quantity:</span>

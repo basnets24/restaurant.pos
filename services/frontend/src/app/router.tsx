@@ -9,7 +9,9 @@ import { ProtectedRoute } from "../api-authorization/ProtectedRoute";
 import LoginPage from "../api-authorization/LoginPage";
 import LogoutPage from "../api-authorization/LogoutPage";
 import LogoutCallbackPage from "../api-authorization/LogoutCallbackPage";
+import LoggedOutPage from "../api-authorization/LoggedOutPage";
 import LoginCallbackPage from "../api-authorization/LoginCallback";
+import RegisterPage from "../api-authorization/RegisterPage";
 
 // ---- Shared fallback ----
 const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</div>;
@@ -52,6 +54,7 @@ const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
+const JoinPage      = lazy(() => import("@/features/join/JoinPage"));
 
 export const router = createBrowserRouter([
   // ========= PUBLIC =========
@@ -59,11 +62,20 @@ export const router = createBrowserRouter([
 
   // Auth endpoints (public)
   { path: AuthorizationPaths.Login,           element: <LoginPage /> },
+  { path: AuthorizationPaths.Register,        element: <RegisterPage /> },
   { path: AuthorizationPaths.LoginCallback,   element: <LoginCallbackPage /> },
   { path: AuthorizationPaths.LogOut,          element: <LogoutPage /> },
   { path: AuthorizationPaths.LogOutCallback,  element: <LogoutCallbackPage /> },
+  { path: AuthorizationPaths.LoggedOut,       element: <LoggedOutPage /> },
 
   // ========= PROTECTED (everything from /home onward) =========
+  { path: "/join",
+    element: (
+      <ProtectedRoute>
+        <Suspense fallback={<Fallback />}><JoinPage /></Suspense>
+      </ProtectedRoute>
+    ),
+  },
   { path: "/home",
     element: (
       <ProtectedRoute>

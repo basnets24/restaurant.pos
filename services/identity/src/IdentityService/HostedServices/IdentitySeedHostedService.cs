@@ -50,8 +50,6 @@ public class IdentitySeedHostedService : IHostedService
             {
                 UserName = _settings.AdminUserEmail,
                 Email = _settings.AdminUserEmail,
-                RestaurantId = _settings.RestaurantId,
-                LocationId = _settings.LocationId,
                 EmailConfirmed = false
             };
             var result = await userManager.CreateAsync(admin, _settings.AdminUserPassword);

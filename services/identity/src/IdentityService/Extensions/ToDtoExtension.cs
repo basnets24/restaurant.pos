@@ -23,8 +23,6 @@ public static class ToDtoExtension
             AccessFailedCount: user.AccessFailedCount,
             TwoFactorEnabled: user.TwoFactorEnabled,
             LockoutEnd: user.LockoutEnd,
-            RestaurantId: user.RestaurantId,
-            LocationId : user.LocationId, 
             Roles: roles
         );
     

@@ -31,8 +31,6 @@ public record UserDetailDto(
     int AccessFailedCount,
     bool TwoFactorEnabled,
     DateTimeOffset? LockoutEnd,
-    string RestaurantId,
-    string LocationId,
     IEnumerable<string> Roles
 );
 
@@ -47,17 +45,12 @@ public class UserUpdateDto
     // Use string to keep leading zeros; enforce 4–6 digits
     [RegularExpression(@"^\d{4,6}$")]
     public string? AccessCode { get; set; }
-
     [StringLength(64)]
     public string? DisplayName { get; set; }
-
     public bool? LockoutEnabled { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
-
     public bool? TwoFactorEnabled { get; set; }
-
-    public required string RestaurantId { get; set; }
-    public  required string LocationId { get; set; }
+    
     
 }
 

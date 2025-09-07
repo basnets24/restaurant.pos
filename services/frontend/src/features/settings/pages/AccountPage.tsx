@@ -124,11 +124,11 @@ export default function AccountPage() {
           </DialogHeader>
           <div className="grid gap-3 py-2">
             <label className="text-xs">Operating Hours</label>
-            <Input value={draft.operatingHours} onChange={(e) => setDraft({ ...draft, operatingHours: e.target.value })} />
+            <Input size="lg" value={draft.operatingHours} onChange={(e) => setDraft({ ...draft, operatingHours: e.target.value })} />
             <label className="text-xs">Tax Rate (%)</label>
-            <Input type="number" step="0.01" value={draft.taxRatePct} onChange={(e) => setDraft({ ...draft, taxRatePct: Number(e.target.value) })} />
+            <Input size="lg" type="number" step="0.01" value={draft.taxRatePct} onChange={(e) => setDraft({ ...draft, taxRatePct: Number(e.target.value) })} />
             <label className="text-xs">Currency</label>
-            <Input value={draft.currencyCode} onChange={(e) => setDraft({ ...draft, currencyCode: e.target.value })} />
+            <Input size="lg" value={draft.currencyCode} onChange={(e) => setDraft({ ...draft, currencyCode: e.target.value })} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

@@ -10,6 +10,5 @@ public class ApplicationUser : IdentityUser<Guid>
     [StringLength(64)]
     public string? DisplayName { get; set; }
     
-    public string RestaurantId { get; set; } = default!;
-    public string LocationId { get; set; } = default!;
+    
 }

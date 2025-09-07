@@ -12,19 +12,23 @@ import {
 } from "lucide-react";
 import { useTables } from "../hooks/useTables";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
 interface LandingPageProps { onGetStarted?: () => void; }
 
 export default function LandingView({ onGetStarted }: LandingPageProps) {
     const navigate = useNavigate();
-    const { isAuthenticated, signIn } = useAuth();
+    const { isAuthenticated } = useAuth();
+    const register = () => {
+        const desired = "/join"; // send to onboarding after auth
+        const returnUrl = `${window.location.origin}${desired}`;
+        navigate(`${AuthorizationPaths.Register}?${QueryParameterNames.ReturnUrl}=${encodeURIComponent(returnUrl)}`);
+    };
     const { tables } = useTables();
     const go = () => {
         if (onGetStarted) return onGetStarted();
-        if (isAuthenticated) return navigate("/home");
-        const desired = "/home"; // return to home after login when unauthenticated
-        const returnUrl = `${window.location.origin}${desired}`;
-        void signIn(returnUrl);
+        if (isAuthenticated) return navigate("/join");
+        register();
     };
 
     const features = [

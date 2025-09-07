@@ -19,6 +19,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Duende.IdentityServer.Services;
 
 namespace IdentityService.Areas.Identity.Pages.Account
 {
@@ -30,13 +32,17 @@ namespace IdentityService.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailSender _emailSender;
+        private readonly IConfiguration _config;
+        private readonly IIdentityServerInteractionService _interaction;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            IConfiguration config,
+            IIdentityServerInteractionService interaction)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -44,6 +50,8 @@ namespace IdentityService.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailSender = emailSender;
+            _config = config;
+            _interaction = interaction;
         }
 
         /// <summary>
@@ -142,7 +150,26 @@ namespace IdentityService.Areas.Identity.Pages.Account
                     else
                     {
                         await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnUrl);
+
+                        // Prefer resuming OIDC if a valid returnUrl was supplied
+                        if (!string.IsNullOrWhiteSpace(returnUrl) &&
+                            (_interaction.IsValidReturnUrl(returnUrl) || Url.IsLocalUrl(returnUrl)))
+                        {
+                            return LocalRedirect(returnUrl);
+                        }
+
+                        // Fallback: send to SPA login with a join redirect
+                        var origins = _config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+                        var baseUrl = origins.FirstOrDefault() ?? string.Empty;
+                        if (!string.IsNullOrEmpty(baseUrl))
+                        {
+                            if (baseUrl.EndsWith('/')) baseUrl = baseUrl.TrimEnd('/');
+                            var join = $"{baseUrl}/join";
+                            var login = $"{baseUrl}/authentication/login?returnUrl={Uri.EscapeDataString(join)}";
+                            return Redirect(login);
+                        }
+
+                        return LocalRedirect("~/");
                     }
                 }
                 foreach (var error in result.Errors)

@@ -1,10 +1,16 @@
 import type { Table } from "../types/tables";
 import { API_BASE, getToken } from "../lib/config";
 
-const h = () => ({
-    Authorization: `Bearer ${getToken()}`,
-    "Content-Type": "application/json",
-});
+const h = () => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json",
+    };
+    const tenant = (window as any)?.POS_SHELL_AUTH?.getTenant?.();
+    if (tenant?.restaurantId) headers["x-restaurant-id"] = tenant.restaurantId;
+    if (tenant?.locationId) headers["x-location-id"] = tenant.locationId;
+    return headers;
+};
 
 export async function fetchTables(): Promise<Table[]> {
     const r = await fetch(`${API_BASE}/tables/layout`, { headers: h() });
