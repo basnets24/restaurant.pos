@@ -19,10 +19,8 @@ public static class IdentityServerExtensions
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseInformationEvents = true;
                 options.Events.RaiseSuccessEvents = true;
-                // Ensure local API tokens carry the static audience 'urn:identityserver:identityserver'
                 options.EmitStaticAudienceClaim = true;
                 
-
                 // Persist & rotate signing keys here (ensure a writable path in container)
                 // options.KeyManagement.KeyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 // options.KeyManagement.Enabled = true; // default is true in recent Duende
@@ -34,9 +32,7 @@ public static class IdentityServerExtensions
             .AddInMemoryClients(idp.Clients)
             .AddDeveloperSigningCredential()
             .AddProfileService<Services.TenantProfileService>();
-
-        // if you need custom claims (roles, etc.), add a ProfileService here.
-        // builder.AddProfileService<YourProfileService>();
+         
         return services;
     }
 

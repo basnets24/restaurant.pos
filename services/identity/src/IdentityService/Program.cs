@@ -11,13 +11,6 @@ var builder = WebApplication.CreateBuilder(args);
 //services
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
-// builder.Host.UseSerilog((ctx, services, cfg) =>
-// {
-//     // Use the preconfigured logger from AddSeqLogging, but allow override
-//     cfg.ReadFrom.Configuration(ctx.Configuration)
-//        .ReadFrom.Services(services)
-//        .Enrich.FromLogContext();
-// });
 
 builder.Services.AddPostgresWithIdentity(builder.Configuration);
 builder.Services.AddRestaurantPosIdentityServer(builder.Configuration);

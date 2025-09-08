@@ -67,11 +67,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(corsPolicy);
 }
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseCors(corsPolicy);
 app.UseApiProblemDetails();
 app.UseAuthentication();
 app.UseAuthorization();

@@ -31,10 +31,6 @@ public class IdentitySeedHostedService : IHostedService
         var roles = new[]
         {
             Roles.Admin, 
-            Roles.Server, 
-            Roles.Chef,
-            Roles.Manager,
-            Roles.Cashier
         };
         
         foreach (var role in roles)
@@ -50,6 +46,8 @@ public class IdentitySeedHostedService : IHostedService
             {
                 UserName = _settings.AdminUserEmail,
                 Email = _settings.AdminUserEmail,
+                CurrentRestaurantId = _settings.RestaurantId,
+                CurrentLocationId = _settings.LocationId,
                 EmailConfirmed = false
             };
             var result = await userManager.CreateAsync(admin, _settings.AdminUserPassword);

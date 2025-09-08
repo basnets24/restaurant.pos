@@ -3,13 +3,16 @@ using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Menu;
 using MongoDB.Driver;
+using MongoDB.Bson.Serialization.Attributes;
 
 // Adjust the namespace to your service
 namespace OrderService.Projections
 {
     // Compact POS read model (unified on MenuItemId)
+    [BsonIgnoreExtraElements]
     public sealed class PosCatalogItem
     {
+        [BsonId]
         public Guid   MenuItemId      { get; set; }
         public string RestaurantId    { get; set; } = default!;
         public string? LocationId     { get; set; }

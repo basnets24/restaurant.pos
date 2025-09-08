@@ -138,7 +138,7 @@ function AddEmployeeButton({ rid, roles, locations }: { rid: string; roles: stri
     <>
       <Button onClick={() => setOpen(true)} variant="outline">+ Add</Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-xl md:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Employee</DialogTitle>
           </DialogHeader>

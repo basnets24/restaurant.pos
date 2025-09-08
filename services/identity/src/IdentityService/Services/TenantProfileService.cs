@@ -25,7 +25,7 @@ public class
 
     public async Task GetProfileDataAsync(ProfileDataRequestContext context)
     {
-        var subjectId = context.Subject.FindFirstValue(ClaimTypes.NameIdentifier);
+        var subjectId = context.Subject.FindFirstValue("sub");
         if (string.IsNullOrWhiteSpace(subjectId) || !Guid.TryParse(subjectId, out var userId))
             return;
 
@@ -67,7 +67,8 @@ public class
             if (!string.IsNullOrEmpty(locId))
                 context.IssuedClaims.Add(new Claim(LocationIdClaim, locId));
         }
-
+        
+        context.IssuedClaims.RemoveAll(c => c.Type == "role");
         if (wantRoles)
         {
             var rid = membership.RestaurantId;
