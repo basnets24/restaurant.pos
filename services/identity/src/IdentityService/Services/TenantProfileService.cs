@@ -16,7 +16,8 @@ public class
     public const string RestaurantIdClaim = "restaurant_id";
     public const string LocationIdClaim = "location_id";
 
-    public TenantProfileService(TenantDbContext tenantDb, ILogger<TenantProfileService> logger)
+    public TenantProfileService(TenantDbContext tenantDb, 
+        ILogger<TenantProfileService> logger)
     {
         _tenantDb = tenantDb;
         _logger = logger;
@@ -31,8 +32,9 @@ public class
         var requested = context.RequestedClaimTypes?.ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
         var wantRestaurant = requested.Count == 0 || requested.Contains(RestaurantIdClaim);
         var wantLocation = requested.Count == 0 || requested.Contains(LocationIdClaim);
+        var wantRoles = requested.Count == 0 || requested.Contains("role");
 
-        if (!wantRestaurant && !wantLocation)
+        if (!wantRestaurant && !wantLocation && !wantRoles)
             return;
 
         var membership = await _tenantDb.RestaurantMemberships
@@ -66,7 +68,23 @@ public class
                 context.IssuedClaims.Add(new Claim(LocationIdClaim, locId));
         }
 
-        _logger.LogDebug("Issued tenant claims for user {UserId}: restaurant_id={RestaurantId} location_id={LocationId}", userId, membership.RestaurantId, context.IssuedClaims.FirstOrDefault(c => c.Type == LocationIdClaim)?.Value);
+        if (wantRoles)
+        {
+            var rid = membership.RestaurantId;
+            var roles = await _tenantDb.RestaurantUserRoles
+                .AsNoTracking()
+                .Where(r => r.UserId == userId && r.RestaurantId == rid)
+                .Select(r => r.RoleName)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var role in roles)
+                context.IssuedClaims.Add(new Claim("role", role));
+        }
+
+        _logger.LogDebug("Issued tenant claims for user {UserId}: restaurant_id={RestaurantId} location_id={LocationId}", 
+            userId, membership.RestaurantId, 
+            context.IssuedClaims.FirstOrDefault(c => c.Type == LocationIdClaim)?.Value);
     }
 
     public Task IsActiveAsync(IsActiveContext context)

@@ -31,6 +31,7 @@ import {
     Building2,
 } from "lucide-react";
 import StaffUsersCard from "./StaffUsersCard";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
 import InventoryStockCard from "./InventoryStockCard.tsx";
 import MenuItemsCard from "./MenuItemsCard.tsx";
 interface ManagementViewProps {
@@ -44,6 +45,7 @@ export default function ManagementView({
                                            onBackToDashboard,
                                            onBackToLanding,
                                        }: ManagementViewProps) {
+    const { restaurantName: nameFromTenant } = useTenantInfo();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"analytics" | "staff" | "inventory" | "reservations" | "settings">("analytics");
 
@@ -100,7 +102,7 @@ export default function ManagementView({
                                 </div>
                                 <div>
                                     <h1 className="text-lg font-bold text-foreground">Management Dashboard</h1>
-                                    <p className="text-sm text-muted-foreground">{userData.restaurantName}</p>
+                                    <p className="text-sm text-muted-foreground">{nameFromTenant ?? userData.restaurantName}</p>
                                 </div>
                             </div>
                         </div>

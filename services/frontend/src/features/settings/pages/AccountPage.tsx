@@ -1,141 +1,230 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
+import { useTenant } from "@/app/TenantContext";
+import { useEmployeeDomain } from "@/domain/employee/Provider";
+import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog as Modal, DialogContent as ModalContent, DialogHeader as ModalHeader, DialogTitle as ModalTitle, DialogFooter as ModalFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Building2, User, Phone } from "lucide-react";
-
-type RestaurantProfile = {
-  operatingHours: string;
-  taxRatePct: number; // 8.25 → 8.25
-  currencyCode: string; // USD ($)
-};
-
-const LS_KEY = "settings.restaurant.profile.v1";
-
-function readProfile(): RestaurantProfile {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { operatingHours: "Mon–Sun: 11:00 AM – 10:00 PM", taxRatePct: 8.25, currencyCode: "USD ($)" };
-    const p = JSON.parse(raw);
-    return {
-      operatingHours: p.operatingHours ?? "Mon–Sun: 11:00 AM – 10:00 PM",
-      taxRatePct: Number(p.taxRatePct ?? 8.25),
-      currencyCode: p.currencyCode ?? "USD ($)",
-    };
-  } catch {
-    return { operatingHours: "Mon–Sun: 11:00 AM – 10:00 PM", taxRatePct: 8.25, currencyCode: "USD ($)" };
-  }
-}
-
-function writeProfile(p: RestaurantProfile) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(p)); } catch {}
-}
+import { User } from "lucide-react";
 
 export default function AccountPage() {
   const { profile } = useAuth();
-  const display = useMemo(() => {
-    const restaurantName = (profile as any)?.restaurant_name || (profile as any)?.restaurantName || "Demo Restaurant";
-    const ownerName = (profile as any)?.name || [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") || "Demo User";
-    const phone = (profile as any)?.phone_number || (profile as any)?.phone || "(555) 123-4567";
-    return { restaurantName, ownerName, phone };
-  }, [profile]);
+  const { restaurantName: nameFromTenant } = useTenantInfo();
+  const { rid } = useTenant();
+  const employee = useEmployeeDomain();
+  const rp = useRestaurantUserProfile();
+  const userId = (profile as any)?.sub as string | undefined;
+  const employeeDetail = employee.useEmployee(rid ?? "", userId ?? "", { enabled: !!rid && !!userId });
+  const locs = useTenantInfo().locations ?? [];
+  const updateEmp = employee.useUpdateEmployee(rid ?? "", userId ?? "");
+  const updateDefaultLoc = employee.useUpdateDefaultLocation(rid ?? "", userId ?? "");
+  const [defaultLocDraft, setDefaultLocDraft] = useState<string | "">("");
+  const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
+  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
+  const canAdmin = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
-  const [cfg, setCfg] = useState<RestaurantProfile>(() => readProfile());
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<RestaurantProfile>(cfg);
+  // Edit employee modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUserName, setEditUserName] = useState<string>("");
+  const [editDisplayName, setEditDisplayName] = useState<string>("");
+  const [editEmail, setEditEmail] = useState<string>("");
+  const [editAccessCode, setEditAccessCode] = useState<string>("");
+  const [editError, setEditError] = useState<string | undefined>();
+  const onOpenEdit = () => {
+    const d = employeeDetail.data;
+    setEditUserName(d?.userName ?? "");
+    setEditDisplayName(d?.displayName ?? "");
+    setEditEmail(d?.email ?? "");
+    setEditAccessCode("");
+    setEditError(undefined);
+    setEditOpen(true);
+  };
+  const onSaveEdit = async () => {
+    if (!rid || !userId) return;
+    setEditError(undefined);
+    try {
+      await updateEmp.mutateAsync({
+        userName: editUserName || null,
+        displayName: editDisplayName || null,
+        email: editEmail || null,
+        accessCode: editAccessCode || null,
+      });
+      setEditOpen(false);
+    } catch (e: any) {
+      setEditError(e?.message ?? "Failed to update profile");
+    }
+  };
+  const display = useMemo(() => {
+    const ownerName = (profile as any)?.name || [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") || (profile as any)?.preferred_username || (profile as any)?.email || "User";
+    return { ownerName };
+  }, [profile]);
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Restaurant Settings</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Restaurant Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Restaurant Information</CardTitle>
-            <CardDescription>Basic information about your restaurant</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center">
-                <Building2 className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <div className="font-medium">{display.restaurantName}</div>
-                <div className="text-xs text-muted-foreground">Restaurant Name</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <div className="font-medium">{display.ownerName}</div>
-                <div className="text-xs text-muted-foreground">Owner/Manager</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center">
-                <Phone className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <div className="font-medium">{display.phone}</div>
-                <div className="text-xs text-muted-foreground">Phone Number</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <h2 className="text-xl font-semibold">My Profile</h2>
 
-        {/* System Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">System Settings</CardTitle>
-            <CardDescription>Configure your restaurant management system</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Operating Hours</span>
-              <span className="font-medium">{cfg.operatingHours}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax Rate</span>
-              <span className="font-medium">{cfg.taxRatePct.toFixed(2)}%</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Currency</span>
-              <span className="font-medium">{cfg.currencyCode}</span>
-            </div>
-
-            <div className="pt-2">
-              <Button variant="secondary" className="w-full" onClick={() => { setDraft(cfg); setOpen(true); }}>
-                Edit Settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Edit dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit System Settings</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
-            <label className="text-xs">Operating Hours</label>
-            <Input size="lg" value={draft.operatingHours} onChange={(e) => setDraft({ ...draft, operatingHours: e.target.value })} />
-            <label className="text-xs">Tax Rate (%)</label>
-            <Input size="lg" type="number" step="0.01" value={draft.taxRatePct} onChange={(e) => setDraft({ ...draft, taxRatePct: Number(e.target.value) })} />
-            <label className="text-xs">Currency</label>
-            <Input size="lg" value={draft.currencyCode} onChange={(e) => setDraft({ ...draft, currencyCode: e.target.value })} />
+      {/* Basic profile (display name) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Account</CardTitle>
+          <CardDescription>Update your basic profile</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-1.5 max-w-md">
+            <label className="text-xs">Display name</label>
+            <DisplayNameEditor
+              valueFromDetail={employeeDetail.data?.displayName ?? ""}
+              onSave={async (name) => {
+                if (!rid || !userId) return;
+                await updateEmp.mutateAsync({ displayName: name || null });
+              }}
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => { setCfg(draft); writeProfile(draft); setOpen(false); }}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="text-xs text-muted-foreground">Signed in as: {display.ownerName}</div>
+        </CardContent>
+      </Card>
+
+      {/* Employee (tenant) profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">My Employee Profile</CardTitle>
+          <CardDescription>Tenant-specific details</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {employeeDetail.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
+          {employeeDetail.data && (
+            <>
+              <div className="flex items-start gap-6">
+                <div>
+                  <div className="text-xs text-muted-foreground">UserId</div>
+                  <div className="font-mono text-xs">{employeeDetail.data.userId}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Email</div>
+                  <div className="text-sm">{employeeDetail.data.email ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">User Name</div>
+                  <div className="text-sm">{employeeDetail.data.userName ?? "—"}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-6">
+                <div>
+                  <div className="text-xs text-muted-foreground">Email Confirmed</div>
+                  <div className="text-sm">{employeeDetail.data.emailConfirmed ? "Yes" : "No"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Locked Out</div>
+                  <div className="text-sm">{employeeDetail.data.lockedOut ? "Yes" : "No"}</div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-xs text-muted-foreground">Default Location</div>
+                <div className="text-sm">
+                  {(() => {
+                    const id = employeeDetail.data?.defaultLocationId ?? null;
+                    if (!id) return "—";
+                    const match = locs.find(l => l.id === id);
+                    return match ? `${match.name} (${id})` : id;
+                  })()}
+                </div>
+                {locs.length > 0 && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Select value={defaultLocDraft} onValueChange={(v) => setDefaultLocDraft(v)}>
+                      <SelectTrigger className="w-72">
+                        <SelectValue placeholder="Change default location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locs.map(l => (
+                          <SelectItem key={l.id} value={l.id}>{l.name} ({l.id.slice(0,8)}…)</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        if (!defaultLocDraft) return;
+                        try { await updateDefaultLoc.mutateAsync({ defaultLocationId: defaultLocDraft }); setDefaultLocDraft(""); } catch {}
+                      }}
+                      disabled={updateDefaultLoc.isPending || !defaultLocDraft}
+                    >Save</Button>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Tenant Roles</div>
+                {employeeDetail.data.tenantRoles.length === 0 ? (
+                  <div className="text-sm">—</div>
+                ) : (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {employeeDetail.data.tenantRoles.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {canAdmin && (
+            <div className="pt-2">
+              <Button variant="secondary" onClick={onOpenEdit} disabled={!employeeDetail.data}>Edit Profile</Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Employee Modal */}
+      <Modal open={editOpen} onOpenChange={setEditOpen}>
+        <ModalContent>
+          <ModalHeader>
+            <ModalTitle>Edit Profile</ModalTitle>
+          </ModalHeader>
+          <div className="grid gap-3 py-2">
+            {editError && <div className="text-sm text-red-600">{editError}</div>}
+            <label className="text-xs">User name</label>
+            <Input size="lg" value={editUserName} onChange={(e) => setEditUserName(e.target.value)} />
+            <label className="text-xs">Display name</label>
+            <Input size="lg" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} />
+            <label className="text-xs">Email</label>
+            <Input size="lg" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            <label className="text-xs">Access code (4–6 digits)</label>
+            <Input size="lg" value={editAccessCode} onChange={(e) => setEditAccessCode(e.target.value)} placeholder="Optional" />
+          </div>
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={onSaveEdit} disabled={updateEmp.isPending}>Save</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Tenant role management removed from user account page */}
+
+      {/* Removed app-wide system settings from user account page */}
+    </div>
+  );
+}
+
+function DisplayNameEditor({ valueFromDetail, onSave }: { valueFromDetail: string; onSave: (name: string) => Promise<void> }) {
+  const [name, setName] = useState<string>(valueFromDetail ?? "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | undefined>();
+  useEffect(() => { setName(valueFromDetail ?? ""); }, [valueFromDetail]);
+  const submit = async () => {
+    setMsg(undefined); setSaving(true);
+    try { await onSave(name.trim()); setMsg("Saved."); }
+    catch (e: any) { setMsg(e?.message ?? "Failed to save"); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <Input size="lg" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your display name" className="max-w-xs" />
+      <Button onClick={submit} disabled={saving}>Save</Button>
+      {msg && <div className="text-xs text-muted-foreground ml-2">{msg}</div>}
     </div>
   );
 }

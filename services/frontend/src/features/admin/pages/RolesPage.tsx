@@ -1,117 +1,167 @@
-import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Users, Pencil, Trash2, Shield } from "lucide-react";
-
-type Role = { id: string; name: string; members: number; description?: string; updatedAt: string; permissions: string[] };
-const LS = "admin.roles.v1";
-
-const SAMPLE: Role[] = [
-  { id: "1", name: "Manager", members: 4, description: "Full access to management", updatedAt: new Date().toISOString(), permissions: ["orders:read","orders:write","tables:manage","staff:manage"] },
-  { id: "2", name: "Server", members: 12, description: "Take orders and payments", updatedAt: new Date().toISOString(), permissions: ["orders:read","orders:write","tables:read"] },
-  { id: "3", name: "Host", members: 3, description: "Seat guests, manage tables", updatedAt: new Date().toISOString(), permissions: ["tables:read","tables:manage"] },
-];
-
-function read(): Role[] { try { const raw = localStorage.getItem(LS); return raw ? JSON.parse(raw) : SAMPLE; } catch { return SAMPLE; } }
-function write(v: Role[]) { try { localStorage.setItem(LS, JSON.stringify(v)); } catch {} }
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Shield } from "lucide-react";
+import { useTenant } from "@/app/TenantContext";
+import { useEmployeeDomain } from "@/domain/employee/Provider";
+import { useState } from "react";
+import { useAuth } from "@/api-authorization/AuthProvider";
+import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<Role[]>(() => read());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const selected = useMemo(() => roles.find(r => r.id === selectedId) ?? null, [roles, selectedId]);
-
-  const addRole = () => {
-    const id = Math.random().toString(36).slice(2, 9);
-    const r: Role = { id, name: "New Role", members: 0, description: "", updatedAt: new Date().toISOString(), permissions: [] };
-    const next = [...roles, r]; setRoles(next); write(next); setSelectedId(id);
-  };
-  const removeRole = (id: string) => { const next = roles.filter(r => r.id !== id); setRoles(next); write(next); if (selectedId === id) setSelectedId(null); };
-  const rename = (id: string, name: string) => { const next = roles.map(r => r.id === id ? { ...r, name, updatedAt: new Date().toISOString() } : r); setRoles(next); write(next); };
+  const { rid } = useTenant();
+  const employee = useEmployeeDomain();
+  const roles = employee.useAvailableRoles(rid ?? "", { enabled: !!rid });
+  const [openRole, setOpenRole] = useState<string | null>(null);
+  const { profile } = useAuth();
+  const rp = useRestaurantUserProfile();
+  const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
+  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
+  const canManage = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
   return (
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3"><Shield className="h-5 w-5" /><h2 className="text-lg font-semibold">Roles & Permissions</h2></div>
-        <Button onClick={addRole}>+ Create Role</Button>
+        <div className="text-sm text-muted-foreground">{roles.data?.length ?? 0} roles</div>
       </header>
+      <div className="text-xs text-muted-foreground">Use Settings → Account to manage your roles.</div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left: roles list */}
-        <div className="lg:col-span-1 space-y-3">
-          {roles.map(r => (
-            <Card key={r.id} className={`cursor-pointer ${selectedId===r.id?"ring-1 ring-primary":''}`} onClick={() => setSelectedId(r.id)}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-medium">{r.name}</div>
-                    <div className="text-xs text-muted-foreground">{r.members} members • Updated {new Date(r.updatedAt).toLocaleDateString()}</div>
-                    {r.description && <div className="text-xs mt-1">{r.description}</div>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); const name = prompt("Rename role", r.name) ?? r.name; rename(r.id, name); }}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" className="text-destructive" onClick={(e) => { e.stopPropagation(); if (confirm("Delete role?")) removeRole(r.id); }}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </div>
+      {roles.isLoading ? (
+        <div className="text-sm text-muted-foreground">Loading roles…</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(roles.data ?? []).map((name) => (
+            <Card key={name}>
+              <CardHeader>
+                <CardTitle className="text-base">{name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {canManage && (
+                  <Button size="sm" variant="outline" onClick={() => setOpenRole(name)}>Manage members</Button>
+                )}
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {/* Right: permissions details */}
-        <div className="lg:col-span-2">
-          {!selected ? (
+          {roles.data && roles.data.length === 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Select a role to configure permissions</CardTitle>
-                <CardDescription>Choose from the list to view and edit permissions</CardDescription>
+                <CardTitle className="text-base">No roles available</CardTitle>
+                <CardDescription>Roles will appear here when configured</CardDescription>
               </CardHeader>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{selected.name} — Permissions</CardTitle>
-                <CardDescription>Toggle capabilities for this role</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {PERMS.map(p => (
-                  <div key={p.key} className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-sm">{p.label}</div>
-                      <div className="text-xs text-muted-foreground">{p.desc}</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={selected.permissions.includes(p.key)}
-                      onChange={(e) => {
-                        const next = roles.map(r => r.id === selected.id
-                          ? { ...r, permissions: e.target.checked ? [...new Set([...r.permissions, p.key])] : r.permissions.filter(x => x !== p.key), updatedAt: new Date().toISOString() }
-                          : r);
-                        setRoles(next); write(next);
-                      }}
-                    />
-                  </div>
-                ))}
-                <Separator />
-                <div className="flex items-center gap-2">
-                  <div className="text-xs text-muted-foreground">Role ID:</div>
-                  <div className="text-xs font-mono">{selected.id}</div>
-                </div>
-              </CardContent>
             </Card>
           )}
         </div>
-      </div>
+      )}
+
+      {canManage && <RoleMembersModal roleName={openRole} onClose={() => setOpenRole(null)} />}
     </div>
   );
 }
 
-const PERMS = [
-  { key: "orders:read", label: "View Orders", desc: "See all orders" },
-  { key: "orders:write", label: "Modify Orders", desc: "Create and edit orders" },
-  { key: "tables:read", label: "View Tables", desc: "View floor plan and statuses" },
-  { key: "tables:manage", label: "Manage Tables", desc: "Seat, clear, and edit layout" },
-  { key: "staff:manage", label: "Manage Staff", desc: "Invite, deactivate, and change roles" },
-];
+function RoleMembersModal({ roleName, onClose }: { roleName: string | null; onClose: () => void }) {
+  const { rid } = useTenant();
+  const employee = useEmployeeDomain();
+  const [q, setQ] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const list = employee.useEmployees(
+    rid ?? "",
+    { q: q || undefined, role: showAll ? undefined : roleName ?? undefined, page, pageSize },
+    { enabled: !!rid && !!roleName }
+  );
+
+  const items = list.data?.items ?? [];
+  const total = list.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  return (
+    <Dialog open={!!roleName} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Manage members — {roleName}</DialogTitle>
+        </DialogHeader>
+        {!roleName ? null : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+              <div className="grid gap-1.5 md:col-span-2">
+                <Label>Search employees</Label>
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="name, email, username" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>&nbsp;</Label>
+                <Button variant="outline" onClick={() => { setPage(1); list.refetch(); }}>Search</Button>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Showing {showAll ? "all employees" : "current members"}.&nbsp;
+              <button className="underline" onClick={() => { setShowAll(v => !v); setPage(1); }}>Switch</button>
+            </div>
+
+            <div className="rounded-2xl border p-2 max-h-[420px] overflow-auto">
+              {list.isLoading && <div className="p-3 text-sm text-muted-foreground">Loading…</div>}
+              {!list.isLoading && items.length === 0 && <div className="p-3 text-sm text-muted-foreground">No employees</div>}
+              {!list.isLoading && items.map(e => (
+                <RoleMemberRow
+                  key={e.userId}
+                  rid={rid ?? ""}
+                  roleName={roleName}
+                  userId={e.userId}
+                  displayName={e.displayName || e.userName || "(no name)"}
+                  email={e.email ?? "—"}
+                  hasRole={(e.tenantRoles ?? []).includes(roleName)}
+                  onChanged={() => list.refetch()}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-sm opacity-70">{total.toLocaleString()} employees</div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</Button>
+                <div className="min-w-[6rem] text-center text-sm">Page {page} / {totalPages}</div>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RoleMemberRow({ rid, roleName, userId, displayName, email, hasRole, onChanged }: {
+  rid: string;
+  roleName: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  hasRole: boolean;
+  onChanged: () => void;
+}) {
+  const employee = useEmployeeDomain();
+  const addRoles = employee.useUpdateEmployeeRoles(rid, userId);
+  const removeRole = employee.useDeleteEmployeeRole(rid, userId);
+  const onAdd = async () => { await addRoles.mutateAsync({ roles: [roleName] }); onChanged(); };
+  const onRemove = async () => { await removeRole.mutate(roleName); onChanged(); };
+  return (
+    <div className="flex items-center justify-between p-2 rounded hover:bg-muted/40">
+      <div>
+        <div className="text-sm font-medium">{displayName}</div>
+        <div className="text-xs text-muted-foreground">{email}</div>
+      </div>
+      <div>
+        {hasRole ? (
+          <Button size="sm" variant="destructive" onClick={onRemove} disabled={removeRole.isPending}>Remove</Button>
+        ) : (
+          <Button size="sm" onClick={onAdd} disabled={addRoles.isPending}>Add</Button>
+        )}
+      </div>
+    </div>
+  );
+}

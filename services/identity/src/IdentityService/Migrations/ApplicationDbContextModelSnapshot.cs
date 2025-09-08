@@ -65,6 +65,12 @@ namespace IdentityService.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<string>("CurrentLocationId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CurrentRestaurantId")
+                        .HasColumnType("text");
+
                     b.Property<string>("DisplayName")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");

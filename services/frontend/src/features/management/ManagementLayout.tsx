@@ -5,9 +5,11 @@ import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ArrowLeft, Home, BarChart3, Users, Package, Calendar, Utensils } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CircleUserRound } from "lucide-react";
+import { CircleUserRound, User, Shield, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
 
 type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations";
 
@@ -24,13 +26,9 @@ export type ManagementOutletContext = { userData: any };
 export default function ManagementLayout({ userData }: { userData?: any }) {
     const navigate = useNavigate();
     const { pathname } = useLocation();
-    const { profile, signOut } = useAuth();
-    const displayName =
-      (profile as any)?.name ||
-      [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") ||
-      (profile as any)?.preferred_username ||
-      (profile as any)?.email ||
-      "User";
+    const { signOut } = useAuth();
+    const { restaurantName: nameFromTenant } = useTenantInfo();
+    const { displayName } = useUserDisplayName();
     const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
 
     // derive the active tab from the path: /management/<tab>
@@ -60,7 +58,7 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
                                 </div>
                                 <div>
                                     <h1 className="text-lg font-bold text-foreground">Management Dashboard</h1>
-                                    <p className="text-sm text-muted-foreground">{userData?.restaurantName}</p>
+                                    <p className="text-sm text-muted-foreground">{nameFromTenant ?? userData?.restaurantName}</p>
                                 </div>
                             </div>
                         </div>
@@ -81,9 +79,19 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
                               <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
                               <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => navigate("/settings/account")}>Profile</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate("/settings/account")}>
+                                <User className="h-4 w-4 mr-2" /> Account
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate("/settings/security")}>
+                                <Shield className="h-4 w-4 mr-2" /> Security
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate("/settings/notifications")}>
+                                <Bell className="h-4 w-4 mr-2" /> Notifications
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
+                              <DropdownMenuItem onClick={onLogout}>
+                                <LogOut className="h-4 w-4 mr-2" /> Logout
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -95,10 +103,14 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
             <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div className="overflow-x-auto">
                     <Tabs value={activeTab} onValueChange={(v) => go(`/management/${v}`)} className="space-y-8">
-                        <TabsList className="grid min-w-max grid-cols-5 gap-2 rounded-2xl p-2 md:w-full md:grid-cols-5">
+                        <TabsList className="w-full rounded-2xl p-2 flex items-center gap-3 overflow-x-auto">
                             {TAB_LIST.map(({ value, label, Icon }) => (
-                                <TabsTrigger key={value} value={value} className="flex items-center gap-2 px-4 py-3 text-base">
-                                    <Icon className="h-5 w-5" />
+                                <TabsTrigger
+                                  key={value}
+                                  value={value}
+                                  className="flex items-center gap-2 px-6 py-3.5 text-xl flex-none"
+                                >
+                                    <Icon className="h-6 w-6" />
                                     <span className="hidden sm:inline">{label}</span>
                                 </TabsTrigger>
                             ))}

@@ -1,7 +1,8 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, ShieldCheck, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { User, ShieldCheck, Bell, ArrowLeft } from "lucide-react";
 
 type SettingsTab = "account" | "security" | "notifications";
 
@@ -21,12 +22,16 @@ export default function SettingsLayout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Card className="border-none shadow-none">
             <CardHeader className="py-2">
               <CardTitle className="text-lg">Settings</CardTitle>
             </CardHeader>
           </Card>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate("/home")}> 
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
         </div>
       </header>
 

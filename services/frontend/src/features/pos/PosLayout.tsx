@@ -1,12 +1,13 @@
 import { Outlet, useParams } from "react-router-dom";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { PosHeader } from "@/features/pos/components/PosHeader";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 
 export default function PosLayout() {
   const { profile } = useAuth();
-  const restaurantName =
-    (profile as any)?.restaurant_name || (profile as any)?.restaurantName || "Restaurant POS";
+  const { restaurantName: nameFromTenant } = useTenantInfo();
+  const restaurantName = nameFromTenant || (profile as any)?.restaurant_name || (profile as any)?.restaurantName || "Restaurant POS";
   const { tableId } = useParams();
   const kitchen = useKitchen();
   const activeOrdersCount = kitchen.active().length;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Copy } from "lucide-react";
 import { ENV, getToken } from "@/config/env";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ function read(): OrgProfile {
 function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch {} }
 
 export default function OrganizationPage() {
+  const { restaurantName: nameFromTenant, locations } = useTenantInfo();
   const [tab, setTab] = useState("general");
   const [model, setModel] = useState<OrgProfile>(() => read());
   const [draft, setDraft] = useState<OrgProfile>(model);
@@ -62,6 +64,15 @@ export default function OrganizationPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // If tenant name is known and current model is default/demo, hydrate it for display convenience
+  useEffect(() => {
+    if (nameFromTenant) {
+      if (model.restaurantName === DEFAULTS.restaurantName) setModel((m) => ({ ...m, restaurantName: nameFromTenant }));
+      if (draft.restaurantName === DEFAULTS.restaurantName) setDraft((d) => ({ ...d, restaurantName: nameFromTenant }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameFromTenant]);
+
   const onCancel = () => setDraft(model);
   const onSave = () => { setModel(draft); write(draft); };
 
@@ -71,7 +82,7 @@ export default function OrganizationPage() {
         <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center"><Building2 className="h-4 w-4 text-primary" /></div>
         <div>
           <h2 className="text-xl font-semibold">Organization</h2>
-          <p className="text-sm text-muted-foreground">Manage your restaurant profile and policies</p>
+          <p className="text-sm text-muted-foreground">{nameFromTenant ?? "Manage your restaurant profile and policies"}</p>
         </div>
       </header>
 
@@ -127,6 +138,28 @@ export default function OrganizationPage() {
             <Field label="Phone"><Input size="lg" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
             <Field label="Email"><Input size="lg" type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></Field>
           </TwoColCard>
+        )}
+
+        {/* Locations (read-only from tenant info for now) */}
+        {locations && locations.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Locations</CardTitle>
+              <CardDescription>Locations from your tenant</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {locations.map(l => (
+                  <div key={l.id} className="rounded-lg border p-3">
+                    <div className="font-medium">{l.name}</div>
+                    <div className="text-xs text-muted-foreground">{l.id}</div>
+                    <div className="text-xs mt-1">{l.isActive ? "Active" : "Inactive"}</div>
+                    <div className="text-xs text-muted-foreground">{l.timeZoneId ?? "(no time zone)"}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Hours */}

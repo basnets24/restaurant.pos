@@ -53,7 +53,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
         // keep state in sync if the user is reloaded/removed elsewhere
         const onLoaded = (u: User) => setFromUser(u);
-        const onUnloaded = () => setFromUser(undefined);
+        const onUnloaded = () => {
+            setFromUser(undefined);
+            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch {}
+        };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
             try {
@@ -122,9 +125,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     const completeSignOut = async () => {
         const res = await userManager.signoutCallback(window.location.href);
-        // clear local session
+        // clear local session + tenant
         setFromUser(undefined);
-        try { localStorage.removeItem('token'); } catch {}
+        try {
+            localStorage.removeItem('token');
+            localStorage.removeItem('rid');
+            localStorage.removeItem('lid');
+        } catch {}
 
         const to =
             (res?.state as any)?.returnUrl ??

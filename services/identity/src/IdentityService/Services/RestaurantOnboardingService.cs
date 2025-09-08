@@ -1,6 +1,8 @@
 
+using IdentityService.Auth;
 using IdentityService.Data;
 using IdentityService.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Services;
@@ -14,10 +16,14 @@ public record JoinCodeRes(string RestaurantId, string? Slug);
     public class RestaurantOnboardingService
     {
     private readonly TenantDbContext _db;
+    private readonly UserManager<ApplicationUser> _users;
     private readonly ILogger<RestaurantOnboardingService> _logger;
     public RestaurantOnboardingService(TenantDbContext db, 
-        ILogger<RestaurantOnboardingService> logger)
-    { _db = db; _logger = logger; }
+        ILogger<RestaurantOnboardingService> logger, 
+        UserManager<ApplicationUser> users)
+    { _db = db; _logger = logger;
+        _users = users;
+    }
 
     public async Task<OnboardRestaurantRes> OnboardAsync(
         Guid userId, 
@@ -34,10 +40,21 @@ public record JoinCodeRes(string RestaurantId, string? Slug);
 
         _db.Restaurants.Add(r);
         _db.Locations.Add(loc);
-        _db.RestaurantMemberships.Add(new RestaurantMembership { UserId = userId, RestaurantId = r.Id, DefaultLocationId = loc.Id });
-        _db.RestaurantUserRoles.Add(new RestaurantUserRole { UserId = userId, RestaurantId = r.Id, RoleName = "Admin" });
+        _db.RestaurantMemberships.Add(new RestaurantMembership 
+            { UserId = userId, RestaurantId = r.Id, DefaultLocationId = loc.Id });
+        _db.RestaurantUserRoles.Add(new RestaurantUserRole 
+            { UserId = userId, RestaurantId = r.Id, RoleName = TenantRoles.TenantAdmin });
+        _db.RestaurantUserRoles.Add(new RestaurantUserRole
+            { UserId = userId, RestaurantId = r.Id, RoleName = TenantRoles.TenantOwner }); 
 
         await _db.SaveChangesAsync(ct);
+        var user = await _users.FindByIdAsync(userId.ToString());
+        // update the 
+        user.CurrentRestaurantId = r.Id;
+        user.CurrentLocationId = loc.Id;
+        await _users.UpdateAsync(user);
+        
+        // client should refresh the token after this call 
         _logger.LogInformation("Onboarded restaurant {RestaurantId} with location {LocationId} by user {UserId}", r.Id, loc.Id, userId);
         return new OnboardRestaurantRes(r.Id, loc.Id);
     }
@@ -88,6 +105,11 @@ public record JoinCodeRes(string RestaurantId, string? Slug);
                 RoleName = "Server"
             });
             await _db.SaveChangesAsync(ct);
+            var user = await _users.FindByIdAsync(userId.ToString());
+            // update the user  
+            user.CurrentRestaurantId = restaurant.Id;
+            user.CurrentLocationId = locId;
+            await _users.UpdateAsync(user);
             _logger.LogInformation("User {UserId} joined restaurant {RestaurantId} with default location {LocationId}", userId, restaurant.Id, locId);
         }
 

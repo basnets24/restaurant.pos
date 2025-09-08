@@ -50,8 +50,6 @@ public class UserUpdateDto
     public bool? LockoutEnabled { get; set; }
     public DateTimeOffset? LockoutEnd { get; set; }
     public bool? TwoFactorEnabled { get; set; }
-    
-    
 }
 
 public class AddRolesDto
@@ -74,3 +72,4 @@ public record Paged<T>(
     int PageSize,
     long Total
 );
+

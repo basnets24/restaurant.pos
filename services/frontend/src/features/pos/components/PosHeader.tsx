@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 import {
   LayoutDashboard,
@@ -14,6 +15,10 @@ import {
   ShoppingCart,
   CreditCard,
   CircleUserRound,
+  User,
+  ShieldCheck,
+  Bell,
+  LogOut,
 } from "lucide-react";
 
 type NavKey = "dashboard" | "tables" | "menu" | "orders" | "current" | "checkout";
@@ -53,13 +58,8 @@ export function PosHeader({
   rightExtra,
 }: PosHeaderProps) {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
-  const displayName =
-    (profile as any)?.name ||
-    [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") ||
-    (profile as any)?.preferred_username ||
-    (profile as any)?.email ||
-    "User";
+  const { signOut } = useAuth();
+  const { displayName } = useUserDisplayName();
   const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
   const routes = useMemo(
     () => ({
@@ -171,9 +171,19 @@ export function PosHeader({
                 <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
                 <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/settings/account")}>Profile</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings/account")}>
+                  <User className="h-4 w-4 mr-2" /> Account
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings/security")}>
+                  <ShieldCheck className="h-4 w-4 mr-2" /> Security
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings/notifications")}>
+                  <Bell className="h-4 w-4 mr-2" /> Notifications
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={onLogout}>
+                  <LogOut className="h-4 w-4 mr-2" /> Logout
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

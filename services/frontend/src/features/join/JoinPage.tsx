@@ -2,18 +2,23 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { userManager } from "@/api-authorization/oidc";
-import { ENV, getToken } from "@/config/env";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CircleUserRound, Building2, MapPin, Clock, KeySquare, PlusCircle, LogIn } from "lucide-react";
+import { CircleUserRound, Building2, MapPin, Clock, KeySquare, PlusCircle, LogIn, User, Shield, Bell, LogOut } from "lucide-react";
 import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
+import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
+import { createEmployeeApi } from "@/domain/employee";
+import { ENV } from "@/config/env";
+import { useTenant } from "@/app/TenantContext";
 
 export default function JoinPage() {
-  const { profile, getAccessToken, signOut } = useAuth();
+  const { profile, signOut, getAccessToken } = useAuth();
+  const hooks = useRestaurantUserProfile();
+  const { rid, lid, setRid, setLid } = useTenant();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const alreadyOnboarded = useMemo(() => !!((profile as any)?.restaurant_id ?? (profile as any)?.restaurantId), [profile]);
@@ -24,6 +29,7 @@ export default function JoinPage() {
   const [locationName, setLocationName] = useState("");
   const [timeZoneId, setTimeZoneId] = useState<string | undefined>(undefined);
   const [code, setCode] = useState("");
+  const [displayNameInput, setDisplayNameInput] = useState("");
   const [error, setError] = useState<string | undefined>();
 
   const displayName =
@@ -39,22 +45,8 @@ export default function JoinPage() {
     if (prefill && !code) setCode(prefill);
   }, [params]);
 
-  const authHeader = async () => {
-    // Always try to refresh silently to pick up latest scopes/audience for Local API
-    try { const u = await userManager.signinSilent(); if (u?.access_token) {
-      return { "Content-Type": "application/json", Authorization: `Bearer ${u.access_token}` } as Record<string, string>;
-    }} catch {}
-
-    const token = await getAccessToken();
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
-  };
-
-  const afterSuccess = async () => {
-    try { await userManager.signinSilent(); } catch {}
-    navigate("/home", { replace: true });
-  };
+  const { mutateAsync: onboardRestaurant } = hooks.useOnboardRestaurant();
+  const { mutateAsync: joinRestaurant } = hooks.useJoinRestaurant();
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -62,15 +54,18 @@ export default function JoinPage() {
     if (!name.trim()) { setError("Restaurant name is required"); return; }
     setCreating(true);
     try {
-      const headers = await authHeader();
-      const r = await fetch(`${ENV.IDENTITY_URL}/api/onboarding/restaurant`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ name, locationName: locationName || null, timeZoneId: timeZoneId || null }),
-        credentials: "include",
-      });
-      if (!r.ok) throw new Error(await r.text());
-      await afterSuccess();
+      const res = await onboardRestaurant({ name, locationName: locationName || null, timeZoneId: timeZoneId || null });
+      setRid(res.restaurantId);
+      setLid(res.locationId);
+      // Optionally capture display name right after onboarding (user is Admin)
+      if (displayNameInput.trim()) {
+        try {
+          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
+          const userId = (profile as any)?.sub as string | undefined;
+          if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
+        } catch {}
+      }
+      navigate("/home", { replace: true });
     } catch (err: any) {
       setError(err?.message ?? "Failed to create restaurant");
     } finally { setCreating(false); }
@@ -82,15 +77,18 @@ export default function JoinPage() {
     if (!code.trim()) { setError("Join code is required"); return; }
     setJoining(true);
     try {
-      const headers = await authHeader();
-      const r = await fetch(`${ENV.IDENTITY_URL}/api/onboarding/join`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ code }),
-        credentials: "include",
-      });
-      if (!r.ok) throw new Error(await r.text());
-      await afterSuccess();
+      const res = await joinRestaurant({ code });
+      setRid(res.restaurantId);
+      setLid(res.locationId);
+      // Best-effort: update display name (may fail if not admin)
+      if (displayNameInput.trim()) {
+        try {
+          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
+          const userId = (profile as any)?.sub as string | undefined;
+          if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
+        } catch {}
+      }
+      navigate("/home", { replace: true });
     } catch (err: any) {
       setError(err?.message ?? "Failed to join restaurant");
     } finally { setJoining(false); }
@@ -138,6 +136,12 @@ export default function JoinPage() {
     return null;
   }
 
+  // On mount: fetch status, redirect if already has membership (safety)
+  const { data: status } = hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
+  useEffect(() => {
+    if (status?.hasMembership) navigate("/home", { replace: true });
+  }, [status]);
+
   return (
     <div>
       {/* Minimal header with profile + logout */}
@@ -155,9 +159,19 @@ export default function JoinPage() {
               <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
               <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/settings/account")}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings/account")}>
+                <User className="h-4 w-4 mr-2" /> Account
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings/security")}>
+                <Shield className="h-4 w-4 mr-2" /> Security
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings/notifications")}>
+                <Bell className="h-4 w-4 mr-2" /> Notifications
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout}>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={onLogout}>
+                <LogOut className="h-4 w-4 mr-2" /> Logout
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -185,6 +199,10 @@ export default function JoinPage() {
                 <div className="grid gap-1.5">
                   <Label className="text-base">Restaurant name</Label>
                   <Input size="lg" value={name} onChange={e => setName(e.target.value)} placeholder="Acme Bistro" />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-base">Your display name (optional)</Label>
+                  <Input size="lg" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="e.g. Alex" />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-base flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> Location name (optional)</Label>
@@ -224,6 +242,10 @@ export default function JoinPage() {
                 <div className="grid gap-1.5">
                   <Label className="text-base">Join code</Label>
                   <Input size="lg" value={code} onChange={e => setCode(e.target.value)} placeholder="acme-bistro" />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label className="text-base">Your display name (optional)</Label>
+                  <Input size="lg" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="e.g. Alex" />
                 </div>
               </CardContent>
               <CardFooter className="mt-auto">

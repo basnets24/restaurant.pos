@@ -32,6 +32,7 @@ builder.Services.AddTenancy();
 builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
 builder.Services.AddHostedService<IdentitySeedHostedService>(); 
 builder.Services.AddScoped<RestaurantOnboardingService>();
+builder.Services.AddScoped<TenantUserProfileService>();
 
 const string corsPolicy = "frontend";
 builder.Services.AddCors(options =>
