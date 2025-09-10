@@ -14,12 +14,12 @@ export interface CheckoutViewProps {
 }
 
 export function CheckoutView({
-                                 orderItems,
-                                 selectedTable,
-                                 totalPrice,
-                                 onOrderComplete,
-                                 onBackToOrder,
-                             }: CheckoutViewProps) {
+    orderItems,
+    selectedTable,
+    totalPrice,
+    onOrderComplete,
+    onBackToOrder,
+}: CheckoutViewProps) {
     const taxRate = 0.085;
     const tax = totalPrice * taxRate;
     const grandTotal = totalPrice + tax;
@@ -38,12 +38,12 @@ export function CheckoutView({
                     <div>
                         <div className="text-foreground font-medium">Table {selectedTable.number}</div>
                         <div className="flex items-center gap-4 text-muted-foreground text-sm">
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-4 w-4" /> {selectedTable.section}
-              </span>
                             <span className="inline-flex items-center gap-1">
-                <Users className="h-4 w-4" /> {selectedTable.seats} seats
-              </span>
+                                <MapPin className="h-4 w-4" /> {selectedTable.section}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                                <Users className="h-4 w-4" /> {selectedTable.seats} seats
+                            </span>
                         </div>
                     </div>
                 </div>

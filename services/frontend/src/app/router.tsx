@@ -13,6 +13,9 @@ import LoggedOutPage from "../api-authorization/LoggedOutPage";
 import LoginCallbackPage from "../api-authorization/LoginCallback";
 import RegisterPage from "../api-authorization/RegisterPage";
 
+import SuccessView from "@/components/SuccessView";
+import CancelView from "@/components/CancelView";
+
 // ---- Shared fallback ----
 const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</div>;
 
@@ -157,6 +160,8 @@ export const router = createBrowserRouter([
           { path: "menu",     element: <Suspense fallback={<Fallback />}><MenuPage /></Suspense> },
           { path: "order",    element: <Suspense fallback={<Fallback />}><OrderPage /></Suspense> },
           { path: "checkout", element: <Suspense fallback={<Fallback />}><CheckoutPage /></Suspense> },
+          { path: "checkout/success", element: <Suspense fallback={<Fallback />}><SuccessView /></Suspense> },
+          { path: "checkout/cancel",  element: <Suspense fallback={<Fallback />}><CancelView /></Suspense> },
         ],
       },
     ],

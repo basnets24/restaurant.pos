@@ -24,6 +24,7 @@ import {
 } from "@/domain/cart";
 import type { CartDto } from "@/domain/cart";
 import { useStore } from "@/stores";
+import { pollForSessionUrl } from "@/domain/payments/api";
 
 type POSMenuItem = {
   id: string;
@@ -205,6 +206,19 @@ export default function MenuPage() {
   async function handleCheckout() {
     if (!cartId) return;
     const res = await cartApi.checkoutCart(cartId);
+    const orderId = res?.orderId as string | undefined;
+    if (!orderId) {
+      toast.error("Could not create order for checkout.");
+      return;
+    }
+    
+    const url = await pollForSessionUrl(orderId); // polls GET /api/orders/{orderId}/payment-session
+    if (!url) {
+      toast.error("Payment session not ready yet. Please try again.");
+      return;
+    }
+    window.location.href = url;
+
     try { await unlinkOrder.mutateAsync(cartId); } catch {}
     try { await setTableStatus.mutateAsync({ status: "available" }); } catch {}
     store.clearTableSession(tableId);
