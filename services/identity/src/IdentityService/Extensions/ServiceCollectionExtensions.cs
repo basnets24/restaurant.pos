@@ -1,5 +1,6 @@
-using IdentityService.Data;
 using IdentityService.Entities;
+using IdentityService.Data;
+using Tenant.Domain.Data;
 using IdentityService.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

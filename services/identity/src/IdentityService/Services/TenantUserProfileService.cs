@@ -1,6 +1,7 @@
 using System.Linq;
-using IdentityService.Data;
+using Tenant.Domain.Data;
 using IdentityService.Entities;
+using Tenant.Domain.Contracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

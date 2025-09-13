@@ -23,5 +23,9 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     </ItemGroup>
     
+    <ItemGroup>
+        <ProjectReference Include="../../../../shared/tenant.domain/Tenant.Domain.csproj" />
+    </ItemGroup>
+
 
 </Project>

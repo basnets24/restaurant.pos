@@ -1,6 +1,7 @@
 using Duende.IdentityServer;
-using IdentityService.Data;
+using Tenant.Domain.Data;
 using IdentityService.Entities;
+using Tenant.Domain.Entities;
 using IdentityService.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
