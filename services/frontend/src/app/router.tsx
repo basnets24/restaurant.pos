@@ -51,7 +51,6 @@ const TablesPage    = lazy(() => import("@/features/pos/routes/TablesPage"));
 const TableRoute    = lazy(() => import("@/features/pos/routes/TableRoute"));
 const MenuPage      = lazy(() => import("@/features/pos/routes/MenuPage"));
 const OrderPage     = lazy(() => import("@/features/pos/routes/OrderPage"));
-const CheckoutPage  = lazy(() => import("@/features/pos/routes/CheckoutPage"));
 const ActiveOrdersPage = lazy(() => import("@/features/pos/routes/ActiveOrdersPage"));
 const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 
@@ -159,7 +158,6 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="menu" replace /> },
           { path: "menu",     element: <Suspense fallback={<Fallback />}><MenuPage /></Suspense> },
           { path: "order",    element: <Suspense fallback={<Fallback />}><OrderPage /></Suspense> },
-          { path: "checkout", element: <Suspense fallback={<Fallback />}><CheckoutPage /></Suspense> },
           { path: "checkout/success", element: <Suspense fallback={<Fallback />}><SuccessView /></Suspense> },
           { path: "checkout/cancel",  element: <Suspense fallback={<Fallback />}><CancelView /></Suspense> },
         ],

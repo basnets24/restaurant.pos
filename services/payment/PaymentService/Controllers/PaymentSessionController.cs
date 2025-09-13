@@ -1,41 +1,43 @@
-// PaymentService/Controllers/PaymentSessionController.cs
 using Common.Library;
 using Microsoft.AspNetCore.Mvc;
 using PaymentService.Entities;
-using Stripe.Checkout;
 
 namespace PaymentService.Controllers;
 
 [ApiController]
-[Route("api/orders/{orderId:guid}/payment-session")]
-public sealed class PaymentSessionController : ControllerBase
+[Route("orders")] 
+public class PaymentSessionController : ControllerBase
 {
     private readonly IRepository<Payment> _payments;
+    private readonly ILogger<PaymentSessionController> _logger;
 
-    public PaymentSessionController(IRepository<Payment> payments)
-        => _payments = payments;
+    public PaymentSessionController(IRepository<Payment> payments, ILogger<PaymentSessionController> logger)
+    {
+        _payments = payments;
+        _logger = logger;
+    }
 
     // GET /api/orders/{orderId}/payment-session
-    [HttpGet]
-    public async Task<IActionResult> Get(Guid orderId)
+    [HttpGet("{orderId:guid}/payment-session")]
+    public async Task<IActionResult> GetPaymentSession([FromRoute] Guid orderId)
     {
-        // Find latest payment attempt for this order (tenant-scoped via ITenantEntity)
-        var payment = await _payments.GetAsync(p => p.OrderId == orderId && p.Provider == "Stripe");
-        if (payment is null) return NotFound(); // nothing created yet
+        var payment = await _payments.GetAsync(p => p.OrderId == orderId);
 
-        // If webhook already finished, no need to redirect the user anymore
-        if (string.Equals(payment.Status, "Succeeded", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(payment.Status, "Failed", StringComparison.OrdinalIgnoreCase))
+        if (payment is null)
         {
-            return Ok(new { sessionUrl = (string?)null, status = payment.Status, error = payment.ErrorMessage });
+            // Not materialized yet (pending)
+            return StatusCode(404, new { sessionUrl = (string?)null, status = "pending" });
         }
 
-        // We stored the Checkout Session id in ProviderRef; fetch the live URL from Stripe
-        if (string.IsNullOrWhiteSpace(payment.ProviderRef)) return NotFound();
+        var status = (payment.Status ?? "").Trim().ToLowerInvariant();
+        if (status == "succeeded") return Ok(new { status = "succeeded" });
+        if (status == "failed")    return Ok(new { status = "failed" });
 
-        var svc = new SessionService();
-        var session = await svc.GetAsync(payment.ProviderRef); // needs Stripe secret configured
-        // Session.Url is only present for "hosted" Checkout (not embedded)
-        return Ok(new { sessionUrl = session.Url });
+        // Pending
+        if (string.IsNullOrWhiteSpace(payment.SessionUrl))
+            return StatusCode(202, new { sessionUrl = (string?)null, status = "pending" });
+
+        return Ok(new { sessionUrl = payment.SessionUrl });
     }
 }
+

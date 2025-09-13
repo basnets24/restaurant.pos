@@ -12,8 +12,6 @@ import {
   Table2,
   UtensilsCrossed,
   ReceiptText,
-  ShoppingCart,
-  CreditCard,
   CircleUserRound,
   User,
   ShieldCheck,
@@ -141,19 +139,6 @@ export function PosHeader({
               badge={counts?.current}
               disabled={!!disabled?.current}
             />
-            <NavButton
-              to={routes.orders}
-              icon={<ShoppingCart className="h-4 w-4" />}
-              label="Orders"
-              badge={counts?.orders}
-              disabled={!!disabled?.orders}
-            />
-            <NavButton
-              to={routes.checkout}
-              icon={<CreditCard className="h-4 w-4" />}
-              label="Checkout"
-              disabled={!!disabled?.checkout}
-            />
           </nav>
 
           {/* Right: optional extras, profile */}
@@ -195,12 +180,6 @@ export function PosHeader({
           <NavChip to={routes.tables} label="Tables" />
           <NavChip to={routes.menu} label="Menu" active />
           <NavChip to={routes.current} label="Current Orders" disabled={!!disabled?.current} />
-          <NavChip
-            to={routes.orders}
-            label={`Orders${counts?.orders ? ` (${counts.orders})` : ""}`}
-            disabled={!!disabled?.orders}
-          />
-          <NavChip to={routes.checkout} label="Checkout" disabled={!!disabled?.checkout} />
         </div>
       </div>
     </header>

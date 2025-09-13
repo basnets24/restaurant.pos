@@ -15,13 +15,13 @@ export default function CancelView() {
         </p>
         <div className="mt-6 flex gap-3 justify-center">
           <Link
-            to={`/table/${tableId}/checkout`}
+            to={`/pos/table/${tableId}/menu`}
             className="px-4 py-2 rounded-xl bg-gray-800 text-white hover:bg-gray-900"
           >
             Try Checkout Again
           </Link>
           <Link
-            to={`/table/${tableId}/menu`}
+            to={`/pos/table/${tableId}/menu`}
             className="px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-800 hover:text-white"
           >
             Back to Menu

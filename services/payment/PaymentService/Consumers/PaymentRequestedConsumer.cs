@@ -50,16 +50,33 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             LocationId = _tenant.LocationId
         };
         
+        var tableId = msg.TableId;
+        
         // Build a Stripe Checkout Session
-        var success = $"{_frontend.PublicBaseUrl}/checkout/success?order={msg.OrderId}&session_id={{CHECKOUT_SESSION_ID}}";
-        var cancel  = $"{_frontend.PublicBaseUrl}/checkout/cancel?order={msg.OrderId}";
+        
+        var success = $"{_frontend.PublicBaseUrl}/pos/table/{tableId}/checkout/success?order={msg.OrderId}&session_id={{CHECKOUT_SESSION_ID}}";
+        var cancel  = $"{_frontend.PublicBaseUrl}/pos/table/{tableId}/checkout/cancel?order={msg.OrderId}";
         
         var create = new Stripe.Checkout.SessionCreateOptions
         {
             Mode = "payment",
             SuccessUrl = success,
             CancelUrl  = cancel,
-            Metadata   = new() { ["orderId"] = msg.OrderId.ToString() },
+            Metadata   = new()
+            {
+                ["orderId"]      = msg.OrderId.ToString(),
+                ["restaurantId"] = _tenant.RestaurantId!,
+                ["locationId"]   = _tenant.LocationId!
+            },
+            PaymentIntentData = new Stripe.Checkout.SessionPaymentIntentDataOptions
+            {
+                Metadata = new()
+                {
+                    ["orderId"]      = msg.OrderId.ToString(),
+                    ["restaurantId"] = _tenant.RestaurantId!,
+                    ["locationId"]   = _tenant.LocationId!
+                }
+            },
             LineItems  =
             [
                 new Stripe.Checkout.SessionLineItemOptions
@@ -79,7 +96,8 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         };
         
         var session = await new Stripe.Checkout.SessionService().CreateAsync(create);
-        payment.ProviderRef = session.Id; // store Checkout Session id for later webhook correlation
+        payment.ProviderRef = session.Id; 
+        payment.SessionUrl  = session.Url; 
         
         payment.UpdatedAt = DateTimeOffset.UtcNow;
 

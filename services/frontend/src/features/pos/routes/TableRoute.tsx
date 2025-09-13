@@ -1,8 +1,6 @@
-import { Outlet, NavLink, useNavigate, useParams } from "react-router-dom";
+import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { useTable } from "@/domain/tables/hooks";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft } from "lucide-react";
 
 export default function TableRoute() {
@@ -25,34 +23,8 @@ export default function TableRoute() {
         </div>
       </div>
 
-      <Card className="p-2">
-        <div className="flex items-center gap-4 px-2 py-1">
-          <Tab to="menu" label="Menu" />
-          <Tab to="order" label="Order" />
-          <Tab to="checkout" label="Checkout" />
-        </div>
-        <Separator className="mb-2" />
-        {/* Child routes render here (menu / order / checkout). The index route redirects to menu. */}
-        <Outlet />
-      </Card>
+      {/* Render the selected child route (menu). The index route redirects to menu. */}
+      <Outlet />
     </div>
-  );
-}
-
-function Tab({ to, label }: { to: string; label: string }) {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `text-sm px-2 py-1 rounded-none border-b-2 ${
-          isActive
-            ? "border-primary text-foreground font-medium"
-            : "border-transparent text-muted-foreground hover:text-foreground"
-        }`
-      }
-      end
-    >
-      {label}
-    </NavLink>
   );
 }

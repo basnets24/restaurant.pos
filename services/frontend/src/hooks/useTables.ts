@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import type { HubConnection } from "@microsoft/signalr";
-import type { Table } from "../types/tables";
-import { API_BASE, getToken } from "../lib/config";
-import { fetchTables, setStatus, seatParty, saveLayout } from "../api/table";
+import type { TableViewDto as Table } from "@/domain/tables/types";
+import { API_BASE, getToken } from "@/lib/config";
+import { TablesApi } from "@/domain/tables/api";
 
 export function useTables() {
     const [tables, setTables] = useState<Table[]>([]);
@@ -13,7 +13,7 @@ export function useTables() {
     // Only load tables after tenant context is available
     useEffect(() => {
         if (!tenant?.restaurantId) return;
-        fetchTables().then(setTables).catch(console.error);
+        TablesApi.getAll().then(setTables).catch(console.error);
     }, [tenant?.restaurantId]);
 
     useEffect(() => {
@@ -53,28 +53,26 @@ export function useTables() {
     }, [tenant?.restaurantId, tenant?.locationId]);
 
     const updateStatus = useCallback(async (id: string, status: Table["status"], partySize?: number) => {
-        await setStatus(id, status, partySize);
+        await TablesApi.setStatus(id, { status, partySize });
         setTables(prev => prev.map(t => t.id === id ? { ...t, status, partySize: status === "available" ? undefined : partySize } : t));
     }, []);
 
     const seat = useCallback(async (id: string, size: number) => {
-        await seatParty(id, size);
+        await TablesApi.seat(id, size);
         setTables(prev => prev.map(t => t.id === id ? { ...t, status: "occupied", partySize: size } : t));
     }, []);
 
     const persistMove = useCallback(async (changed: Table) => {
         try {
-            await saveLayout(changed.id, {
+            await TablesApi.updateLayout(changed.id, {
                 x: changed.position.x, y: changed.position.y,
                 width: changed.size.width, height: changed.size.height,
                 rotation: 0, shape: changed.shape, version: changed.version,
             });
             setTables(prev => prev.map(t => t.id === changed.id ? { ...t, version: t.version + 1 } : t));
         } catch (e: any) {
-            if (e.message === "version-conflict") {
-                const fresh = await fetchTables();
-                setTables(fresh);
-            } else { throw e; }
+            const fresh = await TablesApi.getAll();
+            setTables(fresh);
         }
     }, []);
 

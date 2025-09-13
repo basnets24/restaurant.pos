@@ -1,6 +1,8 @@
 namespace Messaging.Contracts.Events.Payment;
 
-public record PaymentRequested(Guid CorrelationId, Guid OrderId, long AmountCents,
+public record PaymentRequested(Guid CorrelationId, Guid OrderId,
+    Guid TableId, 
+    long AmountCents,
     string RestaurantId,
     string LocationId);
 public record PaymentSucceeded(Guid CorrelationId, Guid OrderId,

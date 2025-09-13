@@ -28,7 +28,7 @@ public class StripeController : ControllerBase
     [HttpPost("checkout/session")]
     public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutRequest? req)
     {
-        var amount = req?.Amount ?? 2599L; // cents (compute server-side in real app!)
+        var amount = req?.Amount ?? 2599L; // cents 
         var currency = string.IsNullOrWhiteSpace(req?.Currency) ? "usd" : req!.Currency.ToLowerInvariant();
         var orderId = req?.OrderId ?? Guid.NewGuid().ToString();
 
@@ -75,7 +75,18 @@ public class StripeController : ControllerBase
         {
             currency = pi.Currency?.ToUpperInvariant();
             amount = pi.AmountReceived ;
-            
+            try
+            {
+                var charges = await new Stripe.ChargeService().ListAsync(new Stripe.ChargeListOptions
+                {
+                    PaymentIntent = pi.Id,
+                    Limit = 1
+                });
+                var charge = charges?.Data?.FirstOrDefault();
+                if (charge is not null && !string.IsNullOrWhiteSpace(charge.ReceiptUrl))
+                    receiptUrl = charge.ReceiptUrl;
+            }
+            catch { /* optional */ }
         }
 
         return Ok(new { status = paid ? "Paid" : session.PaymentStatus, amount, currency, receiptUrl,

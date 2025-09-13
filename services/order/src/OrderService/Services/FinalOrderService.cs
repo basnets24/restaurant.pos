@@ -87,9 +87,11 @@ public class FinalOrderService : IOrderService
         _logger.LogInformation( "Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
                                 "grand total is {grandTotal}", subtotal, p.TaxTotal, p.ServiceChargeTotal, p.Tip, p.GrandTotal);;
 
+        // when pos only, table id is present
         await _publishEndpoint.Publish(new OrderSubmitted(
             correlationId,
             orderId,
+            TableId: dto.TableId ?? Guid.Empty,
             dto.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
             p.GrandTotal, 
             _tenant.RestaurantId, _tenant.LocationId

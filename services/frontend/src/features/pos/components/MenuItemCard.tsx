@@ -50,28 +50,35 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
     };
 
     return (
-        <Card className="menu-item-card hover:shadow-lg transition-all duration-200 border-border bg-card group">
-            <CardContent className="p-5 sm:p-7 cursor-pointer" onClick={handleQuickAdd}>
-                <div className="mb-4 sm:mb-5">
-                    <h3 className="text-base sm:text-lg font-medium text-foreground mb-2 sm:mb-3 leading-tight">
+        <Card className="menu-item-card h-full min-h-[260px] flex flex-col hover:shadow-lg transition-all duration-200 border-border bg-card group">
+            {/* Top: title + price, description */}
+            <CardContent className="p-5 sm:p-6 lg:p-7 flex-1">
+                <div
+                    className="flex items-start justify-between gap-3 mb-2 cursor-pointer select-none"
+                    onClick={handleQuickAdd}
+                    role="button"
+                    aria-label={`Add ${item.name} quickly`}
+                >
+                    <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground leading-snug">
                         {item.name}
                     </h3>
-                    <Badge className="bg-primary text-primary-foreground px-2 py-1 text-sm font-medium">
+                    <Badge className="bg-primary text-primary-foreground px-2.5 py-1 text-sm font-medium shadow-sm shrink-0">
                         ${item.price.toFixed(2)}
                     </Badge>
                 </div>
 
                 {item.description && (
-                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mt-2" onClick={handleQuickAdd}>
                         {item.description}
                     </p>
                 )}
             </CardContent>
 
-            <CardFooter className="p-5 sm:p-7 pt-0 flex flex-col gap-4">
-                {/* Quantity Selector */}
+            {/* Bottom: quantity + primary action + optional notes */}
+            <CardFooter className="p-5 sm:p-6 lg:p-7 pt-0 flex flex-col gap-3">
+                {/* Quantity controls */}
                 <div className="flex items-center justify-between w-full">
-                    <span className="text-sm text-muted-foreground">Quantity:</span>
+                    <span className="text-sm text-muted-foreground">Quantity</span>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
@@ -97,12 +104,12 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                     </div>
                 </div>
 
-                {/* Add to Order */}
+                {/* Primary action */}
                 <Button
                     onClick={handleAdd}
                     disabled={isLoading}
-                    className="w-full shadow-sm hover:shadow-md transition-all duration-200"
-                    size="sm"
+                    className="w-full shadow-sm hover:shadow-md transition-all duration-200 text-base py-5"
+                    size="lg"
                 >
                     {isLoading ? (
                         <div className="flex items-center gap-2">
@@ -112,29 +119,28 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                     ) : (
                         <>
                             <Plus className="h-4 w-4 mr-2" />
-                            Add {quantity > 1 ? `${quantity}x ` : ""}to Order
+                            Add {quantity > 1 ? `${quantity}× ` : ""}to Order
                         </>
                     )}
                 </Button>
 
-                {/* Notes */}
+                {/* Special instructions (demoted) */}
                 {showNotes ? (
                     <Textarea
-                        placeholder="Special instructions..."
+                        placeholder="Special instructions (optional)"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         className="text-xs resize-none"
                         rows={2}
                     />
                 ) : (
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    <button
+                        type="button"
                         onClick={() => setShowNotes(true)}
-                        className="text-xs text-muted-foreground h-auto py-1"
+                        className="self-start text-xs text-muted-foreground hover:text-foreground"
                     >
                         + Add special instructions
-                    </Button>
+                    </button>
                 )}
             </CardFooter>
         </Card>

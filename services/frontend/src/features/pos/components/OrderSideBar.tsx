@@ -23,7 +23,7 @@ import {
     Receipt,
     Clock,
 } from "lucide-react";
-import { Flame, Check } from "lucide-react";
+import { Flame, Check, Loader2 } from "lucide-react";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import { toast } from "sonner";
 
@@ -40,6 +40,7 @@ interface OrderSidebarProps {
     // Matches POSShell usage: no argument needed
     onCheckout: () => void;
     isMobile?: boolean;
+    checkoutLoading?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -128,6 +129,7 @@ function OrderSidebarContent({
                                  onUpdateItem,
                                  onRemoveItem,
                                  onCheckout,
+                                 checkoutLoading,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
     if (!table) return null;
 
@@ -297,9 +299,18 @@ function OrderSidebarContent({
                         </div>
                     </div>
 
-                    <Button onClick={onCheckout} className="w-full" size="lg">
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Checkout – ${total.toFixed(2)}
+                    <Button onClick={onCheckout} className="w-full" size="lg" disabled={!!checkoutLoading}>
+                        {checkoutLoading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Preparing Payment…
+                            </>
+                        ) : (
+                            <>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Checkout – ${total.toFixed(2)}
+                            </>
+                        )}
                     </Button>
                 </div>
             )}

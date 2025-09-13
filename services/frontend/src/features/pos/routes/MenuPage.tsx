@@ -24,7 +24,7 @@ import {
 } from "@/domain/cart";
 import type { CartDto } from "@/domain/cart";
 import { useStore } from "@/stores";
-import { pollForSessionUrl } from "@/domain/payments/api";
+import { pollForSessionUrl, getPaymentSessionUrl } from "@/domain/payments/api";
 
 type POSMenuItem = {
   id: string;
@@ -78,6 +78,7 @@ export default function MenuPage() {
 
   // Sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   // Selected category
   const [category, setCategory] = useState<string>("All");
@@ -93,6 +94,7 @@ export default function MenuPage() {
   const unlinkOrder = useUnlinkOrder(tableId);
 
   const linkedOnce = useRef(false);
+  const checkoutAbortRef = useRef<AbortController | null>(null);
   // Seed guest count to store if passed via navigation state
   useEffect(() => {
     if (location.state?.partySize != null) {
@@ -100,6 +102,9 @@ export default function MenuPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableId]);
+
+  // Abort any in-flight checkout polling when unmounting
+  useEffect(() => () => checkoutAbortRef.current?.abort(), []);
 
   // Ensure we have a cart; then link table->cart and set party size
   useEffect(() => {
@@ -205,27 +210,45 @@ export default function MenuPage() {
 
   async function handleCheckout() {
     if (!cartId) return;
+    setCheckingOut(true);
     const res = await cartApi.checkoutCart(cartId);
     const orderId = res?.orderId as string | undefined;
     if (!orderId) {
       toast.error("Could not create order for checkout.");
       return;
     }
-    
-    const url = await pollForSessionUrl(orderId); // polls GET /api/orders/{orderId}/payment-session
-    if (!url) {
-      toast.error("Payment session not ready yet. Please try again.");
-      return;
-    }
-    window.location.href = url;
-
-    try { await unlinkOrder.mutateAsync(cartId); } catch {}
-    try { await setTableStatus.mutateAsync({ status: "available" }); } catch {}
-    store.clearTableSession(tableId);
-    await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
-    // Navigate to order review/receipt page with orderId if you have it
-    if (res?.orderId) {
-      navigate(`/pos/table/${tableId}/order`, { state: { orderId: res.orderId } });
+    const ac = new AbortController();
+    checkoutAbortRef.current = ac;
+    try {
+      const url = await pollForSessionUrl(orderId, 12_000, 600, { signal: ac.signal });
+      if (url) {
+        window.location.href = url;
+        // Best-effort cleanup; may not run after navigation
+        try { await unlinkOrder.mutateAsync(cartId); } catch {}
+        try { await setTableStatus.mutateAsync({ status: "available" }); } catch {}
+        store.clearTableSession(tableId);
+        await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
+        return;
+      }
+      // No URL — check terminal status and route accordingly
+      try {
+        const last = await getPaymentSessionUrl(orderId, { signal: ac.signal });
+        const s = last.status?.toLowerCase();
+        if (s === "succeeded") {
+          toast.success("Payment already completed.");
+          navigate(`/pos/table/${tableId}/checkout/success?order=${encodeURIComponent(orderId)}`);
+          return;
+        }
+        if (s === "failed") {
+          toast.error("Payment failed.");
+          navigate(`/pos/table/${tableId}/checkout/cancel?order=${encodeURIComponent(orderId)}`);
+          return;
+        }
+      } catch {}
+      toast.error("Payment session not ready yet. Please try again.")
+    } finally {
+      setCheckingOut(false);
+      checkoutAbortRef.current = null;
     }
   }
 
@@ -266,7 +289,7 @@ export default function MenuPage() {
   }, [blocker.state, blocker.location?.pathname, tableId]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-4 xl:pr-[25rem]"> {/* reserve space for fixed sidebar on xl+ */}
+    <div className="mx-auto max-w-screen-2xl px-4 py-4 xl:pr-[25rem]"> {/* reserve space for fixed sidebar on xl+ */}
       {/* Header */}
       <div className="mb-4">
         <div className="flex items-center justify-between">
@@ -296,20 +319,30 @@ export default function MenuPage() {
       </div>
 
       {/* Category Tabs */}
-      <Card className="mb-4 border-border">
-        <CardContent className="p-3">
+      <Card className="mb-4 border-border overflow-hidden">
+        <CardContent className="p-0">
           <Tabs value={category} onValueChange={(v) => setCategory(v)}>
-            <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
-              {["All", ...((categories.data ?? []).filter(Boolean))].map((c) => (
-                <TabsTrigger
-                  key={c}
-                  value={c}
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                >
-                  {c}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div
+              className="px-2 sm:px-3 py-2 overflow-x-auto no-scrollbar"
+              style={{
+                WebkitMaskImage:
+                  "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+                maskImage:
+                  "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
+              }}
+            >
+              <TabsList className="flex flex-nowrap sm:flex-wrap items-center gap-2 sm:gap-3 bg-transparent p-0 min-w-0">
+                {["All", ...((categories.data ?? []).filter(Boolean))].map((c) => (
+                  <TabsTrigger
+                    key={c}
+                    value={c}
+                    className="whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 text-sm rounded-full border border-border bg-muted/30 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    {c}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
           </Tabs>
         </CardContent>
       </Card>
@@ -327,13 +360,13 @@ export default function MenuPage() {
       {menuList.isLoading ? (
         <div className="text-sm text-muted-foreground">Loading menu…</div>
       ) : Array.isArray(menuList.data) ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 sm:gap-6 lg:gap-8">
           {(menuList.data as MenuItemDto[]).map((m) => (
             <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
           ))}
         </div>
       ) : (menuList.data as any)?.items?.length ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 sm:gap-6 lg:gap-8">
           {((menuList.data as any).items as MenuItemDto[]).map((m) => (
             <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
           ))}
@@ -359,7 +392,32 @@ export default function MenuPage() {
         onUpdateItem={handleUpdateItem}
         onRemoveItem={handleRemoveItem}
         onCheckout={handleCheckout}
+        checkoutLoading={checkingOut}
       />
+
+      {/* Floating order button to reopen sidebar when hidden */}
+      {!sidebarOpen && (cart?.items?.length ?? 0) > 0 && (
+        <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50">
+          <Button
+            onClick={() => setSidebarOpen(true)}
+            className="h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg"
+            size="lg"
+            variant="default"
+          >
+            <div className="flex flex-col items-center relative">
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+              {(cart?.items?.length ?? 0) > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center p-0 text-xs bg-destructive"
+                >
+                  {(cart?.items?.reduce((n, i) => n + (i.quantity ?? 0), 0) ?? 0)}
+                </Badge>
+              )}
+            </div>
+          </Button>
+        </div>
+      )}
 
       {/* Release confirmation dialog when navigating away with empty order */}
       <Dialog open={releaseOpen} onOpenChange={(o) => { if (!o) { blockerRef.current?.reset(); } setReleaseOpen(o); }}>

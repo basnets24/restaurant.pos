@@ -59,6 +59,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                 .Then(context =>
                     {
                         context.Saga.OrderId = context.Message.OrderId;
+                        context.Saga.TableId = context.Message.TableId; 
                         context.Saga.Items = context.Message.Items;
                         context.Saga.OrderTotal = context.Message.TotalAmount;
                         context.Saga.SubmittedAt = DateTimeOffset.Now;
@@ -92,6 +93,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                .Send( context => new PaymentRequested(
                    context.Saga.CorrelationId,
                    context.Saga.OrderId,
+                   context.Saga.TableId,
                    AmountCents: (long) (context.Saga.OrderTotal * 100m ),
                    context.Saga.RestaurantId, context.Saga.LocationId)
                )
