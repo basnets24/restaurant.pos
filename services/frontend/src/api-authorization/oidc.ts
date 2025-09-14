@@ -11,14 +11,14 @@ if (!authority) {
     );
 }
 
+const scope = import.meta.env.VITE_OIDC_SCOPE ?? 'openid profile roles tenancy tenant.claims.read';
+
 export const userManager = new UserManager({
     authority,
     client_id: 'frontend',
     redirect_uri: `${origin}${AuthorizationPaths.LoginCallback}`,
     response_type: 'code',
-    scope:
-        'openid profile tenancy menu.read menu.write inventory.read inventory.write order.read order.write payment.read payment.charge ' +
-        'payment.refund IdentityServerApi roles',
+    scope,
     post_logout_redirect_uri: `${origin}${AuthorizationPaths.LogOutCallback}`,
     automaticSilentRenew: true,
     includeIdTokenInSilentRenew: true,

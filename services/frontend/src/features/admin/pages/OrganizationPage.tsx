@@ -47,12 +47,12 @@ export default function OrganizationPage() {
 
   useEffect(() => setDraft(model), [tab]);
 
-  // Load join code for current restaurant (from Identity)
+  // Load join code for current restaurant (from Tenant service)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`${ENV.IDENTITY_URL}/api/onboarding/me/code`, {
+        const r = await fetch(`${ENV.TENANT_URL}/api/onboarding/me/code`, {
           headers: { Authorization: `Bearer ${getToken() ?? ""}` },
           credentials: "include",
         });

@@ -42,6 +42,8 @@ dotnet user-secrets set "IdentitySettings:AdminUserPassword" "Passw0rd!"
 dotnet user-secrets set "TenantService:ClientSecret" "dev-identity-tenant-secret"
 ```
 
+
+
 ### Database
 Apply migrations to your local PostgreSQL database:
 ```bash

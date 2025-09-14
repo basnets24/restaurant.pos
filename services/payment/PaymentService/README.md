@@ -1,4 +1,5 @@
-# PaymentService (Restaurant POS)
+-[0-
+p0\=\# PaymentService (Restaurant POS)
 
 Payment orchestration for the Restaurant POS platform. Creates Stripe Checkout sessions on request, handles webhooks to mark payments succeeded/failed, and exposes a simple query to retrieve a pending session URL. Built with .NET 8, MongoDB, MassTransit/RabbitMQ, and Stripe.
 

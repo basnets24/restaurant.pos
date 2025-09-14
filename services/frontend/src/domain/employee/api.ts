@@ -1,4 +1,6 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios from "axios";
+import type { AxiosError, AxiosInstance } from "axios";
+import { getApiToken } from "@/auth/getApiToken";
 
 // Types (DTOs)
 export type GuidString = string;
@@ -114,11 +116,9 @@ function pickMessage(data: any): string | undefined {
   return undefined;
 }
 
-async function withAuthHeaders(getAccessToken: GetAccessToken) {
-  const token = await getAccessToken();
-  const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  return headers;
+async function withIdentityHeaders() {
+  const token = await getApiToken('IdentityServerApi', ['IdentityServerApi']);
+  return { Authorization: `Bearer ${token}` } as Record<string, string>;
 }
 
 function withTenantHeaders(rid?: string) {
@@ -153,10 +153,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
   return {
     async listEmployees(restaurantId, query) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<Paged<EmployeeListItemDto>>(path(restaurantId), {
           headers,
           params: {
@@ -172,10 +169,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
 
     async getEmployeeById(restaurantId, userId) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<EmployeeDetailDto>(path(restaurantId, `/${encodeURIComponent(userId)}`), { headers });
         return res.data;
       } catch (e) { handleError(e); }
@@ -183,40 +177,28 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
 
     async updateEmployee(restaurantId, userId, body) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         await instance.put(path(restaurantId, `/${encodeURIComponent(userId)}`), body, { headers });
       } catch (e) { handleError(e); }
     },
 
     async addEmployee(restaurantId, body) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         await instance.post(path(restaurantId), body, { headers });
       } catch (e) { handleError(e); }
     },
 
     async updateDefaultLocation(restaurantId, userId, body) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         await instance.put(path(restaurantId, `/${encodeURIComponent(userId)}/default-location`), body, { headers });
       } catch (e) { handleError(e); }
     },
 
     async getEmployeeRoles(restaurantId, userId) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<readonly string[]>(path(restaurantId, `/${encodeURIComponent(userId)}/roles`), { headers });
         return res.data;
       } catch (e) { handleError(e); }
@@ -224,34 +206,24 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
 
     async updateEmployeeRoles(restaurantId, userId, body) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         await instance.post(path(restaurantId, `/${encodeURIComponent(userId)}/roles`), body, { headers });
       } catch (e) { handleError(e); }
     },
 
     async deleteEmployeeRole(restaurantId, userId, role) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         await instance.delete(path(restaurantId, `/${encodeURIComponent(userId)}/roles/${encodeURIComponent(role)}`), { headers });
       } catch (e) { handleError(e); }
     },
 
     async getAvailableRoles(restaurantId) {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
-        );
+        const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<readonly string[]>(path(restaurantId, "/roles"), { headers });
         return res.data;
       } catch (e) { handleError(e); }
     },
   };
 }
-

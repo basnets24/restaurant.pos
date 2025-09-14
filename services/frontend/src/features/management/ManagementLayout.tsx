@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ArrowLeft, Home, BarChart3, Users, Package, Calendar, Utensils } from "lucide-react";
+import { useCan } from "@/auth/permissions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CircleUserRound, User, Shield, Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/api-authorization/AuthProvider";
@@ -37,6 +38,7 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
     const activeTab = isValid ? active : "analytics";
 
     const go = (to: string) => navigate(to);
+    const canManageStaff = useCan("manageStaff");
     const backToDashboard = () => navigate("/home");
     const backToLanding = () => navigate("/home");
 
@@ -104,7 +106,7 @@ export default function ManagementLayout({ userData }: { userData?: any }) {
                 <div className="overflow-x-auto">
                     <Tabs value={activeTab} onValueChange={(v) => go(`/management/${v}`)} className="space-y-8">
                         <TabsList className="w-full rounded-2xl p-2 flex items-center gap-3 overflow-x-auto">
-                            {TAB_LIST.map(({ value, label, Icon }) => (
+                            {TAB_LIST.filter(t => t.value !== "staff" || canManageStaff).map(({ value, label, Icon }) => (
                                 <TabsTrigger
                                   key={value}
                                   value={value}

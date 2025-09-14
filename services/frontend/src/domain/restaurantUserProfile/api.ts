@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
+import { getApiToken } from "@/auth/getApiToken";
 import type {
   OnboardRestaurantReq,
   OnboardRestaurantRes,
@@ -60,7 +61,9 @@ export type RestaurantUserProfileApi = {
 };
 
 export type CreateApiOptions = {
-  baseURL?: string;
+  baseURL?: string; // legacy: used when both services are same base
+  identityBaseURL?: string; // for /users/me
+  tenantBaseURL?: string;   // for /api/onboarding/*
   axiosInstance?: AxiosInstance;
   getAccessToken: GetAccessToken;
 };
@@ -105,14 +108,13 @@ function mergeHeaders(
  * Creates an axios-backed API for restaurant user profile & onboarding.
  * Inject a getAccessToken function from your Auth layer.
  */
-export function createRestaurantUserProfileApi(
-  opts: CreateApiOptions
-): RestaurantUserProfileApi {
-  const instance =
-    opts.axiosInstance ??
-    axios.create({
-      baseURL: opts.baseURL ?? "/",
-    });
+export function createRestaurantUserProfileApi(opts: CreateApiOptions): RestaurantUserProfileApi {
+  // Back-compat: if only baseURL provided, use for both
+  const identityBase = opts.identityBaseURL ?? opts.baseURL ?? "/";
+  const tenantBase = opts.tenantBaseURL ?? opts.baseURL ?? "/";
+
+  const idInstance = opts.axiosInstance ?? axios.create({ baseURL: identityBase });
+  const tenantInstance = opts.axiosInstance ?? axios.create({ baseURL: tenantBase });
 
   const handleError = (e: unknown): never => {
     if (isAxiosError(e)) {
@@ -140,7 +142,7 @@ export function createRestaurantUserProfileApi(
     ): Promise<OnboardRestaurantRes> {
       try {
         const headers = await withAuthHeaders(opts.getAccessToken);
-        const res = await instance.post<OnboardRestaurantRes>(
+        const res = await tenantInstance.post<OnboardRestaurantRes>(
           "/api/onboarding/restaurant",
           req,
           { headers }
@@ -163,7 +165,7 @@ export function createRestaurantUserProfileApi(
           await withAuthHeaders(opts.getAccessToken),
           withTenantHeaders(params?.rid, params?.lid)
         );
-        const res = await instance.post<OnboardRestaurantRes>(
+        const res = await tenantInstance.post<OnboardRestaurantRes>(
           "/api/onboarding/join",
           req,
           { headers }
@@ -186,7 +188,7 @@ export function createRestaurantUserProfileApi(
           await withAuthHeaders(opts.getAccessToken),
           withTenantHeaders(params?.rid, params?.lid)
         );
-        const res = await instance.get<OnboardingStatus>(
+        const res = await tenantInstance.get<OnboardingStatus>(
           "/api/onboarding/status",
           { headers }
         );
@@ -208,7 +210,7 @@ export function createRestaurantUserProfileApi(
           await withAuthHeaders(opts.getAccessToken),
           withTenantHeaders(params?.rid, params?.lid)
         );
-        const res = await instance.get<MyJoinCodeRes>(
+        const res = await tenantInstance.get<MyJoinCodeRes>(
           "/api/onboarding/me/code",
           { headers }
         );
@@ -229,11 +231,9 @@ export function createRestaurantUserProfileApi(
       lid?: string;
     }): Promise<UserProfile> {
       try {
-        const headers = mergeHeaders(
-          await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(params?.rid, params?.lid)
-        );
-        const res = await instance.get<UserProfile>("/users/me", { headers });
+        // IdentityService local API expects scope IdentityServerApi and audience set
+        const idHeaders = { Authorization: `Bearer ${await getApiToken('IdentityServerApi', ['IdentityServerApi'])}` };
+        const res = await idInstance.get<UserProfile>("/users/me", { headers: idHeaders });
         return res.data;
       } catch (e) {
         handleError(e);

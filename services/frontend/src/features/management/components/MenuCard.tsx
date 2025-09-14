@@ -70,6 +70,9 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
 
             {/* Filters */}
             <CardContent className="space-y-4">
+                {!canWrite && (
+                    <div className="text-xs text-muted-foreground">You have read-only access to menu items.</div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                     <Input placeholder="Search by name" value={name} onChange={(e) => setName(e.target.value)} />
 

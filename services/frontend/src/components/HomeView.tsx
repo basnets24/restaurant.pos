@@ -88,7 +88,8 @@ export function Dashboard({
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
     const { data: status } = hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
-    const canAccessAdmin = status?.isAdmin === true || roles.includes("Manager") || roles.includes("Admin");
+    // Show Admin button only for Admin or Owner
+    const canAccessAdmin = roles.includes("Admin") || roles.includes("Owner");
     const { data: tablesData } = useDomainTables();
     const employee = useEmployeeDomain();
     const employees = employee.useEmployees(rid ?? "", { page: 1, pageSize: 1 }, { enabled: !!rid });

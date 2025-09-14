@@ -26,9 +26,19 @@ export default function RolesPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3"><Shield className="h-5 w-5" /><h2 className="text-lg font-semibold">Roles & Permissions</h2></div>
-        <div className="text-sm text-muted-foreground">{roles.data?.length ?? 0} roles</div>
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">{roles.data?.length ?? 0} roles</div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => (window.location.href = "/settings/account")}
+            title="Open Settings → Account"
+          >
+            Open Settings
+          </Button>
+        </div>
       </header>
-      <div className="text-xs text-muted-foreground">Use Settings → Account to manage your roles.</div>
+      <div className="text-xs text-muted-foreground">Manage your personal account roles under Settings → Account. If the Settings menu is hidden in POS, use the button above.</div>
 
       {roles.isLoading ? (
         <div className="text-sm text-muted-foreground">Loading roles…</div>

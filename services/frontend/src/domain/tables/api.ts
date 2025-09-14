@@ -1,5 +1,6 @@
 import { http as api } from "@/lib/http";
 import { ENV } from "@/config/env";
+import { getApiToken } from "@/auth/getApiToken";
 import {
   type BulkLayoutUpdateDto,
   type CreateTableDto,
@@ -36,56 +37,69 @@ const base = `${ENV.ORDER_URL}/api/tables`;
 export const TablesApi = {
   // Queries
   async getAll(): Promise<TableViewDto[]> {
-    const { data } = await api.get<TableViewDto[]>(base, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.read']);
+    const { data } = await api.get<TableViewDto[]>(base, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
     return data;
   },
   async getById(id: string): Promise<TableViewDto> {
-    const { data } = await api.get<TableViewDto>(`${base}/${id}`, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.read']);
+    const { data } = await api.get<TableViewDto>(`${base}/${id}`, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
     return data;
   },
 
   // Commands
   async create(dto: CreateTableDto): Promise<void> {
-    await api.post(base, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(base, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   async delete(id: string): Promise<void> {
-    await api.delete(`${base}/${id}`, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.delete(`${base}/${id}`, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
 
   // Layout
   async updateLayout(id: string, dto: UpdateTableLayoutDto): Promise<void> {
-    await api.patch(`${base}/${id}/layout`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.patch(`${base}/${id}/layout`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   async bulkUpdateLayout(dto: BulkLayoutUpdateDto): Promise<void> {
     // Server expects POST, not PATCH
-    await api.post(`${base}/layout/bulk`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(`${base}/layout/bulk`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
 
   // Status / seating
   async setStatus(id: string, dto: SetTableStatusDto): Promise<void> {
-    await api.patch(`${base}/${id}/status`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.patch(`${base}/${id}/status`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   async seat(id: string, party: number): Promise<void> {
-    await api.post(`${base}/${id}/seat`, { partySize: party }, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(`${base}/${id}/seat`, { partySize: party }, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   async clear(id: string): Promise<void> {
-    await api.post(`${base}/${id}/clear`, null, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(`${base}/${id}/clear`, null, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
 
   // Order linking
   async linkOrder(id: string, dto: LinkOrderDto): Promise<void> {
-    await api.post(`${base}/${id}/link-order`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(`${base}/${id}/link-order`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   async unlinkOrder(id: string, dto: LinkOrderDto): Promise<void> {
-    await api.post(`${base}/${id}/unlink-order`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(`${base}/${id}/unlink-order`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
 
   // Grouping
   async join(dto: JoinTablesDto): Promise<{ groupId: string }> {
-    const { data } = await api.post<{ groupId: string }>(`${base}/join`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    const { data } = await api.post<{ groupId: string }>(`${base}/join`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
     return data;
   },
   async split(dto: SplitTablesDto): Promise<void> {
-    await api.post(`${base}/split`, dto, { headers: withTenantHeaders() });
+    const token = await getApiToken('Order', ['order.write']);
+    await api.post(`${base}/split`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   }
 };

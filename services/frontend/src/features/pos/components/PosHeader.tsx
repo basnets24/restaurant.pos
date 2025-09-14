@@ -156,16 +156,6 @@ export function PosHeader({
                 <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
                 <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/settings/account")}>
-                  <User className="h-4 w-4 mr-2" /> Account
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings/security")}>
-                  <ShieldCheck className="h-4 w-4 mr-2" /> Security
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/settings/notifications")}>
-                  <Bell className="h-4 w-4 mr-2" /> Notifications
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout}>
                   <LogOut className="h-4 w-4 mr-2" /> Logout
                 </DropdownMenuItem>

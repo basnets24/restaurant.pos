@@ -1,3 +1,4 @@
+/* @refresh skip */
 import React, { createContext, useContext, useMemo } from "react";
 import { createEmployeeApi } from "./api";
 import { createEmployeeHooks } from "./hooks";
@@ -28,4 +29,3 @@ export function useEmployeeDomain() {
   if (!ctx) throw new Error("useEmployeeDomain must be used within EmployeeProvider");
   return ctx;
 }
-

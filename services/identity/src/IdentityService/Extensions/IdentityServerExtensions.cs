@@ -21,7 +21,8 @@ public static class IdentityServerExtensions
             var tenantClient = idp!.Clients.FirstOrDefault(c => string.Equals(c.ClientId, tenantClientId, StringComparison.Ordinal));
             if (tenantClient is not null)
             {
-                tenantClient.ClientSecrets = new List<Secret> { new Secret(tenantClientSecret) };
+                // IdentityServer expects stored client secrets to be hashed (Sha256 base64).
+                tenantClient.ClientSecrets = new List<Secret> { new Secret(HashSharedSecret(tenantClientSecret)) };
             }
         }
 
@@ -47,6 +48,14 @@ public static class IdentityServerExtensions
             .AddProfileService<Services.TenantProfileService>();
          
         return services;
+    }
+
+    private static string HashSharedSecret(string secret)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = System.Text.Encoding.UTF8.GetBytes(secret);
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
     }
 
 }

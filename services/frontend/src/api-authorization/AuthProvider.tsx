@@ -2,11 +2,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from 'oidc-client-ts';
 import { userManager } from './oidc';
+import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 
 declare global {
     interface Window {
-        POS_SHELL_AUTH?: { getToken?: () => string | undefined };
+        POS_SHELL_AUTH?: { getToken?: () => string | undefined; getTenant?: () => { restaurantId?: string; locationId?: string } | undefined };
     }
 }
 
@@ -108,10 +109,31 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const completeSignIn = async () => {
         const u = await userManager.signinCallback(window.location.href);
         setFromUser(u);
-        const returnUrl =
+        const suggested =
             (u?.state as any)?.returnUrl ??
             `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`;
-        window.location.replace(returnUrl);
+
+        // After login, check onboarding status; if not onboarded, go to /join
+        try {
+            const token = u?.access_token;
+            if (token) {
+                const r = await fetch(`${ENV.TENANT_URL}/api/onboarding/status`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    credentials: "include",
+                });
+                if (r.ok) {
+                    const s = await r.json();
+                    if (!s?.hasMembership) {
+                        window.location.replace(`${window.location.origin}/join`);
+                        return;
+                    }
+                }
+            }
+        } catch {
+            // swallow and fall through to suggested URL
+        }
+
+        window.location.replace(suggested);
     };
 
     const signOut = async (returnUrl?: string) => {

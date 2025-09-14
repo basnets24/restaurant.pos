@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Package } from "lucide-react";
+import { useCan } from "@/auth/permissions";
 
 export default function InventoryStockCard() {
     const { data, isLoading } = useInventoryItems();
+    const canWrite = useCan("inventoryWrite");
 
     const items: InventoryItemDto[] = Array.isArray(data)
         ? data
@@ -32,6 +34,9 @@ export default function InventoryStockCard() {
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
+                {!canWrite && (
+                    <div className="text-xs text-muted-foreground">You have read-only access to inventory.</div>
+                )}
                 <div className="rounded-2xl border">
                     <Table>
                         <TableHeader>
@@ -40,17 +45,18 @@ export default function InventoryStockCard() {
                                 <TableHead className="w-24 text-right">Qty</TableHead>
                                 <TableHead>Available</TableHead>
                                 <TableHead>Acquired</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                {canWrite && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading && <TableRow><TableCell colSpan={5}>Loading…</TableCell></TableRow>}
-                            {!isLoading && items.length === 0 && <TableRow><TableCell colSpan={5}>No inventory items</TableCell></TableRow>}
+                            {!isLoading && items.length === 0 && <TableRow><TableCell colSpan={canWrite ? 5 : 4}>No inventory items</TableCell></TableRow>}
                             {items.map((it) => (
                                 <InventoryRow
                                     key={it.id}
                                     it={it}
                                     busy={updateMut.isPending || adjustMut.isPending}
+                                    canWrite={canWrite}
                                     onUpdate={(dto) =>
                                         updateMut.mutate(
                                             { id: it.id, dto, menuItemId: it.menuItemId },
@@ -85,11 +91,12 @@ export default function InventoryStockCard() {
     );
 }
 
-function InventoryRow({ it, onUpdate, onAdjust, busy }: {
+function InventoryRow({ it, onUpdate, onAdjust, busy, canWrite }: {
     it: InventoryItemDto;
     onUpdate: (dto: { quantity?: number; isAvailable?: boolean }) => void;
     onAdjust: (delta: number) => void;
     busy?: boolean;
+    canWrite: boolean;
 }) {
     const [qtyEdit, setQtyEdit] = useState<string>(String(it.quantity ?? 0));
     // Keep input in sync with server updates
@@ -105,23 +112,33 @@ function InventoryRow({ it, onUpdate, onAdjust, busy }: {
                 <div className="text-xs opacity-70">Menu #{it.menuItemId.slice(0, 8)}</div>
             </TableCell>
             <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                    <Button size="icon" variant="outline" onClick={() => onAdjust(-1)} disabled={busy} aria-label="Decrease quantity">−</Button>
-                    <Input className="w-16 text-right" value={qtyEdit} onChange={(e) => setQtyEdit(e.target.value)} />
-                    <Button size="icon" variant="outline" onClick={() => onAdjust(1)} disabled={busy} aria-label="Increase quantity">+</Button>
-                </div>
+                {canWrite ? (
+                    <div className="flex items-center justify-end gap-2">
+                        <Button size="icon" variant="outline" onClick={() => onAdjust(-1)} disabled={busy} aria-label="Decrease quantity">−</Button>
+                        <Input className="w-16 text-right" value={qtyEdit} onChange={(e) => setQtyEdit(e.target.value)} />
+                        <Button size="icon" variant="outline" onClick={() => onAdjust(1)} disabled={busy} aria-label="Increase quantity">+</Button>
+                    </div>
+                ) : (
+                    <div className="text-right font-medium">{it.quantity ?? 0}</div>
+                )}
             </TableCell>
             <TableCell>
-                <div className="flex items-center gap-2">
-                    <Switch checked={it.isAvailable} onCheckedChange={(v) => onUpdate({ isAvailable: v })} disabled={busy} />
+                {canWrite ? (
+                    <div className="flex items-center gap-2">
+                        <Switch checked={it.isAvailable} onCheckedChange={(v) => onUpdate({ isAvailable: v })} disabled={busy} />
+                        <Badge variant={it.isAvailable ? "default" : "secondary"}>{it.isAvailable ? "Available" : "Hidden"}</Badge>
+                    </div>
+                ) : (
                     <Badge variant={it.isAvailable ? "default" : "secondary"}>{it.isAvailable ? "Available" : "Hidden"}</Badge>
-                </div>
+                )}
             </TableCell>
             <TableCell>{new Date(it.acquiredDate).toLocaleString()}</TableCell>
-            <TableCell className="text-right space-x-2">
-                <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: qty })} disabled={busy}>Set</Button>
-                <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: 0 })} disabled={busy}>Zero</Button>
-            </TableCell>
+            {canWrite && (
+                <TableCell className="text-right space-x-2">
+                    <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: qty })} disabled={busy}>Set</Button>
+                    <Button size="sm" variant="outline" onClick={() => onUpdate({ quantity: 0 })} disabled={busy}>Zero</Button>
+                </TableCell>
+            )}
         </TableRow>
     );
 }

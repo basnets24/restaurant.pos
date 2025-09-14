@@ -16,7 +16,8 @@ export const RestaurantUserProfileProvider: React.FC<React.PropsWithChildren> = 
   const hooks = useMemo(() => {
     const api = createRestaurantUserProfileApi({
       getAccessToken: async () => (await getAccessToken()) ?? null,
-      baseURL: ENV.IDENTITY_URL,
+      identityBaseURL: ENV.IDENTITY_URL,
+      tenantBaseURL: ENV.TENANT_URL,
     }) as RestaurantUserProfileApi;
     return createRestaurantUserProfileHooks(api, {
       onAuthRefresh: async () => {

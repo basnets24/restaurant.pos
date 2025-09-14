@@ -1,5 +1,5 @@
 // src/auth/ProtectedRoute.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthorizationPaths, QueryParameterNames } from './ApiAuthorizationConstants';
 import { useAuth } from './AuthProvider';
@@ -17,27 +17,34 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
     const hooks = useRestaurantUserProfile();
     const { rid, lid, setRid, setLid } = useTenant();
 
+    // Always call hooks in the same order. Drive behavior via flags.
+    const { data: status, error, isLoading } = hooks.useOnboardingStatus(
+      { rid: rid ?? undefined, lid: lid ?? undefined },
+      { retry: 1, enabled: isReady && isAuthenticated && loc.pathname !== "/join" }
+    );
+
+    // Now branch based on state
     if (!isReady) return null;
     if (!isAuthenticated) return <Navigate to={loginUrl} replace />;
 
-    // Onboarding gate using backend status
-    const { data: status, error, isLoading } = hooks.useOnboardingStatus(
-      { rid: rid ?? undefined, lid: lid ?? undefined },
-      { retry: 1, enabled: loc.pathname !== "/join" }
-    );
-    if (isLoading) return null;
-    if (error) {
-        const statusCode = (error as any)?.status ?? (error as any)?.response?.status;
-        if (error instanceof UnauthorizedError || statusCode === 401) {
-            return <Navigate to={loginUrl} replace />;
+    if (loc.pathname !== "/join") {
+        if (isLoading) return null;
+        if (error) {
+            const statusCode = (error as any)?.status ?? (error as any)?.response?.status;
+            // If onboarding status call returns 401 while authenticated, treat it as not onboarded
+            // and send to onboarding instead of bouncing to login (avoids loops).
+            if (statusCode === 401) {
+                return <Navigate to="/join" replace />;
+            }
+            if (error instanceof UnauthorizedError) {
+                return <Navigate to={loginUrl} replace />;
+            }
         }
-    }
-    if (status?.hasMembership) {
-        // ensure TenantContext is hydrated
-        if (status.restaurantId && status.restaurantId !== rid) setRid(status.restaurantId);
-        if (status.locationId && status.locationId !== lid) setLid(status.locationId);
-    } else {
-        if (loc.pathname !== "/join") {
+        if (status?.hasMembership) {
+            // ensure TenantContext is hydrated
+            if (status.restaurantId && status.restaurantId !== rid) setRid(status.restaurantId);
+            if (status.locationId && status.locationId !== lid) setLid(status.locationId);
+        } else {
             return <Navigate to="/join" replace />;
         }
     }

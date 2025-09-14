@@ -1,6 +1,7 @@
 // src/domain/payments/api.ts
 import { ENV } from "@/config/env";
 import { http } from "@/lib/http";
+import { getApiToken } from "@/auth/getApiToken";
 
 export type PaymentSessionStatus = "pending" | "succeeded" | "failed" | string;
 
@@ -17,9 +18,10 @@ export async function getPaymentSessionUrl(
   // Use absolute API URL so dev server (Vite) doesn't need a proxy
   const url = `${ENV.PAYMENT_URL}/orders/${orderId}/payment-session`;
   try {
-    const { data, status, statusText } = await http.get<PaymentSessionResponse>(url, {
+    const token = await getApiToken("Payment", ["payment.read"]);
+    const { data } = await http.get<PaymentSessionResponse>(url, {
       signal: opts?.signal as any,
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
       // Authorization header is attached by http interceptor; getToken exists for SSR safety
     });
     // Normalize successful payloads
