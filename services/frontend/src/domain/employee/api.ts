@@ -1,5 +1,4 @@
-import axios from "axios";
-import type { AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
 
 // Types (DTOs)
@@ -163,10 +162,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
             pageSize: query?.pageSize,
           },
         });
-        if (!res.data) {
-          throw new ApiError("Failed to fetch employee list", 500);
-        }
-        return res.data as Paged<EmployeeListItemDto>;
+        return res.data;
       } catch (e) { handleError(e); }
     },
 
