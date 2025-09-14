@@ -1,4 +1,5 @@
 using Common.Library;
+using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
 using Microsoft.AspNetCore.Mvc;
@@ -16,14 +17,14 @@ public class StripeWebhookController : ControllerBase
     private readonly IRepository<Payment> _repo;
     private readonly IPublishEndpoint _publish;
     private readonly string _secret;
-    private readonly Common.Library.Tenancy.TenantMiddleware.TenantContextHolder _tenantHolder;
+    private readonly TenantMiddleware.TenantContextHolder _tenantHolder;
     private readonly ILogger<StripeWebhookController> _logger;
 
     public StripeWebhookController(IRepository<Payment> repo, 
         IPublishEndpoint publish, 
         IConfiguration cfg, 
         ILogger<StripeWebhookController> logger,
-        Common.Library.Tenancy.TenantMiddleware.TenantContextHolder tenantHolder)
+        TenantMiddleware.TenantContextHolder tenantHolder)
     {
         _repo = repo;
         _publish = publish;
@@ -54,6 +55,33 @@ public class StripeWebhookController : ControllerBase
 
     try
     {
+        // Rehydrate tenant context early from event metadata (before any repo queries)
+        try
+        {
+            string? rid = null, lid = null;
+            if (stripeEvent.Type.StartsWith("checkout.session.", StringComparison.Ordinal))
+            {
+                var s = (Stripe.Checkout.Session)stripeEvent.Data.Object!;
+                if (s.Metadata != null)
+                {
+                    s.Metadata.TryGetValue("restaurantId", out rid);
+                    s.Metadata.TryGetValue("locationId", out lid);
+                }
+            }
+            else if (stripeEvent.Type.StartsWith("payment_intent.", StringComparison.Ordinal))
+            {
+                var pi = (PaymentIntent)stripeEvent.Data.Object!;
+                if (pi.Metadata != null)
+                {
+                    pi.Metadata.TryGetValue("restaurantId", out rid);
+                    pi.Metadata.TryGetValue("locationId", out lid);
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(rid) && !string.IsNullOrWhiteSpace(lid))
+                _tenantHolder.Set(new TenantContext { RestaurantId = rid!, LocationId = lid! });
+        }
+        catch { /* best-effort tenant hydration */ }
+
         // Global idempotency guard: skip if we've already processed this event id
         var duplicate = await _repo.GetAsync(p => p.LastStripeEventId == stripeEvent.Id);
         if (duplicate is not null)
@@ -62,7 +90,7 @@ public class StripeWebhookController : ControllerBase
             return Ok();
         }
 
-        // 2) Switch by raw event type (compatible with all Stripe.NET versions)
+        // 2) Switch by raw event type 
         switch (stripeEvent.Type)
         {
             // Synchronous success (paid immediately)
@@ -71,13 +99,41 @@ public class StripeWebhookController : ControllerBase
             case "checkout.session.async_payment_succeeded":
             {
                 var s = (Stripe.Checkout.Session)stripeEvent.Data.Object!;
-                // Set tenant from session metadata (added during session creation)
-                var rid = s.Metadata != null && s.Metadata.TryGetValue("restaurantId", out var srid) ? srid : null;
-                var lid = s.Metadata != null && s.Metadata.TryGetValue("locationId", out var slid) ? slid : null;
-                if (!string.IsNullOrWhiteSpace(rid) && !string.IsNullOrWhiteSpace(lid))
-                    _tenantHolder.Set(new Common.Library.Tenancy.TenantContext { RestaurantId = rid!, LocationId = lid! });
-                // We store the Checkout Session id in Payment.ProviderRef
-                var payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.ProviderRef == s.Id);
+                // Try lookup order: ClientReferenceId -> metadata.paymentId -> PaymentIntentId -> ProviderRef -> metadata.orderId
+                Payment? payment = null;
+                if (!string.IsNullOrWhiteSpace(s.ClientReferenceId) && Guid.TryParse(s.ClientReferenceId, out var pidFromClientRef))
+                    payment = await _repo.GetAsync(p => p.Id == pidFromClientRef);
+                if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("paymentId", out var pmid) && Guid.TryParse(pmid, out var pidFromMeta))
+                    payment = await _repo.GetAsync(p => p.Id == pidFromMeta);
+                if (payment is null && !string.IsNullOrWhiteSpace(s.PaymentIntentId))
+                    payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == s.PaymentIntentId);
+                if (payment is null)
+                    payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.ProviderRef == s.Id);
+                if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("orderId", out var oid) && Guid.TryParse(oid, out var orderIdGuid))
+                    payment = await _repo.GetAsync(p => p.OrderId == orderIdGuid);
+                // As a last resort, retry lookups with default tenant context
+                if (payment is null)
+                {
+                    var cur = _tenantHolder.Current;
+                    _tenantHolder.Set(new TenantContext { RestaurantId = string.Empty, LocationId = string.Empty });
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(s.ClientReferenceId) && Guid.TryParse(s.ClientReferenceId, out pidFromClientRef))
+                            payment = await _repo.GetAsync(p => p.Id == pidFromClientRef);
+                        if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("paymentId", out pmid) && Guid.TryParse(pmid, out pidFromMeta))
+                            payment = await _repo.GetAsync(p => p.Id == pidFromMeta);
+                        if (payment is null && !string.IsNullOrWhiteSpace(s.PaymentIntentId))
+                            payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == s.PaymentIntentId);
+                        if (payment is null)
+                            payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.ProviderRef == s.Id);
+                        if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("orderId", out oid) && Guid.TryParse(oid, out orderIdGuid))
+                            payment = await _repo.GetAsync(p => p.OrderId == orderIdGuid);
+                    }
+                    finally
+                    {
+                        if (cur is not null) _tenantHolder.Set(cur);
+                    }
+                }
                 if (payment is null)
                 {
                     _logger.LogWarning("Payment not found for stripe session {SessionId}", s.Id);
@@ -141,7 +197,39 @@ public class StripeWebhookController : ControllerBase
             case "checkout.session.expired":
             {
                 var s = (Stripe.Checkout.Session)stripeEvent.Data.Object!;
-                var payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.ProviderRef == s.Id);
+                Payment? payment = null;
+                if (!string.IsNullOrWhiteSpace(s.ClientReferenceId) && Guid.TryParse(s.ClientReferenceId, out var pidFromClientRef))
+                    payment = await _repo.GetAsync(p => p.Id == pidFromClientRef);
+                if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("paymentId", out var pmid) && Guid.TryParse(pmid, out var pidFromMeta))
+                    payment = await _repo.GetAsync(p => p.Id == pidFromMeta);
+                if (payment is null && !string.IsNullOrWhiteSpace(s.PaymentIntentId))
+                    payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == s.PaymentIntentId);
+                if (payment is null)
+                    payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.ProviderRef == s.Id);
+                if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("orderId", out var oid) && Guid.TryParse(oid, out var orderIdGuid))
+                    payment = await _repo.GetAsync(p => p.OrderId == orderIdGuid);
+                if (payment is null)
+                {
+                    var cur = _tenantHolder.Current;
+                    _tenantHolder.Set(new TenantContext { RestaurantId = string.Empty, LocationId = string.Empty });
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(s.ClientReferenceId) && Guid.TryParse(s.ClientReferenceId, out pidFromClientRef))
+                            payment = await _repo.GetAsync(p => p.Id == pidFromClientRef);
+                        if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("paymentId", out pmid) && Guid.TryParse(pmid, out pidFromMeta))
+                            payment = await _repo.GetAsync(p => p.Id == pidFromMeta);
+                        if (payment is null && !string.IsNullOrWhiteSpace(s.PaymentIntentId))
+                            payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == s.PaymentIntentId);
+                        if (payment is null)
+                            payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.ProviderRef == s.Id);
+                        if (payment is null && s.Metadata != null && s.Metadata.TryGetValue("orderId", out oid) && Guid.TryParse(oid, out orderIdGuid))
+                            payment = await _repo.GetAsync(p => p.OrderId == orderIdGuid);
+                    }
+                    finally
+                    {
+                        if (cur is not null) _tenantHolder.Set(cur);
+                    }
+                }
                 if (payment is null)
                 {
                     _logger.LogWarning("Payment not found for stripe session {SessionId}", s.Id);
@@ -175,16 +263,15 @@ public class StripeWebhookController : ControllerBase
                 break;
             }
 
-            // Optional: store PaymentIntentId in ProviderRef, you can handle these:
+            // PaymentIntent events
             case "payment_intent.payment_failed":
             {
                 var pi = (Stripe.PaymentIntent)stripeEvent.Data.Object!;
-                // Set tenant from payment intent metadata when available
-                var rid = pi.Metadata != null && pi.Metadata.TryGetValue("restaurantId", out var prid) ? prid : null;
-                var lid = pi.Metadata != null && pi.Metadata.TryGetValue("locationId", out var plid) ? plid : null;
-                if (!string.IsNullOrWhiteSpace(rid) && !string.IsNullOrWhiteSpace(lid))
-                    _tenantHolder.Set(new Common.Library.Tenancy.TenantContext { RestaurantId = rid!, LocationId = lid! });
-                var payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == pi.Id);
+                Payment? payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == pi.Id);
+                if (payment is null && pi.Metadata != null && pi.Metadata.TryGetValue("paymentId", out var pmid) && Guid.TryParse(pmid, out var pid))
+                    payment = await _repo.GetAsync(p => p.Id == pid);
+                if (payment is null && pi.Metadata != null && pi.Metadata.TryGetValue("orderId", out var oid) && Guid.TryParse(oid, out var orderIdGuid))
+                    payment = await _repo.GetAsync(p => p.OrderId == orderIdGuid);
                 if (payment is null) break;
 
                 if (string.Equals(payment.Status, "Failed", StringComparison.OrdinalIgnoreCase))
@@ -214,11 +301,11 @@ public class StripeWebhookController : ControllerBase
             case "payment_intent.succeeded":
             {
                 var pi = (Stripe.PaymentIntent)stripeEvent.Data.Object!;
-                var rid = pi.Metadata != null && pi.Metadata.TryGetValue("restaurantId", out var prid) ? prid : null;
-                var lid = pi.Metadata != null && pi.Metadata.TryGetValue("locationId", out var plid) ? plid : null;
-                if (!string.IsNullOrWhiteSpace(rid) && !string.IsNullOrWhiteSpace(lid))
-                    _tenantHolder.Set(new Common.Library.Tenancy.TenantContext { RestaurantId = rid!, LocationId = lid! });
-                var payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == pi.Id);
+                Payment? payment = await _repo.GetAsync(p => p.Provider == "Stripe" && p.PaymentIntentId == pi.Id);
+                if (payment is null && pi.Metadata != null && pi.Metadata.TryGetValue("paymentId", out var pmid) && Guid.TryParse(pmid, out var pid))
+                    payment = await _repo.GetAsync(p => p.Id == pid);
+                if (payment is null && pi.Metadata != null && pi.Metadata.TryGetValue("orderId", out var oid) && Guid.TryParse(oid, out var orderIdGuid))
+                    payment = await _repo.GetAsync(p => p.OrderId == orderIdGuid);
                 if (payment is null) break;
 
                 if (string.Equals(payment.Status, "Succeeded", StringComparison.OrdinalIgnoreCase))

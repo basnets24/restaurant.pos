@@ -49,7 +49,12 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             RestaurantId = _tenant.RestaurantId,
             LocationId = _tenant.LocationId
         };
-        
+        // Persist first if new, to have a stable paymentId
+        if (existing is null)
+        {
+            await _paymentsRepo.CreateAsync(payment);
+        }
+
         var tableId = msg.TableId;
         
         // Build a Stripe Checkout Session
@@ -62,17 +67,20 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             Mode = "payment",
             SuccessUrl = success,
             CancelUrl  = cancel,
+            ClientReferenceId = payment.Id.ToString(),
             Metadata   = new()
             {
                 ["orderId"]      = msg.OrderId.ToString(),
-                ["restaurantId"] = _tenant.RestaurantId!,
-                ["locationId"]   = _tenant.LocationId!
+                ["paymentId"]    = payment.Id.ToString(),
+                ["restaurantId"] = _tenant.RestaurantId,
+                ["locationId"]   = _tenant.LocationId
             },
             PaymentIntentData = new Stripe.Checkout.SessionPaymentIntentDataOptions
             {
                 Metadata = new()
                 {
                     ["orderId"]      = msg.OrderId.ToString(),
+                    ["paymentId"]    = payment.Id.ToString(),
                     ["restaurantId"] = _tenant.RestaurantId!,
                     ["locationId"]   = _tenant.LocationId!
                 }
@@ -101,10 +109,7 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         
         payment.UpdatedAt = DateTimeOffset.UtcNow;
 
-        if (await _paymentsRepo.GetAsync(p => p.Id == payment.Id) is null)
-            await _paymentsRepo.CreateAsync(payment);
-        else
-            await _paymentsRepo.UpdateAsync(payment);
+        await _paymentsRepo.UpdateAsync(payment);
         
         await context.Publish(new PaymentSessionCreated(
             msg.CorrelationId, msg.OrderId, session.Url!, _tenant.RestaurantId, _tenant.LocationId));

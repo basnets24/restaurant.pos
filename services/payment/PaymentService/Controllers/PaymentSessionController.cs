@@ -11,13 +11,14 @@ public class PaymentSessionController : ControllerBase
     private readonly IRepository<Payment> _payments;
     private readonly ILogger<PaymentSessionController> _logger;
 
-    public PaymentSessionController(IRepository<Payment> payments, ILogger<PaymentSessionController> logger)
+    public PaymentSessionController(IRepository<Payment> payments, 
+        ILogger<PaymentSessionController> logger)
     {
         _payments = payments;
         _logger = logger;
     }
 
-    // GET /api/orders/{orderId}/payment-session
+    // GET orders/{orderId}/payment-session
     [HttpGet("{orderId:guid}/payment-session")]
     public async Task<IActionResult> GetPaymentSession([FromRoute] Guid orderId)
     {
