@@ -14,6 +14,7 @@ public class OrderState : SagaStateMachineInstance, ISagaVersion
 
     public Guid OrderId { get; set; }
     public Guid CustomerId { get; set; }
+    public Guid TableId { get; set; }
     
     public List<OrderItemMessage> Items { get; set; } = new();
     public decimal OrderTotal { get; set; }

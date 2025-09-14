@@ -47,3 +47,7 @@ public record UpdateMenuItemDto
     public string? Category { get; init; }
     
 }
+
+public record MenuQuery(string? Name=null, string? Category=null, bool? Available=null,
+    decimal? MinPrice=null, decimal? MaxPrice=null, int Page=1, int PageSize=25);
+public record PageResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, long Total);

@@ -7,15 +7,24 @@ import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstan
 // UI (shadcn)
 import { Button } from "./ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card";
+import { CardGrid } from "@/components/primitives/CardGrid";
+import { StatCard } from "@/components/primitives/StatCard";
 
 // Icons (lucide-react)
 import {
     ShoppingCart, CreditCard, Clock, BarChart3, Users, Package,
-    Calendar, Settings, TrendingUp, User, ArrowRight, LogOut
+    Calendar, Settings, TrendingUp, User, ArrowRight, LogOut, Shield
 } from "lucide-react";
 
 // Your data hook (adjust the import path to match your project)
-import { useTables } from "../hooks/useTables";
+// Prefer domain tables API via React Query
+import { useTables as useDomainTables } from "@/domain/tables/hooks";
+import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
+import { useTenant } from "@/app/TenantContext";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
+import { useEmployeeDomain } from "@/domain/employee/Provider";
+import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
+import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 
 function getDisplayName(p?: Record<string, unknown>) {
     if (!p) return "User";
@@ -37,7 +46,8 @@ export default function Home() {
     const displayName = getDisplayName(profile);
     const firstName = (profile?.["given_name"] as string) ?? displayName.split(" ")[0] ?? displayName;
     const lastName = (profile?.["family_name"] as string) ?? "";
-    const restaurantName = (profile?.["restaurant_name"] as string) ?? "Your Restaurant";
+    const { restaurantName: nameFromTenant } = useTenantInfo();
+    const restaurantName = nameFromTenant || (profile?.["restaurant_name"] as string) || "Your Restaurant";
 
     const onSelectPOS = () => navigate("/pos/tables");
     const onSelectManagement = () => navigate("/management");
@@ -71,20 +81,34 @@ export function Dashboard({
                               onSelectManagement,
                               onLogout,
                           }: DashboardProps) {
-    const { tables } = useTables(); // make sure this hook internally waits for auth (enabled flag) or returns []
+    const navigate = useNavigate();
+    const { profile } = useAuth();
+    const rawRoles = (profile as any)?.role as string | string[] | undefined;
+    const roles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
+    const hooks = useRestaurantUserProfile();
+    const { rid, lid } = useTenant();
+    const { data: status } = hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
+    // Show Admin button only for Admin or Owner
+    const canAccessAdmin = roles.includes("Admin") || roles.includes("Owner");
+    const { data: tablesData } = useDomainTables();
+    const employee = useEmployeeDomain();
+    const employees = employee.useEmployees(rid ?? "", { page: 1, pageSize: 1 }, { enabled: !!rid });
+    const kitchen = useKitchen();
+    const activeOrdersCount = kitchen.active().length;
+    const { displayName: userDisplay } = useUserDisplayName();
 
     const stats = useMemo(() => {
-        const list = tables ?? [];
+        const list = tablesData ?? [];
         const total = list.length;
         const occupied = list.filter((t: any) => t.status === "occupied").length;
         const capacityPct = total ? Math.round((occupied / total) * 100) : 0;
         return { total, occupied, capacityText: `${capacityPct}% capacity` };
-    }, [tables]);
+    }, [tablesData]);
 
     const quickStats = [
         { label: "Today's Sales", value: "$2,847.50", change: "+12.5%", trend: "up" as const },
-        { label: "Active Orders", value: "23", change: "+5", trend: "up" as const },
-        { label: "Staff On Duty", value: "8", change: "2 arriving soon", trend: "neutral" as const },
+        { label: "Active Orders", value: String(activeOrdersCount), change: "", trend: "neutral" as const },
+        { label: "Staff On Duty", value: String(employees.data?.total ?? 0), change: "", trend: "neutral" as const },
         { label: "Tables Occupied", value: `${stats.occupied}/${stats.total}`, change: stats.capacityText, trend: "neutral" as const },
     ];
 
@@ -122,10 +146,14 @@ export function Dashboard({
                         <div className="flex items-center gap-4">
                             <div className="hidden sm:flex items-center gap-2">
                                 <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-foreground">
-                  {userData.firstName} {userData.lastName}
-                </span>
+                                <span className="text-sm text-foreground">{userDisplay}</span>
                             </div>
+                            {canAccessAdmin && (
+                                <Button variant="outline" onClick={() => navigate("/admin")} size="sm">
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    Admin
+                                </Button>
+                            )}
                             <Button variant="outline" onClick={onLogout} size="sm">
                                 <LogOut className="h-4 w-4 mr-2" />
                                 Logout
@@ -138,41 +166,25 @@ export function Dashboard({
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 {/* Welcome */}
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-foreground mb-2">
-                        Welcome back, {userData.firstName}!
-                    </h2>
+                    <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back, {userDisplay}!</h2>
                     <p className="text-lg text-muted-foreground">
                         Choose your workspace to get started with your restaurant operations.
                     </p>
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    {quickStats.map((stat, i) => (
-                        <Card key={i}>
-                            <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                                        <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                                        <p
-                                            className={`text-sm ${
-                                                stat.trend === "up"
-                                                    ? "text-green-600"
-                                                    : stat.trend === "down"
-                                                        ? "text-red-600"
-                                                        : "text-muted-foreground"
-                                            }`}
-                                        >
-                                            {stat.change}
-                                        </p>
-                                    </div>
-                                    {stat.trend === "up" && <TrendingUp className="h-8 w-8 text-green-600" />}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                <CardGrid cols={{ base: 1, md: 4 }} gap="gap-4" className="mb-12">
+                  {quickStats.map((s, i) => (
+                    <StatCard
+                      key={i}
+                      label={s.label}
+                      value={s.value}
+                      change={s.change}
+                      trend={s.trend}
+                      icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-green-600" /> : undefined}
+                    />
+                  ))}
+                </CardGrid>
 
                 {/* Main Action Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">

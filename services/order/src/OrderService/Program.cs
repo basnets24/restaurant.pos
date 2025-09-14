@@ -6,6 +6,7 @@ using OrderService.Entities;
 using Microsoft.OpenApi.Models;
 using OrderService;
 using OrderService.Auth;
+using OrderService.Extensions;
 using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
@@ -21,6 +22,7 @@ builder.Host.UseSerilog();
 builder.Services.AddMongo();
 builder.Services.AddTenancy();
 
+builder.Services.AddPosCatalogReadModel();
 builder.Services.AddTenantMongoRepository<Cart>("carts");
 builder.Services.AddTenantMongoRepository<DiningTable>("diningtables");
 builder.Services.AddTenantMongoRepository<InventoryItem>("inventoryitems");
@@ -37,13 +39,21 @@ builder.Services.AddScoped<IDiningTableService, DiningTableService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
-
+const string corsPolicy = "frontend";
+builder.Services.AddCors(options =>
+{
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+    options.AddPolicy(corsPolicy, p =>
+        p.WithOrigins(origins) // include http & https in appsettings.json
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
 });
 builder.Services.AddSignalR();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -60,6 +70,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors(corsPolicy);
 app.UseApiProblemDetails();
 app.UseAuthentication();
 app.UseAuthorization();

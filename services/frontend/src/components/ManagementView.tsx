@@ -9,6 +9,8 @@ import {
     CardTitle,
 } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { CardGrid } from "@/components/primitives/CardGrid";
+import { StatCard } from "@/components/primitives/StatCard";
 import {
     Tabs,
     TabsContent,
@@ -25,11 +27,13 @@ import {
     DollarSign,
     ArrowLeft,
     Home,
-    AlertTriangle,
     User,
     Building2,
 } from "lucide-react";
 import StaffUsersCard from "./StaffUsersCard";
+import { useTenantInfo } from "@/app/TenantInfoProvider";
+import InventoryStockCard from "./InventoryStockCard.tsx";
+import MenuItemsCard from "./MenuItemsCard.tsx";
 interface ManagementViewProps {
     userData: any;
     onBackToDashboard?: () => void;
@@ -41,6 +45,7 @@ export default function ManagementView({
                                            onBackToDashboard,
                                            onBackToLanding,
                                        }: ManagementViewProps) {
+    const { restaurantName: nameFromTenant } = useTenantInfo();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"analytics" | "staff" | "inventory" | "reservations" | "settings">("analytics");
 
@@ -54,15 +59,7 @@ export default function ManagementView({
         customers: { today: 156, week: 1024, month: 4280, change: 15.2 },
     };
 
-   
-
-    const inventoryData = [
-        { item: "Chicken Breast", current: 5, unit: "lbs", minimum: 10, status: "low" },
-        { item: "Fresh Basil", current: 2, unit: "bunches", minimum: 5, status: "critical" },
-        { item: "Tomatoes", current: 25, unit: "lbs", minimum: 15, status: "good" },
-        { item: "Mozzarella", current: 8, unit: "lbs", minimum: 10, status: "low" },
-    ];
-
+    
     const reservationsData = [
         { id: 1, name: "Johnson Party", time: "7:00 PM", party: 4, table: "A2", status: "confirmed" },
         { id: 2, name: "Smith Anniversary", time: "7:30 PM", party: 2, table: "B5", status: "confirmed" },
@@ -105,7 +102,7 @@ export default function ManagementView({
                                 </div>
                                 <div>
                                     <h1 className="text-lg font-bold text-foreground">Management Dashboard</h1>
-                                    <p className="text-sm text-muted-foreground">{userData.restaurantName}</p>
+                                    <p className="text-sm text-muted-foreground">{nameFromTenant ?? userData.restaurantName}</p>
                                 </div>
                             </div>
                         </div>
@@ -154,81 +151,32 @@ export default function ManagementView({
                         <div>
                             <h2 className="text-2xl font-bold text-foreground mb-6">Business Analytics</h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-                                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">
-                                            ${analyticsData.revenue.today.toLocaleString()}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            <span className="text-green-600">+{analyticsData.revenue.change}%</span> from yesterday
-                                        </p>
-                                        <div className="mt-4 space-y-1">
-                                            <div className="flex justify-between text-sm">
-                                                <span>This Week</span>
-                                                <span>${analyticsData.revenue.week.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span>This Month</span>
-                                                <span>${analyticsData.revenue.month.toLocaleString()}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                            <CardGrid cols={{ base: 1, md: 3 }} gap="gap-6" className="mb-8">
+                                <StatCard
+                                  label="Revenue"
+                                  value={`$${analyticsData.revenue.today.toLocaleString()}`}
+                                  change={`+${analyticsData.revenue.change}% from yesterday`}
+                                  trend="up"
+                                  icon={<DollarSign className="h-6 w-6 text-muted-foreground" />}
+                                />
+                                <StatCard
+                                  label="Orders"
+                                  value={analyticsData.orders.today}
+                                  change={`+${analyticsData.orders.change}% from yesterday`}
+                                  trend="up"
+                                  icon={<TrendingUp className="h-6 w-6 text-muted-foreground" />}
+                                />
+                                <StatCard
+                                  label="Customers"
+                                  value={analyticsData.customers.today}
+                                  change={`+${analyticsData.customers.change}% from yesterday`}
+                                  trend="up"
+                                  icon={<Users className="h-6 w-6 text-muted-foreground" />}
+                                />
+                            </CardGrid>
 
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Orders</CardTitle>
-                                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{analyticsData.orders.today}</div>
-                                        <p className="text-xs text-muted-foreground">
-                                            <span className="text-green-600">+{analyticsData.orders.change}%</span> from yesterday
-                                        </p>
-                                        <div className="mt-4 space-y-1">
-                                            <div className="flex justify-between text-sm">
-                                                <span>This Week</span>
-                                                <span>{analyticsData.orders.week}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span>This Month</span>
-                                                <span>{analyticsData.orders.month}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Customers</CardTitle>
-                                        <Users className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{analyticsData.customers.today}</div>
-                                        <p className="text-xs text-muted-foreground">
-                                            <span className="text-green-600">+{analyticsData.customers.change}%</span> from yesterday
-                                        </p>
-                                        <div className="mt-4 space-y-1">
-                                            <div className="flex justify-between text-sm">
-                                                <span>This Week</span>
-                                                <span>{analyticsData.customers.week}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span>This Month</span>
-                                                <span>{analyticsData.customers.month}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <Card>
+                            <CardGrid cols={{ base: 1, lg: 2 }} gap="gap-6">
+                                <Card className="h-full">
                                     <CardHeader>
                                         <CardTitle>Sales Trend</CardTitle>
                                         <CardDescription>Revenue over the last 7 days</CardDescription>
@@ -244,7 +192,7 @@ export default function ManagementView({
                                     </CardContent>
                                 </Card>
 
-                                <Card>
+                                <Card className="h-full">
                                     <CardHeader>
                                         <CardTitle>Popular Items</CardTitle>
                                         <CardDescription>Best selling menu items this week</CardDescription>
@@ -270,7 +218,7 @@ export default function ManagementView({
                                         </div>
                                     </CardContent>
                                 </Card>
-                            </div>
+                            </CardGrid>
                         </div>
                     </TabsContent>
 
@@ -278,6 +226,13 @@ export default function ManagementView({
                     <TabsContent value="staff" className="space-y-8">
                         <div>
                             <h2 className="text-2xl font-bold text-foreground mb-6">Staff Management</h2>
+
+                            {/* Summary stats */}
+                            <CardGrid cols={{ base: 1, sm: 3 }} gap="gap-4">
+                              <StatCard label="On Duty" value={8} trend="neutral" />
+                              <StatCard label="Arriving Soon" value={2} trend="neutral" />
+                              <StatCard label="Total Staff" value={14} trend="neutral" />
+                            </CardGrid>
 
                             <Card>
                                 <CardHeader>
@@ -291,10 +246,22 @@ export default function ManagementView({
                         </div>
                     </TabsContent>
 
+                    <TabsContent value="menu" className="space-y-8">
+                        <h2 className="text-2xl font-bold">Menu</h2>
+                        <MenuItemsCard canWrite />
+                    </TabsContent>
+
                     {/* Inventory */}
                     <TabsContent value="inventory" className="space-y-8">
                         <div>
                             <h2 className="text-2xl font-bold text-foreground mb-6">Inventory Management</h2>
+
+                            {/* Summary stats */}
+                            <CardGrid cols={{ base: 1, sm: 3 }} gap="gap-4">
+                              <StatCard label="Low Stock" value={5} trend="neutral" />
+                              <StatCard label="Items" value={128} trend="neutral" />
+                              <StatCard label="Suppliers" value={9} trend="neutral" />
+                            </CardGrid>
 
                             <Card>
                                 <CardHeader>
@@ -302,30 +269,7 @@ export default function ManagementView({
                                     <CardDescription>Monitor inventory levels and receive low stock alerts</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-4">
-                                        {inventoryData.map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-accent/20 rounded-lg">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                                                        <Package className="h-5 w-5 text-primary" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-medium text-foreground">{item.item}</h4>
-                                                        <p className="text-sm text-muted-foreground">Minimum: {item.minimum} {item.unit}</p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-4">
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-medium">{item.current} {item.unit}</p>
-                                                        <p className="text-sm text-muted-foreground">Available</p>
-                                                    </div>
-                                                    <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-                                                    {item.status === "critical" && <AlertTriangle className="h-5 w-5 text-red-500" />}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <InventoryStockCard />
                                 </CardContent>
                             </Card>
                         </div>
@@ -335,6 +279,18 @@ export default function ManagementView({
                     <TabsContent value="reservations" className="space-y-8">
                         <div>
                             <h2 className="text-2xl font-bold text-foreground mb-6">Reservations</h2>
+                            {(() => {
+                              const total = reservationsData.length;
+                              const confirmed = reservationsData.filter(r => r.status === 'confirmed').length;
+                              const pending = reservationsData.filter(r => r.status === 'pending').length;
+                              return (
+                                <CardGrid cols={{ base: 1, sm: 3 }} gap="gap-4" className="mb-6">
+                                  <StatCard label="Total" value={total} trend="neutral" />
+                                  <StatCard label="Confirmed" value={confirmed} change={`${confirmed}/${total}`} trend="neutral" />
+                                  <StatCard label="Pending" value={pending} change={`${pending}/${total}`} trend="neutral" />
+                                </CardGrid>
+                              );
+                            })()}
 
                             <Card>
                                 <CardHeader>

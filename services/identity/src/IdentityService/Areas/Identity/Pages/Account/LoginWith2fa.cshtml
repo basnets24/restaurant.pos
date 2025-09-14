@@ -1,0 +1,32 @@
+@page
+@model IdentityService.Areas.Identity.Pages.Account.LoginWith2faModel
+@{
+    ViewData["Title"] = "Two-factor authentication";
+}
+
+<h2>Two-factor authentication</h2>
+<p class="muted">Enter the 6-digit code from your authenticator app.</p>
+
+<form method="post" class="form">
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    <div class="field">
+        <label class="label" asp-for="Input.TwoFactorCode">Code</label>
+        <input class="input" asp-for="Input.TwoFactorCode" autocomplete="one-time-code" />
+        <span asp-validation-for="Input.TwoFactorCode" class="text-danger"></span>
+    </div>
+    <div class="row">
+        <label class="checkbox">
+            <input type="checkbox" asp-for="Input.RememberMachine" />
+            <span>Remember this device</span>
+        </label>
+    </div>
+    <button class="btn btn-primary" type="submit">Verify</button>
+    <div>
+        <a class="link" asp-page="./Login">Use a different method</a>
+    </div>
+    <div asp-validation-summary="All" class="text-danger"></div>
+    
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+

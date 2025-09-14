@@ -2,11 +2,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from 'oidc-client-ts';
 import { userManager } from './oidc';
+import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 
 declare global {
     interface Window {
-        POS_SHELL_AUTH?: { getToken?: () => string | undefined };
+        POS_SHELL_AUTH?: { getToken?: () => string | undefined; getTenant?: () => { restaurantId?: string; locationId?: string } | undefined };
     }
 }
 
@@ -53,7 +54,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
         // keep state in sync if the user is reloaded/removed elsewhere
         const onLoaded = (u: User) => setFromUser(u);
-        const onUnloaded = () => setFromUser(undefined);
+        const onUnloaded = () => {
+            setFromUser(undefined);
+            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch {}
+        };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
             try {
@@ -80,14 +84,23 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     const signIn = async (returnUrl?: string) => {
         try {
-            // Try silent first (if already logged in at the IdP)
-            const u = await userManager.signinSilent();
-            setFromUser(u);
-            if (returnUrl) window.location.replace(returnUrl);
+            // If we recently signed out, skip silent once to avoid auto SSO login via back button
+            const skipSilent = sessionStorage.getItem("auth.skipSilentOnce") === "1";
+            if (!skipSilent) {
+                // Try silent first (if already logged in at the IdP)
+                const u = await userManager.signinSilent();
+                setFromUser(u);
+                if (returnUrl) window.location.replace(returnUrl);
+                return;
+            } else {
+                sessionStorage.removeItem("auth.skipSilentOnce");
+            }
+            // Fall through to interactive login
         } catch {
             // Fall back to redirect; carry returnUrl in `state`
             await userManager.signinRedirect({
                 state: { returnUrl },
+                prompt: "login",
                 redirect_uri: `${window.location.origin}${AuthorizationPaths.LoginCallback}`,
             });
         }
@@ -96,13 +109,36 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const completeSignIn = async () => {
         const u = await userManager.signinCallback(window.location.href);
         setFromUser(u);
-        const returnUrl =
+        const suggested =
             (u?.state as any)?.returnUrl ??
             `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`;
-        window.location.replace(returnUrl);
+
+        // After login, check onboarding status; if not onboarded, go to /join
+        try {
+            const token = u?.access_token;
+            if (token) {
+                const r = await fetch(`${ENV.TENANT_URL}/api/onboarding/status`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    credentials: "include",
+                });
+                if (r.ok) {
+                    const s = await r.json();
+                    if (!s?.hasMembership) {
+                        window.location.replace(`${window.location.origin}/join`);
+                        return;
+                    }
+                }
+            }
+        } catch {
+            // swallow and fall through to suggested URL
+        }
+
+        window.location.replace(suggested);
     };
 
     const signOut = async (returnUrl?: string) => {
+        // Signal to the next login attempt to skip silent once
+        try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch {}
         await userManager.signoutRedirect({
             state: { returnUrl },
             post_logout_redirect_uri: `${window.location.origin}${AuthorizationPaths.LogOutCallback}`,
@@ -111,8 +147,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     const completeSignOut = async () => {
         const res = await userManager.signoutCallback(window.location.href);
-        // clear local session
+        // clear local session + tenant
         setFromUser(undefined);
+        try {
+            localStorage.removeItem('token');
+            localStorage.removeItem('rid');
+            localStorage.removeItem('lid');
+        } catch {}
 
         const to =
             (res?.state as any)?.returnUrl ??
@@ -126,8 +167,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     useEffect(() => {
-        window.POS_SHELL_AUTH = { getToken: () => accessToken };
-    }, [accessToken]);
+        window.POS_SHELL_AUTH = {
+            getToken: () => accessToken,
+            getTenant: () => {
+                const rid = (profile as any)?.restaurant_id ?? (profile as any)?.restaurantId;
+                const lid = (profile as any)?.location_id ?? (profile as any)?.locationId;
+                return rid ? { restaurantId: rid as string, locationId: (lid as string | undefined) } : undefined;
+            }
+        };
+    }, [accessToken, profile]);
     
 
     const value = useMemo<AuthState>(
@@ -149,8 +197,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 };
 
-export const useAuth = () => {
+export function useAuth() {
     const ctx = useContext(AuthCtx);
     if (!ctx) throw new Error('useAuth must be used within AuthProvider');
     return ctx;
-};
+}

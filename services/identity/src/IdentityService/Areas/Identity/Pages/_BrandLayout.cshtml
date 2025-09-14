@@ -1,0 +1,30 @@
+@*
+  Custom brand layout for Identity Area, aligned with frontend tokens.
+*@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Sign In</title>
+    <link rel="stylesheet" href="~/Identity/css/brand.css" asp-append-version="true" />
+</head>
+<body>
+<div class="auth-shell">
+    <div class="brand-pane">
+        <div class="brand-inner">
+            <div class="logo">🍽️</div>
+            <h1 class="brand-title">Restaurant POS</h1>
+            <p class="brand-sub">Simple. Fast. Delightful service.</p>
+        </div>
+    </div>
+    <main class="auth-pane">
+        <div class="card">
+            @RenderBody()
+        </div>
+        @await RenderSectionAsync("Scripts", required: false)
+    </main>
+</div>
+</body>
+</html>
+

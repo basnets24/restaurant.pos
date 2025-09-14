@@ -79,7 +79,7 @@
     /* Dark derived colors */
     --ink-muted: #c4c8bb; /* muted light text */
     --mint-light: #2a251f; /* dark brown for cards */
-    --mint-dark: #3a3228; /* slightly lighter brown for borders */
+    --mint-dark: #63533f; /* slightly lighter brown for borders */
     --brand-light: #7ba857; /* darker brand for accents */
     --brand-dark: #c8e8a3; /* lighter brand for hover */
 
@@ -183,6 +183,18 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/* Design system utilities */
+@layer utilities {
+  /* Auto grid with equal heights when children use h-full */
+  .grid-cards { display: grid; grid-auto-rows: 1fr; }
+  .grid-cards.equal { grid-auto-rows: 1fr; }
+  .card-fill > * { height: 100%; }
+  /* Proportional widths for common card rows */
+  .cols-2-3 { grid-template-columns: 2fr 3fr; }
+  .cols-1-1 { grid-template-columns: 1fr 1fr; }
+  .cols-1-2 { grid-template-columns: 1fr 2fr; }
 }
 
 /**

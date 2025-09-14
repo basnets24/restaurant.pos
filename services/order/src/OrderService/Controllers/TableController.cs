@@ -14,8 +14,7 @@ public class TableController : ControllerBase
 {
     private readonly IDiningTableService _svc;
     private readonly ILogger<TableController> _log;
-
-
+    
     public TableController(IDiningTableService svc, ILogger<TableController> log)
     {
         _svc = svc;

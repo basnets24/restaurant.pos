@@ -1,5 +1,6 @@
-using IdentityService.Data;
 using IdentityService.Entities;
+using IdentityService.Data;
+using Tenant.Domain.Data;
 using IdentityService.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,10 @@ public static class ServiceCollectionExtensions
         
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(postgresSettings!.GetConnectionString()));
+        
+        services.AddDbContext<TenantDbContext>(options =>
+            options.UseNpgsql(postgresSettings!.GetConnectionString()));
+        
         
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {

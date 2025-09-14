@@ -1,0 +1,44 @@
+@page
+@model IdentityService.Areas.Identity.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<h2>Welcome back</h2>
+<p class="muted">Sign in to continue to Restaurant POS</p>
+
+@if (!ViewContext.ViewData.ModelState.IsValid)
+{
+    <div class="error">@Html.ValidationSummary()</div>
+}
+
+<form method="post" class="form">
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    <div class="field">
+        <label class="label" for="Input_Email">Email</label>
+        <input class="input" asp-for="Input.Email" autocomplete="username" />
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+    </div>
+
+    <div class="field">
+        <label class="label" for="Input_Password">Password</label>
+        <input class="input" asp-for="Input.Password" autocomplete="current-password" />
+        <span asp-validation-for="Input.Password" class="text-danger"></span>
+    </div>
+
+    <div class="row">
+        <label class="checkbox">
+            <input type="checkbox" asp-for="Input.RememberMe" />
+            <span>Remember me</span>
+        </label>
+
+        <a class="link" asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create account</a>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Sign in</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

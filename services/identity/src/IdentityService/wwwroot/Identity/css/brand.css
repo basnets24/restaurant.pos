@@ -1,0 +1,48 @@
+/* Brand tokens (mirrors frontend/src/index.css subset) */
+:root {
+  --app-bg: #e8f0d4;
+  --ink: #2a1f20;
+  --brand: #a3d977;
+  --brand-ink: #2a1f20;
+  --hover-ink: #6b7c32;
+  --mint-light: #f4f8ea;
+  --mint-dark: #d4e2bd;
+  --border: var(--mint-dark);
+  --radius: 12px;
+}
+
+html, body { height: 100%; }
+body { margin: 0; background: var(--app-bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+.auth-shell { display: grid; grid-template-columns: 1.2fr 1fr; min-height: 100vh; }
+.brand-pane { background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; justify-content: center; }
+.brand-inner { max-width: 520px; padding: 48px; }
+.brand-title { margin: 0; font-size: 40px; letter-spacing: -0.02em; }
+.brand-sub { margin-top: 8px; opacity: 0.9; }
+.logo { font-size: 48px; margin-bottom: 12px; }
+
+.auth-pane { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
+.card { background: var(--mint-light); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 440px; padding: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.card h2 { margin-top: 0; margin-bottom: 6px; }
+.muted { color: #5a4f50; font-size: 14px; margin-bottom: 18px; }
+
+.form { display: grid; gap: 14px; }
+.field { display: grid; gap: 6px; }
+.label { font-weight: 600; }
+.input { appearance: none; background: white; border: 1px solid var(--mint-dark); padding: 10px 12px; border-radius: 10px; font-size: 16px; outline: none; color: var(--ink); }
+.input:focus { border-color: var(--hover-ink); box-shadow: 0 0 0 3px rgba(163,217,119,0.35); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.checkbox { display: inline-flex; align-items: center; gap: 8px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 10px; border: 1px solid transparent; font-weight: 600; cursor: pointer; }
+.btn-primary { background: var(--brand); color: var(--brand-ink); border-color: var(--mint-dark); }
+.btn-primary:hover { filter: saturate(1.05) brightness(0.98); }
+.link { color: var(--hover-ink); text-decoration: none; font-weight: 600; }
+.link:hover { text-decoration: underline; }
+
+.error { background: #fdecea; color: #b42318; border: 1px solid #f5c2c7; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+
+@media (max-width: 980px) {
+  .auth-shell { grid-template-columns: 1fr; }
+  .brand-pane { display: none; }
+}
+

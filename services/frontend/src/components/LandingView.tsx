@@ -11,13 +11,25 @@ import {
     Clock, CheckCircle, ArrowRight, Star, Zap, Shield, Globe,
 } from "lucide-react";
 import { useTables } from "../hooks/useTables";
+import { useAuth } from "@/api-authorization/AuthProvider";
+import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
 interface LandingPageProps { onGetStarted?: () => void; }
 
 export default function LandingView({ onGetStarted }: LandingPageProps) {
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
+    const register = () => {
+        const desired = "/join"; // send to onboarding after auth
+        const returnUrl = `${window.location.origin}${desired}`;
+        navigate(`${AuthorizationPaths.Register}?${QueryParameterNames.ReturnUrl}=${encodeURIComponent(returnUrl)}`);
+    };
     const { tables } = useTables();
-    const go = () => (onGetStarted ? onGetStarted() : navigate("/pos/tables"));
+    const go = () => {
+        if (onGetStarted) return onGetStarted();
+        if (isAuthenticated) return navigate("/join");
+        register();
+    };
 
     const features = [
         { icon: Users, title: "Interactive Table Management", description: "Drag-and-drop floor plan editor with real-time table status tracking. Manage reservations, seating, and capacity with intuitive visual controls.", highlight: "Visual Floor Plan" },

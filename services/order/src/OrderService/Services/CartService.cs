@@ -8,19 +8,22 @@ namespace OrderService.Services;
 public class CartService : ICartService
 {
     private readonly IRepository<Cart> _cartRepo;
-    private readonly IRepository<MenuItem> _menuRepo;
+    private readonly IRepository<InventoryItem> _inventoryRepo;
+    private readonly IRepository<MenuItem> _menuItemRepo;
     private readonly IRepository<DiningTable> _tableRepo;
     private readonly IOrderService _orderService;
 
     public CartService(IRepository<Cart> cartRepo, 
-        IRepository<MenuItem> menuRepo, 
         IRepository<DiningTable> tableRepo, 
-        IOrderService orderService)
+        IOrderService orderService, 
+        IRepository<InventoryItem> inventoryRepo, 
+        IRepository<MenuItem> menuItemRepo)
     {
         _cartRepo = cartRepo;
-        _menuRepo = menuRepo;
         _tableRepo = tableRepo;
         _orderService = orderService;
+        _inventoryRepo = inventoryRepo;
+        _menuItemRepo = menuItemRepo;
     }
 
     public async Task<Cart> GetAsync(Guid id)
@@ -54,7 +57,7 @@ public class CartService : ICartService
             var table = await _tableRepo.GetAsync(tableId.Value);
             if (table.Status == "Occupied" && table.ActiveCartId != null)
             {
-                throw new InvalidOperationException($"Table {table.Number} is already in use.");
+                throw new InvalidOperationException($" {table.Number} is already in use.");
             }
 
             table.Status = "Occupied";
@@ -67,7 +70,15 @@ public class CartService : ICartService
     public async Task AddItemAsync(Guid cartId, AddCartItemDto itemDto)
     {
         var cart = await _cartRepo.GetAsync(cartId);
-        var menuItem = await _menuRepo.GetAsync(itemDto.MenuItemId);
+        var inv = await _inventoryRepo.GetAsync(i=> i.MenuId == itemDto.MenuItemId);
+        if (inv is null)
+            throw new InvalidOperationException("Inventory item not found.");
+
+        if (!inv.IsAvailable || inv.Quantity < itemDto.Quantity)
+            throw new InvalidOperationException("Item is unavailable or insufficient stock.");
+        
+        var menuItem = await _menuItemRepo.GetAsync(itemDto.MenuItemId);
+        
         var existing = cart.Items.FirstOrDefault(i => i.MenuItemId == itemDto.MenuItemId);
         if (existing != null)
         {

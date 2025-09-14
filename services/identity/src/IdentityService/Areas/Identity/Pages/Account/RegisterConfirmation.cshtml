@@ -1,0 +1,11 @@
+@page
+@model IdentityService.Areas.Identity.Pages.Account.RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Confirm your email";
+}
+
+<h2>Confirm your email</h2>
+<p class="muted">We’ve sent a confirmation link to <strong>@Model.Email</strong>.</p>
+<p class="muted">Please check your inbox and follow the link to finish setting up your account.</p>
+<p><a class="link" asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Back to sign in</a></p>
+

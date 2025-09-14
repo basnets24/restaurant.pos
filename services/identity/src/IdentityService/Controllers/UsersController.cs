@@ -1,6 +1,5 @@
 // Controllers/UsersController.cs
 using System.Security.Claims;
-using Common.Library.Tenancy;
 using Duende.IdentityServer;
 using IdentityService.Auth;
 using IdentityService.Entities;
@@ -20,18 +19,15 @@ public class UsersController : ControllerBase
     private readonly UserManager<ApplicationUser> _users;
     private readonly RoleManager<ApplicationRole> _roles;
     private readonly ILogger<UsersController> _logger;
-    private readonly TenantMiddleware.TenantContextHolder _tenant;
 
     public UsersController(
         UserManager<ApplicationUser> users,
         RoleManager<ApplicationRole> roles,
-        ILogger<UsersController> logger,
-        TenantMiddleware.TenantContextHolder tenant)
+        ILogger<UsersController> logger)
     {
         _users = users;
         _roles = roles;
         _logger = logger;
-        _tenant = tenant;
     }
 
     // =============================
@@ -45,11 +41,15 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<UserDto>> GetMeAsync(CancellationToken ct)
     {
-        var t = _tenant.Current;
         var user = await _users.GetUserAsync(User);
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
+        {
+            _logger.LogWarning("User {UserId} requested their own profile, " +
+                               "but not found.", User.FindFirstValue(ClaimTypes.NameIdentifier));
+        }
+        if (user is null)
             return Unauthorized();
-
+        
         var roles = await _users.GetRolesAsync(user);
         return Ok(user.ToUserDto(roles));
     }
@@ -67,8 +67,6 @@ public class UsersController : ControllerBase
         [FromQuery] UsersQuery query,
         CancellationToken ct)
     {
-        var t = _tenant.Current;
-
         var page = query.Page < 1 ? 1 : query.Page;
         var size = query.PageSize is < 1 or > 200 ? 25 : query.PageSize;
 
@@ -79,8 +77,6 @@ public class UsersController : ControllerBase
                 return BadRequest($"Role '{query.Role}' does not exist.");
 
             var usersInRole = (await _users.GetUsersInRoleAsync(query.Role)).AsQueryable();
-
-            usersInRole = usersInRole.Where(u => u.RestaurantId == t.RestaurantId);
 
             if (!string.IsNullOrWhiteSpace(query.Username))
             {
@@ -109,9 +105,8 @@ public class UsersController : ControllerBase
             return Ok(new Paged<UserListItemDto>(items, page, size, total));
         }
 
-        // No role filter: keep IQueryable to push work to DB
-        var q = _users.Users.AsNoTracking()
-            .Where(u => u.RestaurantId == t.RestaurantId);
+        // No role filter: keep IQueryable to push work to DB (no tenant scoping)
+        var q = _users.Users.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(query.Username))
         {
@@ -147,10 +142,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserDetailDto>> GetByIdAsync([FromRoute] Guid userId, CancellationToken ct)
     {
-        var t = _tenant.Current;
-
         var user = await _users.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId, ct);
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
             return NotFound();
 
         var roles = await _users.GetRolesAsync(user);
@@ -165,16 +158,11 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateAsync([FromRoute] Guid userId, [FromBody] UserUpdateDto dto, CancellationToken ct)
     {
-        var t = _tenant.Current;
         var user = await _users.FindByIdAsync(userId.ToString());
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
             return NotFound();
 
-        // Prevent cross-restaurant moves
-        if (!string.Equals(dto.RestaurantId, user.RestaurantId, StringComparison.Ordinal))
-            return BadRequest("RestaurantId mismatch.");
-
-        // Basic fields
+        // No tenant checks — purely updating identity fields
         if (!string.IsNullOrWhiteSpace(dto.UserName))
         {
             user.UserName = dto.UserName.Trim();
@@ -189,12 +177,8 @@ public class UsersController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(dto.DisplayName))
             user.DisplayName = dto.DisplayName.Trim();
+        
 
-        // Location within same restaurant
-        if (!string.IsNullOrWhiteSpace(dto.LocationId))
-            user.LocationId = dto.LocationId.Trim();
-
-        // Access/PIN, lockout, 2FA
         if (dto.AccessCode is not null)            user.AccessCode = dto.AccessCode;
         if (dto.LockoutEnabled.HasValue)           user.LockoutEnabled = dto.LockoutEnabled.Value;
         if (dto.LockoutEnd.HasValue)               user.LockoutEnd = dto.LockoutEnd.Value;
@@ -214,9 +198,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> DisableAsync([FromRoute] Guid userId, CancellationToken ct)
     {
-        var t = _tenant.Current;
         var user = await _users.FindByIdAsync(userId.ToString());
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
             return NotFound();
 
         var roles = await _users.GetRolesAsync(user);
@@ -245,9 +228,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyCollection<string>>> GetUserRolesAsync([FromRoute] Guid userId, CancellationToken ct)
     {
-        var t = _tenant.Current;
         var user = await _users.FindByIdAsync(userId.ToString());
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
             return NotFound();
 
         var roles = await _users.GetRolesAsync(user);
@@ -262,9 +244,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> AddRolesAsync([FromRoute] Guid userId, [FromBody] AddRolesDto dto, CancellationToken ct)
     {
-        var t = _tenant.Current;
         var user = await _users.FindByIdAsync(userId.ToString());
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
             return NotFound();
 
         var distinct = dto.Roles
@@ -293,9 +274,8 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RemoveRoleAsync([FromRoute] Guid userId, [FromRoute] string role, CancellationToken ct)
     {
-        var t = _tenant.Current;
         var user = await _users.FindByIdAsync(userId.ToString());
-        if (user is null || user.RestaurantId != t.RestaurantId)
+        if (user is null)
             return NotFound();
 
         if (!await _roles.RoleExistsAsync(role))

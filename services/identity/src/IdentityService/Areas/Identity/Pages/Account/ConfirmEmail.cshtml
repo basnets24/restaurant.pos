@@ -1,0 +1,16 @@
+@page
+@model IdentityService.Areas.Identity.Pages.Account.ConfirmEmailModel
+@{
+    ViewData["Title"] = "Email confirmation";
+}
+
+<h2>Email confirmation</h2>
+@if (Model.Success)
+{
+    <p class="muted">Your email has been confirmed. You can now <a class="link" asp-page="./Login">sign in</a>.</p>
+}
+else
+{
+    <div class="error">We could not confirm your email. The link may be invalid or expired.</div>
+}
+

@@ -1,11 +1,12 @@
 // MongoDB/TenantMongoRepository.cs
 using System.Linq.Expressions;
-using Common.Library;
 using Common.Library.Tenancy;
 using MongoDB.Driver;
 
 namespace Common.Library.MongoDB;
 
+// When writing: stamps the entity with ITenantContext
+// When reading: filters entities by ITenantContext
 public class TenantMongoRepository<T> : IRepository<T> where T : IEntity, ITenantEntity
 {
     private readonly IMongoCollection<T> _col;
@@ -14,16 +15,22 @@ public class TenantMongoRepository<T> : IRepository<T> where T : IEntity, ITenan
 
     public TenantMongoRepository(IMongoDatabase db, 
         ITenantContext tenant, 
-        string collectionName)
+        string collectionName,
+        IEnumerable<IMongoIndexConfigurator<T>>? configurators = null)
     {
         _col = db.GetCollection<T>(collectionName);
         _tenant = tenant;
 
-        // helpful compound index for tenant scoping
+        // base tenant index 
         _col.Indexes.CreateOne(new CreateIndexModel<T>(
             Builders<T>.IndexKeys.Ascending(x => x.RestaurantId).Ascending(x => x.LocationId)));
+        
+        //model-specific indexes
+        if (configurators != null)
+            foreach (var c in configurators) c.Configure(_col);
     }
 
+    // Every query automatically adds tenant filters
     private FilterDefinition<T> Scope(FilterDefinition<T>? extra = null)
     {
         var scope = _f.Eq(x => x.RestaurantId, _tenant.RestaurantId) &
@@ -32,6 +39,7 @@ public class TenantMongoRepository<T> : IRepository<T> where T : IEntity, ITenan
         return extra is null ? scope : scope & extra;
     }
 
+    
     public async Task<IReadOnlyCollection<T>> GetAllAsync() =>
         await _col.Find(Scope()).ToListAsync();
 
