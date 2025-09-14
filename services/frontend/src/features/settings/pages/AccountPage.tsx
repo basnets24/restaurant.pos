@@ -10,11 +10,10 @@ import { Dialog as Modal, DialogContent as ModalContent, DialogHeader as ModalHe
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User } from "lucide-react";
 
 export default function AccountPage() {
   const { profile } = useAuth();
-  const { restaurantName: nameFromTenant } = useTenantInfo();
+  useTenantInfo();
   const { rid } = useTenant();
   const employee = useEmployeeDomain();
   const rp = useRestaurantUserProfile();
@@ -187,13 +186,13 @@ export default function AccountPage() {
           <div className="grid gap-3 py-2">
             {editError && <div className="text-sm text-red-600">{editError}</div>}
             <label className="text-xs">User name</label>
-            <Input size="lg" value={editUserName} onChange={(e) => setEditUserName(e.target.value)} />
+            <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)} />
             <label className="text-xs">Display name</label>
-            <Input size="lg" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} />
+            <Input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} />
             <label className="text-xs">Email</label>
-            <Input size="lg" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
             <label className="text-xs">Access code (4–6 digits)</label>
-            <Input size="lg" value={editAccessCode} onChange={(e) => setEditAccessCode(e.target.value)} placeholder="Optional" />
+            <Input value={editAccessCode} onChange={(e) => setEditAccessCode(e.target.value)} placeholder="Optional" />
           </div>
           <ModalFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
@@ -222,7 +221,7 @@ function DisplayNameEditor({ valueFromDetail, onSave }: { valueFromDetail: strin
   };
   return (
     <div className="flex items-center gap-2">
-      <Input size="lg" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your display name" className="max-w-xs" />
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your display name" className="max-w-xs" />
       <Button onClick={submit} disabled={saving}>Save</Button>
       {msg && <div className="text-xs text-muted-foreground ml-2">{msg}</div>}
     </div>

@@ -31,7 +31,7 @@ export default function TablesPage() {
   const { profile, getAccessToken } = useAuth();
   const restaurantId = (profile as any)?.restaurantId ?? (profile as any)?.restaurant_id;
   const locationId = (profile as any)?.locationId ?? (profile as any)?.location_id;
-  useFloorHub({ restaurantId, locationId, accessTokenFactory: () => getAccessToken() });
+  useFloorHub({ restaurantId, locationId, accessTokenFactory: async () => (await getAccessToken()) ?? "" });
 
   const tables: TableViewDto[] = useMemo(() => {
     if (Array.isArray(data)) return data as TableViewDto[];

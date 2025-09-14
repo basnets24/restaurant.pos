@@ -1,4 +1,5 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios from "axios";
+import type { AxiosError, AxiosInstance } from "axios";
 
 // DTOs
 export type TenantRestaurantDto = {
@@ -115,7 +116,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
         const headers = await withAuthHeaders(opts.getAccessToken);
         const res = await instance.get<readonly TenantRestaurantDto[]>(`${base}/mine`, { headers });
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { handleError(e); throw e as any; }
     },
 
     async getTenant(restaurantId: string) {
@@ -129,7 +130,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
           { headers }
         );
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { handleError(e); throw e as any; }
     },
 
     async createLocation(restaurantId: string, body: CreateLocationDto) {
@@ -144,7 +145,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
           { headers }
         );
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { handleError(e); throw e as any; }
     },
 
     async updateLocation(restaurantId: string, locationId: string, body: UpdateLocationDto) {
@@ -158,8 +159,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
           body,
           { headers }
         );
-      } catch (e) { handleError(e); }
+      } catch (e) { handleError(e); throw e as any; }
     },
   };
 }
-

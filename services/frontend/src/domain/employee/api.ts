@@ -163,7 +163,10 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
             pageSize: query?.pageSize,
           },
         });
-        return res.data;
+        if (!res.data) {
+          throw new ApiError("Failed to fetch employee list", 500);
+        }
+        return res.data as Paged<EmployeeListItemDto>;
       } catch (e) { handleError(e); }
     },
 

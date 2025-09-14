@@ -14,7 +14,7 @@ import type {
 } from "./api";
 import { tenantKeys } from "./keys";
 
-function shouldRetry(error: unknown, failureCount: number): boolean {
+function shouldRetry(failureCount: number, error: unknown): boolean {
   const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
   if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) return false;
   return failureCount < 2;
@@ -85,4 +85,3 @@ export function createTenantHooks(api: TenantApi) {
     useUpdateLocation,
   };
 }
-

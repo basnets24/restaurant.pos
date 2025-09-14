@@ -30,7 +30,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
   function useEmployees(
     restaurantId: string,
     query?: { q?: string; role?: string; page?: number; pageSize?: number },
-    options?: UseQueryOptions<Paged<EmployeeListItemDto>, unknown>
+    options?: Omit<UseQueryOptions<Paged<EmployeeListItemDto>, unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<Paged<EmployeeListItemDto>, unknown>({
       queryKey: employeeKeys.list(restaurantId, query),
@@ -45,7 +45,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
   function useEmployee(
     restaurantId: string,
     userId: string,
-    options?: UseQueryOptions<EmployeeDetailDto, unknown>
+    options?: Omit<UseQueryOptions<EmployeeDetailDto, unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<EmployeeDetailDto, unknown>({
       queryKey: employeeKeys.detail(restaurantId, userId),
@@ -60,7 +60,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
   function useEmployeeRoles(
     restaurantId: string,
     userId: string,
-    options?: UseQueryOptions<readonly string[], unknown>
+    options?: Omit<UseQueryOptions<readonly string[], unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<readonly string[], unknown>({
       queryKey: employeeKeys.roles(restaurantId, userId),
@@ -74,7 +74,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
   // Available role names
   function useAvailableRoles(
     restaurantId: string,
-    options?: UseQueryOptions<readonly string[], unknown>
+    options?: Omit<UseQueryOptions<readonly string[], unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<readonly string[], unknown>({
       queryKey: employeeKeys.roleNames(restaurantId),
@@ -198,4 +198,3 @@ export function createEmployeeHooks(api: EmployeeApi) {
     useDeleteEmployeeRole,
   };
 }
-

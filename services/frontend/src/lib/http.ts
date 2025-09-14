@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstants";
+// Authorization paths import not needed; avoid unused import
 
 export const http = axios.create();
 

@@ -16,7 +16,7 @@ import type {
   MyJoinCodeRes,
 } from "./types";
 
-function shouldRetry(error: unknown, failureCount: number): boolean {
+function shouldRetry(failureCount: number, error: unknown): boolean {
   const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
   if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) {
     return false; // don't retry on 4xx
@@ -96,7 +96,7 @@ export function createRestaurantUserProfileHooks(
    */
   function useCurrentUserProfile(
     params?: UseCurrentUserProfileParams,
-    options?: UseQueryOptions<UserProfile, unknown>
+    options?: Omit<UseQueryOptions<UserProfile, unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<UserProfile, unknown>({
       queryKey: userProfileKey,
@@ -111,7 +111,7 @@ export function createRestaurantUserProfileHooks(
    */
   function useOnboardingStatus(
     params?: UseOnboardingStatusParams,
-    options?: UseQueryOptions<OnboardingStatus, unknown>
+    options?: Omit<UseQueryOptions<OnboardingStatus, unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<OnboardingStatus, unknown>({
       queryKey: onboardingKey,
@@ -126,7 +126,7 @@ export function createRestaurantUserProfileHooks(
    */
   function useMyJoinCode(
     params?: { rid?: string; lid?: string },
-    options?: UseQueryOptions<MyJoinCodeRes, unknown>
+    options?: Omit<UseQueryOptions<MyJoinCodeRes, unknown>, 'queryKey' | 'queryFn'>
   ) {
     return useQuery<MyJoinCodeRes, unknown>({
       queryKey: onboardingKey,

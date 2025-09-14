@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { Plus, Save, UploadCloud, Undo2, Redo2, ZoomIn, ZoomOut, Trash2, Play } from "lucide-react";
+import { Plus, Save, UploadCloud, Undo2, Redo2, ZoomOut, Trash2, Play } from "lucide-react";
 
 type Mode = "view" | "edit";
 
