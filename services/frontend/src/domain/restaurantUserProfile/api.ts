@@ -1,5 +1,4 @@
-import axios from "axios";
-import type { AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
 import type {
   OnboardRestaurantReq,
