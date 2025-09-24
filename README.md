@@ -33,6 +33,29 @@ Minimal docs and quick links for core backend services in this repository.
 - Messaging.Contracts — shared event contracts used by all services
   - docs: shared/messaging.contracts/README.md
 
+## Consuming lib packages
+````bash
+# one-time on your laptop
+
+  1. Add your GitHub NuGet source and credentials to `NuGet.config` or via CLI.
+
+      dotnet nuget add source "https://nuget.pkg.github.com/<YOUR_GH_USERNAME>/index.json" \
+      --name "github" \
+      --username "<YOUR_GH_USERNAME>" \
+      --password "<YOUR_PAT_with_read:packages>" \
+      --store-password-in-clear-text
+
+  2. Reference the package in your `.csproj` or dotnet add package Common.Library  --version 1.0.*:
+      ```xml
+      <ItemGroup>
+        <PackageReference Include="Common.Library" Version="1.0.*" />
+      </ItemGroup>
+      ```
+
+````
+
+
+
 ## Local Dev Notes
 
 - Most services expect JWT validation with `ServiceSettings:Authority`.
