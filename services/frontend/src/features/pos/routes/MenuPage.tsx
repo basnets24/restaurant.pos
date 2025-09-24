@@ -156,6 +156,7 @@ export default function MenuPage() {
   // Menu data
   const categories = useDomainMenuCategories();
   const menuList = useMenuList({ category: category && category !== "All" ? category : undefined });
+  const items = (menuList.data?.items ?? []) as MenuItemDto[];
 
   // Add to cart from a card
   async function handleAddToOrder(item: POSMenuItem, quantity = 1, notes?: string) {
@@ -350,24 +351,16 @@ export default function MenuPage() {
       {/* Section title + count */}
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-medium">{category === "All" ? "All Items" : category}</h2>
-        <Badge variant="outline" className="text-xs">
-          {(Array.isArray(menuList.data) ? menuList.data.length : (menuList.data as any)?.items?.length ?? 0).toString()} items
-        </Badge>
+        <Badge variant="outline" className="text-xs">{items.length} items</Badge>
       </div>
       <Separator className="mb-4" />
 
       {/* Items Grid */}
       {menuList.isLoading ? (
         <div className="text-sm text-muted-foreground">Loading menu…</div>
-      ) : Array.isArray(menuList.data) ? (
+      ) : items.length > 0 ? (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 sm:gap-6 lg:gap-8">
-          {(menuList.data as MenuItemDto[]).map((m) => (
-            <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
-          ))}
-        </div>
-      ) : (menuList.data as any)?.items?.length ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 sm:gap-6 lg:gap-8">
-          {((menuList.data as any).items as MenuItemDto[]).map((m) => (
+          {items.map((m) => (
             <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
           ))}
         </div>
