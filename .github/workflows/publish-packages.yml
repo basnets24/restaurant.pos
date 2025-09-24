@@ -1,0 +1,93 @@
+name: Publish .NET Packages (Tag Driven)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # e.g. v1.2.3
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version to publish (e.g. 1.2.3)'
+        required: true
+        default: '1.0.0'
+      project:
+        description: 'Project to publish (all, common.library, messaging.contracts, tenant.domain)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - common.library
+          - messaging.contracts
+          - tenant.domain
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-packages-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  pack-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: common.library
+            path: shared/common.library/Common.Library.csproj
+          - id: messaging.contracts
+            path: shared/messaging.contracts/Messaging.Contracts.csproj
+          - id: tenant.domain
+            path: shared/tenant.domain/Tenant.Domain.csproj
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            RAW_TAG="${GITHUB_REF_NAME}" # e.g. v1.2.3
+            VERSION="${RAW_TAG#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version '$VERSION' is not valid semver (expected MAJOR.MINOR.PATCH)" >&2
+            exit 1
+          fi
+          echo "Resolved version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Pack ${{ matrix.id }}
+        # When manually dispatched, allow filtering to a single project
+        if: github.event_name != 'workflow_dispatch' || inputs.project == 'all' || matrix.id == inputs.project
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Packing ${{ matrix.id }} with version $VERSION"
+          dotnet pack ${{ matrix.path }} -c Release -p:PackageVersion=$VERSION -o ./packages/${{ matrix.id }}
+
+      - name: Show package(s)
+        if: github.event_name != 'workflow_dispatch' || inputs.project == 'all' || matrix.id == inputs.project
+        run: |
+          ls -la ./packages/${{ matrix.id }}
+
+      - name: Push ${{ matrix.id }} to GitHub Packages
+        if: github.event_name != 'workflow_dispatch' || inputs.project == 'all' || matrix.id == inputs.project
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Pushing packages for ${{ matrix.id }} version $VERSION"
+          dotnet nuget push "./packages/${{ matrix.id }}/*.nupkg" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --api-key "${GITHUB_TOKEN}" \
+            --skip-duplicate
