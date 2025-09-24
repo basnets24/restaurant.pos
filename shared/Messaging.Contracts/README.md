@@ -1,21 +1,27 @@
 # Messaging.Contracts
 
-Shared message contracts for Restaurant POS services using MassTransit. Provides immutable record types for menu, inventory, order, payment, and saga orchestration events. Publishing these contracts as a package ensures all services share the same event shapes.
+Shared message contracts for Restaurant POS services using MassTransit. Provides immutable record types for menu, inventory, order, payment, and saga orchestration events. Publishing these contracts as a package ensures all services share the same event shapes and maintains consistency across the microservices architecture.
+
+This library is consumed by all services in the Restaurant POS system and can be published as a package for external reuse.
 
 ## Installation
 
-Reference from your service or consume as a package:
+From GitHub Packages:
+
+1) Add your GitHub NuGet source and credentials to `NuGet.config` or via CLI.
+2) Reference the package in your `.csproj`:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Messaging.Contracts" Version="1.0.*" />
+</ItemGroup>
+```
+
+Or reference directly as a project (for development):
 
 ```xml
 <ItemGroup>
   <ProjectReference Include="..\\..\\..\\shared\\Messaging.Contracts\\Messaging.Contracts.csproj" />
-</ItemGroup>
-```
-
-Or (when published):
-```xml
-<ItemGroup>
-  <PackageReference Include="Messaging.Contracts" Version="1.0.*" />
 </ItemGroup>
 ```
 
@@ -72,9 +78,31 @@ await publishEndpoint.Publish(new PaymentRequested(
 ));
 ```
 
+## Creating a Package
+
+To create and publish a new version:
+
+```bash
+# Build and pack locally
+dotnet pack --configuration Release --output ../../packages
+
+# Publish to GitHub Packages (requires authentication)
+dotnet nuget push ../../packages/Messaging.Contracts.1.0.0.nupkg --source "github"
+```
+
 ## Versioning
 
-- Backward‑compatible changes (adding optional fields) will bump the minor version.
-- Breaking changes (renaming/removing fields) will bump the major version and be called out in release notes.
+- **Patch** (1.0.x): Bug fixes, documentation updates
+- **Minor** (1.x.0): Backward‑compatible changes (adding optional fields)
+- **Major** (x.0.0): Breaking changes (renaming/removing fields) - will be called out in release notes
 
-License: Proprietary (internal project).
+## Development Notes
+
+All event types are C# records intended to be serialized by MassTransit's default serializer. When adding new events:
+
+1. Use immutable record types
+2. Include relevant tenant context (restaurantId, locationId) where applicable
+3. Use descriptive property names that are self-documenting
+4. Consider backward compatibility when modifying existing contracts
+
+Namespaces live under `Messaging.Contracts.Events.*`.

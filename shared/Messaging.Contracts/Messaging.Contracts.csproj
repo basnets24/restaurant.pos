@@ -1,10 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageId>Messaging.Contracts</PackageId>
+    <Version>1.0.0</Version>
+    <IsPackable>true</IsPackable>
+    <Authors>basnets24</Authors>
+    <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Shared message contracts for Restaurant POS services using MassTransit. Provides immutable record types for menu, inventory, order, payment, and saga orchestration events.</Description>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EnablePackageValidation>true</EnablePackageValidation>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Stop any wildcard or global rule from grabbing another README -->
+    <None Remove="**/README.md" />
+
+    <!-- Include exactly THIS project's README -->
+    <None Include="$(MSBuildThisFileDirectory)README.md"
+          Pack="true"
+          PackagePath="README.md" />
+  </ItemGroup>
 
 </Project>
