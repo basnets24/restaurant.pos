@@ -9,7 +9,11 @@ export const employeeKeys = {
     [
       ...employeeKeys.all,
       "list",
-      { rid: restaurantId, q: params?.q ?? null, role: params?.role ?? null, page: params?.page ?? 1, pageSize: params?.pageSize ?? 20 }
+      { rid: restaurantId, 
+        q: params?.q ?? null, 
+        role: params?.role ?? null, 
+        page: params?.page ?? 1, 
+        pageSize: params?.pageSize ?? 20 }
     ] as const,
   detail: (restaurantId: string, userId: string) =>
     [...employeeKeys.all, "detail", { rid: restaurantId, userId }] as const,

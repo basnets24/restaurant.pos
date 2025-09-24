@@ -70,11 +70,11 @@ export default function LocationsPage() {
             {error && <div className="text-sm text-red-600">{error}</div>}
             <div className="grid gap-1.5">
               <Label>Location name</Label>
-              <Input size="lg" value={name} onChange={(e) => setName(e.target.value)} placeholder="Main" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Main" />
             </div>
             <div className="grid gap-1.5">
               <Label>Time zone (optional)</Label>
-              <Input size="lg" value={timeZoneId} onChange={(e) => setTimeZoneId(e.target.value)} placeholder="e.g. America/Chicago" />
+              <Input value={timeZoneId} onChange={(e) => setTimeZoneId(e.target.value)} placeholder="e.g. America/Chicago" />
             </div>
             <div className="pt-2 flex gap-2">
               <Button variant="outline" onClick={() => { setOpen(false); setName(""); setTimeZoneId(""); }}>Cancel</Button>
@@ -134,7 +134,7 @@ export default function LocationsPage() {
                       <>
                         <div className="grid gap-1.5">
                           <Label>Name</Label>
-                          <Input size="lg" value={editName} onChange={(e) => setEditName(e.target.value)} />
+                          <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                         </div>
                         <div className="grid gap-1.5">
                           <Label>Active</Label>
@@ -148,7 +148,7 @@ export default function LocationsPage() {
                         </div>
                         <div className="grid gap-1.5">
                           <Label>Time Zone (optional)</Label>
-                          <Input size="lg" value={editTz} onChange={(e) => setEditTz(e.target.value)} placeholder="e.g. America/Chicago" />
+                          <Input value={editTz} onChange={(e) => setEditTz(e.target.value)} placeholder="e.g. America/Chicago" />
                         </div>
                       </>
                     ) : (

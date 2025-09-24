@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export interface StatCardProps {
   label: string;

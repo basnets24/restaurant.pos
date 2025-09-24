@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-import { Plus, Save, UploadCloud, Undo2, Redo2, ZoomOut, Trash2, Play } from "lucide-react";
+import { Plus, Save, UploadCloud, Undo2, Redo2, Trash2, Play } from "lucide-react";
 
 type Mode = "view" | "edit";
 
@@ -306,12 +306,12 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
       // Alignment guides
       const moving = draft.find(d => d.id === (dm as any).id);
       if (moving) {
-        const edges = { l: nx, r: nx + moving.size.width, t: ny, b: ny + moving.size.height, cx: nx + moving.size.width/2, cy: ny + moving.size.height/2 };
+        const edges = { l: nx, r: nx + moving.size.width, t: ny, b: ny + moving.size.height, cx: nx + moving.size.width / 2, cy: ny + moving.size.height / 2 };
         const vx: number[] = []; const hy: number[] = [];
         const threshold = 6;
         for (const other of draft) {
           if (other.id === moving.id || other._deleted) continue;
-          const o = { l: other.position.x, r: other.position.x + other.size.width, t: other.position.y, b: other.position.y + other.size.height, cx: other.position.x + other.size.width/2, cy: other.position.y + other.size.height/2 };
+          const o = { l: other.position.x, r: other.position.x + other.size.width, t: other.position.y, b: other.position.y + other.size.height, cx: other.position.x + other.size.width / 2, cy: other.position.y + other.size.height / 2 };
           if (Math.abs(edges.l - o.l) <= threshold) vx.push(o.l);
           if (Math.abs(edges.r - o.r) <= threshold) vx.push(o.r);
           if (Math.abs(edges.cx - o.cx) <= threshold) vx.push(o.cx);
@@ -319,7 +319,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
           if (Math.abs(edges.b - o.b) <= threshold) hy.push(o.b);
           if (Math.abs(edges.cy - o.cy) <= threshold) hy.push(o.cy);
         }
-        setGuides({ vx: vx.slice(0,2), hy: hy.slice(0,2) });
+        setGuides({ vx: vx.slice(0, 2), hy: hy.slice(0, 2) });
       }
     } else if (dm.type === "resize") {
       // Resize from the specified corner, keep min 16
@@ -404,7 +404,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                     <>
                       {/* corners */}
                       <div className="absolute -left-1 -top-1 w-2 h-2 bg-primary rounded-sm cursor-nw-resize"
-                        onMouseDown={(e) => { e.stopPropagation(); const rect = wrapRef.current!.getBoundingClientRect(); const cx = (t.position.x + t.size.width / 2); const cy = (t.position.y + t.size.height / 2); dragRef.current = { type: "resize", id: t.id, edge: "nw", ox: 0, oy: 0, start: { ...t } }; }} />
+                        onMouseDown={(e) => { e.stopPropagation(); dragRef.current = { type: "resize", id: t.id, edge: "nw", ox: 0, oy: 0, start: { ...t } }; }} />
                       <div className="absolute -right-1 -top-1 w-2 h-2 bg-primary rounded-sm cursor-ne-resize"
                         onMouseDown={(e) => { e.stopPropagation(); dragRef.current = { type: "resize", id: t.id, edge: "ne", ox: 0, oy: 0, start: { ...t } }; }} />
                       <div className="absolute -right-1 -bottom-1 w-2 h-2 bg-primary rounded-sm cursor-se-resize"
@@ -542,7 +542,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
   );
 }
 
-function JoinSplitControls({ selectedIds, onJoin, onSplit }: { selectedIds: string[]; onJoin: (label?: string) => void; onSplit: () => void }) {
+function JoinSplitControls({ selectedIds, onJoin }: { selectedIds: string[]; onJoin: (label?: string) => void; onSplit: () => void }) {
   const [open, setOpen] = useState(false);
   const [label, setLabel] = useState("");
   const canJoin = selectedIds.length >= 2;

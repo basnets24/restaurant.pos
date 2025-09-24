@@ -13,7 +13,7 @@ const sizeClasses: Record<InputSize, string> = {
 const Input = React.forwardRef<
     HTMLInputElement,
     React.ComponentProps<"input"> & { size?: InputSize }
->(({ className, type, size = "default", ...props }, ref) => {
+>(({ className, type, size = "default" as InputSize, ...props }, ref) => {
     return (
         <input
             ref={ref}

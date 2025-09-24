@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, type Location } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,8 @@ import { useBlocker } from "react-router-dom";
 import { useLinkOrder, useSetTableStatus, useTable, useUnlinkOrder } from "@/domain/tables/hooks";
 import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/domain/menu/hooks";
 import type { MenuItemDto } from "@/domain/menu/types";
-import { MenuItemCard } from "@/features/pos/components/MenuItemCard"; 
-import { OrderSidebar } from "@/features/pos/components/OrderSideBar";  
+import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
+import { OrderSidebar } from "@/features/pos/components/OrderSideBar";
 import {
   useCreateCart,
   useCart,
@@ -71,7 +71,7 @@ function mapCartToSidebarOrder(cart: CartDto | undefined) {
 export default function MenuPage() {
   const { tableId = "" } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
-  const location = useLocation() as { state?: { partySize?: number; cartId?: string } };
+  const location = useLocation() as Location & { state?: { partySize?: number; cartId?: string } };
   const search = new URLSearchParams(location.search);
   const cartIdFromQuery = search.get("cartId") || undefined;
   const store = useStore();
@@ -133,14 +133,14 @@ export default function MenuPage() {
       if (cartId && !linkedOnce.current) {
         try {
           await linkOrder.mutateAsync(cartId);
-        } catch {}
+        } catch { }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
           if (guestCount != null) {
             await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
             store.setTableSession(tableId, { guestCount });
           }
-        } catch {}
+        } catch { }
         store.setTableSession(tableId, { cartId });
         linkedOnce.current = true;
       }
@@ -167,11 +167,11 @@ export default function MenuPage() {
         id = res.id;
         setCartId(res.id);
         store.setTableSession(tableId, { cartId: res.id, guestCount: location.state?.partySize ?? initialSession?.guestCount ?? null });
-        try { await linkOrder.mutateAsync(res.id); } catch {}
+        try { await linkOrder.mutateAsync(res.id); } catch { }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
           if (guestCount != null) await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
-        } catch {}
+        } catch { }
       } catch {
         toast.error("Could not start an order");
         return;
@@ -224,8 +224,8 @@ export default function MenuPage() {
       if (url) {
         window.location.href = url;
         // Best-effort cleanup; may not run after navigation
-        try { await unlinkOrder.mutateAsync(cartId); } catch {}
-        try { await setTableStatus.mutateAsync({ status: "available" }); } catch {}
+        try { await unlinkOrder.mutateAsync(cartId); } catch { }
+        try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
         store.clearTableSession(tableId);
         await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
         return;
@@ -244,7 +244,7 @@ export default function MenuPage() {
           navigate(`/pos/table/${tableId}/checkout/cancel?order=${encodeURIComponent(orderId)}`);
           return;
         }
-      } catch {}
+      } catch { }
       toast.error("Payment session not ready yet. Please try again.")
     } finally {
       setCheckingOut(false);
@@ -420,7 +420,7 @@ export default function MenuPage() {
       )}
 
       {/* Release confirmation dialog when navigating away with empty order */}
-      <Dialog open={releaseOpen} onOpenChange={(o) => { if (!o) { blockerRef.current?.reset(); } setReleaseOpen(o); }}>
+      <Dialog open={releaseOpen} onOpenChange={(o) => { if (!o) { blockerRef.current?.reset?.(); } setReleaseOpen(o); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Release this table?</DialogTitle>
@@ -432,7 +432,7 @@ export default function MenuPage() {
             <Button
               variant="outline"
               onClick={() => {
-                blockerRef.current?.reset();
+                blockerRef.current?.reset?.();
                 setReleaseOpen(false);
               }}
             >
@@ -441,15 +441,15 @@ export default function MenuPage() {
             <Button
               onClick={async () => {
                 if (cartId) {
-                  try { await unlinkOrder.mutateAsync(cartId); } catch {}
+                  try { await unlinkOrder.mutateAsync(cartId); } catch { }
                 }
-                try { await setTableStatus.mutateAsync({ status: "available" }); } catch {}
+                try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
                 store.clearTableSession(tableId);
                 toast.success("Table released");
                 const b = blockerRef.current;
                 setReleaseOpen(false);
                 // Proceed with the originally requested navigation
-                b?.proceed();
+                b?.proceed?.();
               }}
             >
               Release
