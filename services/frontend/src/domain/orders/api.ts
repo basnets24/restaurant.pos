@@ -2,7 +2,7 @@
 import { ENV } from "@/config/env";
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
-import type { FinalizeOrderDto, OrderDto, TenantHeaders } from "./types";
+import type { FinalizeOrderDto, OrderDto, TenantHeaders, PageResult } from "./types";
 
 const BASE = ENV.ORDER_URL; // e.g. https://localhost:7288
 
@@ -13,12 +13,16 @@ function withTenantHeaders(tenant?: TenantHeaders) {
     return headers;
 }
 
-export async function listOrders(tenant?: TenantHeaders) {
+export async function listOrders(tenant?: TenantHeaders): Promise<PageResult<OrderDto>> {
     const token = await getApiToken('Order', ['order.read']);
-    const { data } = await http.get<OrderDto[]>(`${BASE}/orders`, {
+    const { data } = await http.get(`${BASE}/orders`, {
         headers: { ...withTenantHeaders(tenant), Authorization: `Bearer ${token}` },
     });
-    return data;
+    if (Array.isArray(data)) {
+        const items = data as OrderDto[];
+        return { items, page: 1, pageSize: items.length, total: items.length };
+    }
+    return data as PageResult<OrderDto>;
 }
 
 export async function getOrder(id: string, tenant?: TenantHeaders) {
