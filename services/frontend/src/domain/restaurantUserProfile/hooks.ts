@@ -131,7 +131,8 @@ export function createRestaurantUserProfileHooks(
     return useQuery<MyJoinCodeRes, unknown>({
       queryKey: onboardingKey,
       queryFn: () => api.getMyJoinCode({ rid: params?.rid, lid: params?.lid }),
-      retry: shouldRetry,
+      retry: false,        // 404 → null is a valid state
+      staleTime: 60_000,
       ...options,
     });
   }

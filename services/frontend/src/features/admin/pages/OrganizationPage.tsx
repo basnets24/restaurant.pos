@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
 import { ENV, getToken } from "@/config/env";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
@@ -132,11 +132,11 @@ export default function OrganizationPage() {
         {/* General */}
         {tab === "general" && (
           <TwoColCard title="Restaurant Profile" desc="Basic contact and identity info">
-            <Field label="Restaurant Name"><Input size="lg" value={draft.restaurantName} onChange={(e) => setDraft({ ...draft, restaurantName: e.target.value })} /></Field>
-            <Field label="Legal Name"><Input size="lg" value={draft.legalName} onChange={(e) => setDraft({ ...draft, legalName: e.target.value })} /></Field>
-            <Field label="Address"><Input size="lg" value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} /></Field>
-            <Field label="Phone"><Input size="lg" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
-            <Field label="Email"><Input size="lg" type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></Field>
+            <Field label="Restaurant Name"><Input value={draft.restaurantName} onChange={(e) => setDraft({ ...draft, restaurantName: e.target.value })} /></Field>
+            <Field label="Legal Name"><Input value={draft.legalName} onChange={(e) => setDraft({ ...draft, legalName: e.target.value })} /></Field>
+            <Field label="Address"><Input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} /></Field>
+            <Field label="Phone"><Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
+            <Field label="Email"><Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></Field>
           </TwoColCard>
         )}
 
@@ -165,22 +165,22 @@ export default function OrganizationPage() {
         {/* Hours */}
         {tab === "hours" && (
           <TwoColCard title="Operating Hours" desc="Shown to staff and used for reports">
-            <Field label="Hours"><Input size="lg" value={draft.hours} onChange={(e) => setDraft({ ...draft, hours: e.target.value })} /></Field>
+            <Field label="Hours"><Input value={draft.hours} onChange={(e) => setDraft({ ...draft, hours: e.target.value })} /></Field>
           </TwoColCard>
         )}
 
         {/* Taxes & Fees */}
         {tab === "taxes" && (
           <TwoColCard title="Taxes & Fees" desc="Defaults used for pricing/checkout">
-            <Field label="Tax Rate (%)"><Input size="lg" type="number" step="0.01" value={draft.taxRatePct} onChange={(e) => setDraft({ ...draft, taxRatePct: Number(e.target.value) })} /></Field>
-            <Field label="Service Fee (%)"><Input size="lg" type="number" step="0.1" value={draft.serviceFeePct} onChange={(e) => setDraft({ ...draft, serviceFeePct: Number(e.target.value) })} /></Field>
+            <Field label="Tax Rate (%)"><Input type="number" step="0.01" value={draft.taxRatePct} onChange={(e) => setDraft({ ...draft, taxRatePct: Number(e.target.value) })} /></Field>
+            <Field label="Service Fee (%)"><Input type="number" step="0.1" value={draft.serviceFeePct} onChange={(e) => setDraft({ ...draft, serviceFeePct: Number(e.target.value) })} /></Field>
           </TwoColCard>
         )}
 
         {/* Branding */}
         {tab === "branding" && (
           <TwoColCard title="Branding" desc="Customize look & feel">
-            <Field label="Brand Color"><Input size="lg" type="color" value={draft.brandColor} onChange={(e) => setDraft({ ...draft, brandColor: e.target.value })} /></Field>
+            <Field label="Brand Color"><Input type="color" value={draft.brandColor} onChange={(e) => setDraft({ ...draft, brandColor: e.target.value })} /></Field>
           </TwoColCard>
         )}
 

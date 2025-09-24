@@ -30,10 +30,10 @@ import {
     User,
     Building2,
 } from "lucide-react";
-import StaffUsersCard from "./StaffUsersCard";
+import StaffUsersCard from "@/features/management/components/StaffUsersCard";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
-import InventoryStockCard from "./InventoryStockCard.tsx";
-import MenuItemsCard from "./MenuItemsCard.tsx";
+import InventoryStockCard from "@/features/management/components/InventoryCard";
+import MenuItemsCard from "@/features/management/components/MenuCard";
 interface ManagementViewProps {
     userData: any;
     onBackToDashboard?: () => void;

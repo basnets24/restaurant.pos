@@ -1,6 +1,6 @@
 // SuccessView.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

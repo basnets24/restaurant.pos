@@ -32,11 +32,20 @@ export function createTenantHooks(api: TenantApi) {
     });
   }
 
+  type TenantData = {
+    restaurant: TenantRestaurantDto;
+    locations: readonly TenantLocationDto[];
+  };
+
+  
   function useTenant(
     restaurantId: string,
-    options?: UseQueryOptions<{ restaurant: TenantRestaurantDto; locations: readonly TenantLocationDto[] }, unknown>
+    options?: Omit<
+    UseQueryOptions<TenantData, unknown, TenantData, ReturnType<typeof tenantKeys.detail>>,
+    "queryKey" | "queryFn"
+  >
   ) {
-    return useQuery<{ restaurant: TenantRestaurantDto; locations: readonly TenantLocationDto[] }, unknown>({
+    return useQuery<TenantData, unknown, TenantData, ReturnType<typeof tenantKeys.detail>>({
       queryKey: tenantKeys.detail(restaurantId),
       queryFn: () => api.getTenant(restaurantId),
       enabled: Boolean(restaurantId),

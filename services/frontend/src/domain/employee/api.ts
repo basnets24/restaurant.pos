@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosError, type AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
 
 // Types (DTOs)
@@ -163,7 +163,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
           },
         });
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { return handleError(e); }
     },
 
     async getEmployeeById(restaurantId, userId) {
@@ -171,7 +171,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<EmployeeDetailDto>(path(restaurantId, `/${encodeURIComponent(userId)}`), { headers });
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { return handleError(e); }
     },
 
     async updateEmployee(restaurantId, userId, body) {
@@ -200,7 +200,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<readonly string[]>(path(restaurantId, `/${encodeURIComponent(userId)}/roles`), { headers });
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { return handleError(e); }
     },
 
     async updateEmployeeRoles(restaurantId, userId, body) {
@@ -222,7 +222,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders(restaurantId));
         const res = await instance.get<readonly string[]>(path(restaurantId, "/roles"), { headers });
         return res.data;
-      } catch (e) { handleError(e); }
+      } catch (e) { return handleError(e); }
     },
   };
 }
