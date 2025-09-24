@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
-import { ENV, getToken } from "@/config/env";
+import { ENV } from "@/config/env";
+import { getToken } from "@/lib/config";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,7 +37,7 @@ const DEFAULTS: OrgProfile = {
 function read(): OrgProfile {
   try { const raw = localStorage.getItem(LS); return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS; } catch { return DEFAULTS; }
 }
-function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch {} }
+function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch { } }
 
 export default function OrganizationPage() {
   const { restaurantName: nameFromTenant, locations } = useTenantInfo();
@@ -59,7 +60,7 @@ export default function OrganizationPage() {
         if (!r.ok) return;
         const data = await r.json();
         if (!cancelled) setJoinCode(data);
-      } catch {}
+      } catch { }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -111,7 +112,7 @@ export default function OrganizationPage() {
                     <Input readOnly value={joinCode.joinUrl ?? "(configure CORS origins)"} />
                     <button
                       className="btn"
-                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch {} }}
+                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch { } }}
                       title="Copy link"
                     >
                       <Copy className="h-4 w-4" />

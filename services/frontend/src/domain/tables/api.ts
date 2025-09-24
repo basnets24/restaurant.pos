@@ -1,6 +1,7 @@
 import { http as api } from "@/lib/http";
 import { ENV } from "@/config/env";
 import { getApiToken } from "@/auth/getApiToken";
+import { tenantAccessor } from "@/auth/runtime";
 import {
   type BulkLayoutUpdateDto,
   type CreateTableDto,
@@ -17,7 +18,7 @@ import {
 
 function getTenant() {
   try {
-    return (window as any)?.POS_SHELL_AUTH?.getTenant?.();
+    return tenantAccessor();
   } catch {
     return undefined;
   }

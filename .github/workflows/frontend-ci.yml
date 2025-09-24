@@ -1,0 +1,45 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ dev, main ]
+    paths: [ 'services/frontend/**', '.github/workflows/frontend-ci.yml' ]
+  pull_request:
+    branches: [ dev, main ]
+    paths: [ 'services/frontend/**', '.github/workflows/frontend-ci.yml' ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/frontend/package-lock.json
+      - run: npm ci --prefer-offline --no-audit --fund=false
+      - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cd services/frontend
+          docker build -t pos-frontend .
+          docker run -d -p 8080:80 --name test-container pos-frontend
+          
+          # Wait and test
+          for i in {1..10}; do
+            curl -fsSL http://localhost:8080/ && curl -fsSL http://localhost:8080/config.js && break
+            sleep 3
+          done
+          
+          docker rm -f test-container

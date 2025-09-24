@@ -1,10 +1,11 @@
 import axios from "axios";
+import { tokenAccessor } from "@/auth/runtime";
 // Authorization paths import not needed; avoid unused import
 
 export const http = axios.create();
 
 http.interceptors.request.use((config) => {
-    const token = window.POS_SHELL_AUTH?.getToken?.();
+    const token = tokenAccessor();
     // Respect per-request Authorization header if already set (e.g., audience/scoped tokens).
     const hasAuthHeader = !!(config.headers as any)?.Authorization;
     if (token && !hasAuthHeader) {

@@ -24,12 +24,7 @@ export default function OrdersPage() {
   }, [profile]);
 
   const { data, isLoading } = useOrders(tenant);
-
-  const orders = useMemo(() => {
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray((data as any).items)) return (data as any).items;
-    return [] as any[];
-  }, [data]);
+  const orders = useMemo(() => (data?.items ?? []) as any[], [data]);
 
   return (
     <div className="p-4 mx-auto max-w-6xl space-y-4">

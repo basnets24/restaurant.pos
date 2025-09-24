@@ -9,7 +9,11 @@ export const MenuItems = {
   ): Promise<PageResult<MenuItemDto>> => {
     const token = await getApiToken("Catalog", ["menu.read"]);
     const { data } = await http.get(MenuAPI.list(q), { headers: { Authorization: `Bearer ${token}` } });
-    return data;
+    if (Array.isArray(data)) {
+      const items = data as MenuItemDto[];
+      return { items, page: 1, pageSize: items.length, total: items.length };
+    }
+    return data as PageResult<MenuItemDto>;
   },
   categories: async (): Promise<string[]> => {
     const token = await getApiToken("Catalog", ["menu.read"]);

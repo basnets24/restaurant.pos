@@ -1,13 +1,11 @@
 import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 import { ApplicationName, AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
+import { ENV } from "@/config/env";
 
 export const BASE_ID_SCOPES = "openid profile roles tenancy tenant.claims.read";
 
 const origin = window.location.origin;
-const authority = import.meta.env.VITE_IDENTITY_URL;
-if (!authority) {
-  throw new Error("VITE_IDENTITY_URL is missing");
-}
+const authority = ENV.IDENTITY_URL;
 
 const requestedScope = import.meta.env.VITE_OIDC_SCOPE ?? BASE_ID_SCOPES;
 
