@@ -1,7 +1,8 @@
 // src/auth/AuthProvider.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from 'oidc-client-ts';
 import { userManager } from './oidc';
+import { clearApiTokenCache } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 
@@ -30,12 +31,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const [isAuthenticated, setAuth] = useState(false);
     const [profile, setProfile] = useState<Record<string, unknown>>();
     const [accessToken, setAccessToken] = useState<string>();
+    const lastSubRef = useRef<string | undefined>(undefined);
 
     // small helper to sync local state from a User
     const setFromUser = (u: User | null | undefined) => {
         setAuth(!!u);
         setProfile(u?.profile as unknown as Record<string, unknown> | undefined);
         setAccessToken(u?.access_token);
+        const sub = (u?.profile as any)?.sub as string | undefined;
+        if (sub && lastSubRef.current && lastSubRef.current !== sub) {
+            try { clearApiTokenCache(); } catch {}
+        }
+        lastSubRef.current = sub;
     };
 
     // Initial load + wire up useful events
@@ -57,6 +64,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const onUnloaded = () => {
             setFromUser(undefined);
             try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch {}
+            try { clearApiTokenCache(); } catch {}
         };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
@@ -65,6 +73,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 setFromUser(u);
             } catch {
                 setFromUser(undefined);
+                try { clearApiTokenCache(); } catch {}
             }
         };
 
@@ -154,6 +163,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             localStorage.removeItem('rid');
             localStorage.removeItem('lid');
         } catch {}
+        try { clearApiTokenCache(); } catch {}
 
         const to =
             (res?.state as any)?.returnUrl ??
