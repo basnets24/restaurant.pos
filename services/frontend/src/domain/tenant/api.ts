@@ -83,7 +83,7 @@ async function withAuthHeaders(getAccessToken: GetAccessToken) {
 
 function withTenantHeaders(rid?: string) {
   const headers: Record<string, string> = {};
-  if (rid) headers["X-Restaurant-Id"] = rid;
+  if (rid) headers["x-restaurant-id"] = rid;
   return headers;
 }
 

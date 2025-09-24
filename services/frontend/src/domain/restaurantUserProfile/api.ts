@@ -99,8 +99,8 @@ async function withAuthHeaders(getAccessToken: GetAccessToken) {
 /** Tenant routing headers */
 function withTenantHeaders(rid?: string, lid?: string) {
   const headers: Record<string, string> = {};
-  if (rid) headers["X-Restaurant-Id"] = rid;
-  if (lid) headers["X-Location-Id"] = lid;
+  if (rid) headers["x-restaurant-id"] = rid;
+  if (lid) headers["x-location-id"] = lid;
   return headers;
 }
 
