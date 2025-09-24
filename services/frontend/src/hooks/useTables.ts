@@ -29,27 +29,39 @@ export function useTables() {
             .configureLogging(LogLevel.Warning)
             .build();
 
-        c.on("TableStatusChanged", ({ tableId, status, partySize }) => {
+        const onStatus = ({ tableId, status, partySize }: any) => {
             setTables(prev => prev.map(t => t.id === String(tableId) ? { ...t, status, partySize: partySize ?? undefined } : t));
-        });
-
-        c.on("TableLayoutChanged", ({ tableId, x, y, width, height, version, shape }) => {
+        };
+        const onLayout = ({ tableId, x, y, width, height, version, shape }: any) => {
             setTables(prev => prev.map(t => t.id === String(tableId)
                 ? { ...t, position: { x, y }, size: { width: width ?? t.size.width, height: height ?? t.size.height }, version, shape: shape ?? t.shape }
                 : t));
-        });
-
-        c.on("OrderLinked", ({ tableId, orderId }) => {
+        };
+        const onLinked = ({ tableId, orderId }: any) => {
             setTables(prev => prev.map(t => t.id === String(tableId) ? { ...t, activeCartId: String(orderId) } : t));
-        });
-
-        c.on("OrderUnlinked", ({ tableId }) => {
+        };
+        const onUnlinked = ({ tableId }: any) => {
             setTables(prev => prev.map(t => t.id === String(tableId) ? { ...t, activeCartId: null } : t));
-        });
+        };
+
+        c.on("TableStatusChanged", onStatus);
+        c.on("TableLayoutChanged", onLayout);
+        c.on("OrderLinked", onLinked);
+        c.on("OrderUnlinked", onUnlinked);
 
         c.start().catch(console.error);
         connRef.current = c;
-        return () => { c.stop().catch(() => {}); connRef.current = null; };
+        return () => {
+            try {
+                c.off("TableStatusChanged", onStatus);
+                c.off("TableLayoutChanged", onLayout);
+                c.off("OrderLinked", onLinked);
+                c.off("OrderUnlinked", onUnlinked);
+            } finally {
+                c.stop().catch(() => { });
+                connRef.current = null;
+            }
+        };
     }, [tenant?.restaurantId, tenant?.locationId]);
 
     const updateStatus = useCallback(async (id: string, status: Table["status"], partySize?: number) => {

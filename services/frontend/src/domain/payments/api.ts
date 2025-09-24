@@ -64,14 +64,25 @@ export async function pollForSessionUrl(
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => resolve(), ms);
-    if (!signal) return;
+    let done = false;
+    const onResolve = () => {
+      if (done) return;
+      done = true;
+      if (signal) signal.removeEventListener("abort", onAbort);
+      resolve();
+    };
     const onAbort = () => {
+      if (done) return;
+      done = true;
       clearTimeout(timer);
+      if (signal) signal.removeEventListener("abort", onAbort);
       reject(new DOMException("Aborted", "AbortError"));
     };
-    if (signal.aborted) return onAbort();
-    signal.addEventListener("abort", onAbort, { once: true });
+    const timer = setTimeout(onResolve, ms);
+    if (signal) {
+      if (signal.aborted) return onAbort();
+      signal.addEventListener("abort", onAbort);
+    }
   });
 }
-  
+
