@@ -19,8 +19,8 @@ export default function InventoryStockCard() {
     const items: InventoryItemDto[] = Array.isArray(data)
         ? data
         : Array.isArray((data as any)?.items)
-        ? ((data as any).items as InventoryItemDto[])
-        : [];
+            ? ((data as any).items as InventoryItemDto[])
+            : [];
 
     const updateMut = useUpdateInventoryItem();
     const adjustMut = useAdjustInventoryQuantity();
@@ -29,7 +29,7 @@ export default function InventoryStockCard() {
         <Card>
             <CardHeader className="flex items-center justify-between">
                 <div>
-                    <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5"/> Inventory</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" /> Inventory</CardTitle>
                     <CardDescription>Seeded from Menu items. Quantity starts at 0. Orders decrement stock.</CardDescription>
                 </div>
             </CardHeader>
@@ -59,15 +59,15 @@ export default function InventoryStockCard() {
                                     canWrite={canWrite}
                                     onUpdate={(dto) =>
                                         updateMut.mutate(
-                                            { id: it.id, dto, menuItemId: it.menuItemId },
+                                            { id: it.id, dto, menuItemId: it.menuItemId } as any,
                                             {
                                                 onSuccess: () => {
                                                     const msg =
                                                         dto.quantity !== undefined
                                                             ? `Quantity set to ${dto.quantity}`
                                                             : dto.isAvailable !== undefined
-                                                            ? `Marked as ${dto.isAvailable ? "Available" : "Hidden"}`
-                                                            : "Inventory updated";
+                                                                ? `Marked as ${dto.isAvailable ? "Available" : "Hidden"}`
+                                                                : "Inventory updated";
                                                     toast.success(msg);
                                                 },
                                             }
@@ -75,7 +75,7 @@ export default function InventoryStockCard() {
                                     }
                                     onAdjust={(delta) =>
                                         adjustMut.mutate(
-                                            { id: it.id, delta, menuItemId: it.menuItemId },
+                                            { id: it.id, delta, menuItemId: it.menuItemId } as any,
                                             {
                                                 onSuccess: () => toast.success(delta > 0 ? "Quantity +1" : "Quantity −1"),
                                             }

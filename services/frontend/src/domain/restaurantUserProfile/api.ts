@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosError, type AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
 import type {
   OnboardRestaurantReq,
@@ -9,6 +9,7 @@ import type {
   MyJoinCodeRes,
 } from "./types";
 
+/** Domain errors */
 export class UnauthorizedError extends Error {
   constructor(message = "Unauthorized") {
     super(message);
@@ -27,6 +28,7 @@ export class ApiError extends Error {
   }
 }
 
+/** Types */
 type GetAccessToken = () => Promise<string | null>;
 
 export type RestaurantUserProfileApi = {
@@ -47,11 +49,11 @@ export type RestaurantUserProfileApi = {
     lid?: string;
   }) => Promise<OnboardingStatus>;
 
-  /** GET /api/onboarding/me/code */
+  /** GET /api/onboarding/me/code (returns null on 404) */
   getMyJoinCode: (params?: {
     rid?: string;
     lid?: string;
-  }) => Promise<MyJoinCodeRes>;
+  }) => Promise<MyJoinCodeRes | null>;
 
   /** GET /users/me */
   getCurrentUserProfile: (params?: {
@@ -61,17 +63,19 @@ export type RestaurantUserProfileApi = {
 };
 
 export type CreateApiOptions = {
-  baseURL?: string; // legacy: used when both services are same base
+  baseURL?: string;        // legacy: used when both services share a base
   identityBaseURL?: string; // for /users/me
   tenantBaseURL?: string;   // for /api/onboarding/*
   axiosInstance?: AxiosInstance;
   getAccessToken: GetAccessToken;
 };
 
-function isAxiosError<T = any>(e: unknown): e is AxiosError<T> {
+/** Narrow unknown to AxiosError */
+function isAxiosError<T = unknown>(e: unknown): e is AxiosError<T> {
   return typeof e === "object" && e !== null && (e as any).isAxiosError === true;
 }
 
+/** Extract a reasonable message from common error payload shapes */
 function pickMessage(data: any): string | undefined {
   if (!data) return undefined;
   if (typeof data === "string") return data;
@@ -84,6 +88,7 @@ function pickMessage(data: any): string | undefined {
   return undefined;
 }
 
+/** Build auth header from access token provider */
 async function withAuthHeaders(getAccessToken: GetAccessToken) {
   const token = await getAccessToken();
   const headers: Record<string, string> = {};
@@ -91,6 +96,7 @@ async function withAuthHeaders(getAccessToken: GetAccessToken) {
   return headers;
 }
 
+/** Tenant routing headers */
 function withTenantHeaders(rid?: string, lid?: string) {
   const headers: Record<string, string> = {};
   if (rid) headers["X-Restaurant-Id"] = rid;
@@ -98,10 +104,27 @@ function withTenantHeaders(rid?: string, lid?: string) {
   return headers;
 }
 
+/** Shallow-merge header objects */
 function mergeHeaders(
   ...parts: Array<Record<string, string> | undefined>
 ): Record<string, string> {
   return Object.assign({}, ...parts.filter(Boolean));
+}
+
+/** Convert any error to our domain error types */
+function toApiError(e: unknown): Error {
+  if (isAxiosError(e)) {
+    const status = e.response?.status;
+    if (status === 401) return new UnauthorizedError();
+
+    const msg = pickMessage(e.response?.data) ?? e.message;
+
+    if (status === 400 || status === 409) {
+      return new ApiError(msg, status, e.response?.data);
+    }
+    return new ApiError(msg, status, e.response?.data);
+  }
+  return e instanceof Error ? e : new Error(String(e));
 }
 
 /**
@@ -113,24 +136,9 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
   const identityBase = opts.identityBaseURL ?? opts.baseURL ?? "/";
   const tenantBase = opts.tenantBaseURL ?? opts.baseURL ?? "/";
 
+  // Allow caller to inject a pre-configured axios instance; otherwise create separate ones
   const idInstance = opts.axiosInstance ?? axios.create({ baseURL: identityBase });
   const tenantInstance = opts.axiosInstance ?? axios.create({ baseURL: tenantBase });
-
-  const handleError = (e: unknown): never => {
-    if (isAxiosError(e)) {
-      const status = e.response?.status;
-      if (status === 401) {
-        throw new UnauthorizedError();
-      }
-      if (status === 400 || status === 409) {
-        const msg = pickMessage(e.response?.data) ?? "Request failed";
-        throw new ApiError(msg, status, e.response?.data);
-      }
-      const msg = pickMessage(e.response?.data) ?? e.message;
-      throw new ApiError(msg, status, e.response?.data);
-    }
-    throw e as Error;
-  };
 
   return {
     /**
@@ -149,7 +157,7 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
         );
         return res.data;
       } catch (e) {
-        handleError(e);
+        throw toApiError(e);
       }
     },
 
@@ -172,7 +180,7 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
         );
         return res.data;
       } catch (e) {
-        handleError(e);
+        throw toApiError(e);
       }
     },
 
@@ -194,17 +202,18 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
         );
         return res.data;
       } catch (e) {
-        handleError(e);
+        throw toApiError(e);
       }
     },
 
     /**
      * GET /api/onboarding/me/code
+     * Returns null if the join code doesn't exist (404).
      */
     async getMyJoinCode(params?: {
       rid?: string;
       lid?: string;
-    }): Promise<MyJoinCodeRes> {
+    }): Promise<MyJoinCodeRes | null> {
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
@@ -219,24 +228,28 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
         if (isAxiosError(e) && e.response?.status === 404) {
           return null;
         }
-        handleError(e);
+        throw toApiError(e);
       }
     },
 
     /**
      * GET /users/me
+     * Uses IdentityService audience/scope via getApiToken helper.
      */
     async getCurrentUserProfile(params?: {
       rid?: string;
       lid?: string;
     }): Promise<UserProfile> {
       try {
-        // IdentityService local API expects scope IdentityServerApi and audience set
-        const idHeaders = { Authorization: `Bearer ${await getApiToken('IdentityServerApi', ['IdentityServerApi'])}` };
+        // If you prefer to reuse opts.getAccessToken(), swap this for withAuthHeaders().
+        const idHeaders = {
+          Authorization: `Bearer ${await getApiToken("IdentityServerApi", ["IdentityServerApi"])}`,
+          ...withTenantHeaders(params?.rid, params?.lid), // include tenant if needed downstream
+        };
         const res = await idInstance.get<UserProfile>("/users/me", { headers: idHeaders });
         return res.data;
       } catch (e) {
-        handleError(e);
+        throw toApiError(e);
       }
     },
   };

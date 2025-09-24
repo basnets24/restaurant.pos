@@ -1,7 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/api-authorization/AuthProvider";
-import { userManager } from "@/api-authorization/oidc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,7 @@ export default function JoinPage() {
 
   const displayName =
     (profile as any)?.name ||
-    [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") ||
+    [(profile as any)?.given_name, (profile as any)?.family_name].filter(Boolean).join(" ") ||
     (profile as any)?.preferred_username ||
     (profile as any)?.email ||
     "User";
@@ -63,7 +62,7 @@ export default function JoinPage() {
           const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
           const userId = (profile as any)?.sub as string | undefined;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
-        } catch {}
+        } catch { }
       }
       navigate("/home", { replace: true });
     } catch (err: any) {
@@ -86,7 +85,7 @@ export default function JoinPage() {
           const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
           const userId = (profile as any)?.sub as string | undefined;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
-        } catch {}
+        } catch { }
       }
       navigate("/home", { replace: true });
     } catch (err: any) {
@@ -198,15 +197,15 @@ export default function JoinPage() {
               <CardContent className="space-y-4">
                 <div className="grid gap-1.5">
                   <Label className="text-base">Restaurant name</Label>
-                  <Input size="lg" value={name} onChange={e => setName(e.target.value)} placeholder="Acme Bistro" />
+                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="Acme Bistro" />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-base">Your display name (optional)</Label>
-                  <Input size="lg" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="e.g. Alex" />
+                  <Input value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="e.g. Alex" />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-base flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> Location name (optional)</Label>
-                  <Input size="lg" value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Main" />
+                  <Input value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Main" />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-base flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> Time zone (optional)</Label>
@@ -241,11 +240,11 @@ export default function JoinPage() {
               <CardContent className="space-y-4">
                 <div className="grid gap-1.5">
                   <Label className="text-base">Join code</Label>
-                  <Input size="lg" value={code} onChange={e => setCode(e.target.value)} placeholder="acme-bistro" />
+                  <Input value={code} onChange={e => setCode(e.target.value)} placeholder="acme-bistro" />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-base">Your display name (optional)</Label>
-                  <Input size="lg" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="e.g. Alex" />
+                  <Input value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="e.g. Alex" />
                 </div>
               </CardContent>
               <CardFooter className="mt-auto">

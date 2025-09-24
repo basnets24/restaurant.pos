@@ -17,22 +17,36 @@ import type {
 } from "./api";
 import { employeeKeys } from "./keys";
 
-function shouldRetry(error: unknown, failureCount: number): boolean {
-  const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
-  if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) return false;
-  return failureCount < 2;
+// Conservative retry: don't retry 4xx; retry 2x otherwise
+function shouldRetry(failureCount: number, error: unknown): boolean {
+  const status = (error as any)?.status ?? (error as any)?.response?.status;
+  if (typeof status === "number" && status >= 400 && status < 500) return false; // don't retry 4xx
+  return failureCount < 2; // retry up to 2 times otherwise
 }
 
 export function createEmployeeHooks(api: EmployeeApi) {
   const qc = () => useQueryClient();
 
-  // List
+  // ---------- List
   function useEmployees(
     restaurantId: string,
     query?: { q?: string; role?: string; page?: number; pageSize?: number },
-    options?: Omit<UseQueryOptions<Paged<EmployeeListItemDto>, unknown>, 'queryKey' | 'queryFn'>
+    options?: Omit<
+      UseQueryOptions<
+        Paged<EmployeeListItemDto>,                 // TQueryFnData
+        unknown,                                    // TError
+        Paged<EmployeeListItemDto>,                 // TData (after select)
+        ReturnType<typeof employeeKeys.list>        // TQueryKey
+      >,
+      "queryKey" | "queryFn"
+    >
   ) {
-    return useQuery<Paged<EmployeeListItemDto>, unknown>({
+    return useQuery<
+      Paged<EmployeeListItemDto>,
+      unknown,
+      Paged<EmployeeListItemDto>,
+      ReturnType<typeof employeeKeys.list>
+    >({
       queryKey: employeeKeys.list(restaurantId, query),
       queryFn: () => api.listEmployees(restaurantId, query),
       enabled: Boolean(restaurantId),
@@ -41,13 +55,26 @@ export function createEmployeeHooks(api: EmployeeApi) {
     });
   }
 
-  // Detail
+  // ---------- Detail
   function useEmployee(
     restaurantId: string,
     userId: string,
-    options?: Omit<UseQueryOptions<EmployeeDetailDto, unknown>, 'queryKey' | 'queryFn'>
+    options?: Omit<
+      UseQueryOptions<
+        EmployeeDetailDto,
+        unknown,
+        EmployeeDetailDto,
+        ReturnType<typeof employeeKeys.detail>
+      >,
+      "queryKey" | "queryFn"
+    >
   ) {
-    return useQuery<EmployeeDetailDto, unknown>({
+    return useQuery<
+      EmployeeDetailDto,
+      unknown,
+      EmployeeDetailDto,
+      ReturnType<typeof employeeKeys.detail>
+    >({
       queryKey: employeeKeys.detail(restaurantId, userId),
       queryFn: () => api.getEmployeeById(restaurantId, userId),
       enabled: Boolean(restaurantId && userId),
@@ -56,13 +83,26 @@ export function createEmployeeHooks(api: EmployeeApi) {
     });
   }
 
-  // Roles of employee
+  // ---------- Roles of employee
   function useEmployeeRoles(
     restaurantId: string,
     userId: string,
-    options?: Omit<UseQueryOptions<readonly string[], unknown>, 'queryKey' | 'queryFn'>
+    options?: Omit<
+      UseQueryOptions<
+        readonly string[],
+        unknown,
+        readonly string[],
+        ReturnType<typeof employeeKeys.roles>
+      >,
+      "queryKey" | "queryFn"
+    >
   ) {
-    return useQuery<readonly string[], unknown>({
+    return useQuery<
+      readonly string[],
+      unknown,
+      readonly string[],
+      ReturnType<typeof employeeKeys.roles>
+    >({
       queryKey: employeeKeys.roles(restaurantId, userId),
       queryFn: () => api.getEmployeeRoles(restaurantId, userId),
       enabled: Boolean(restaurantId && userId),
@@ -71,12 +111,25 @@ export function createEmployeeHooks(api: EmployeeApi) {
     });
   }
 
-  // Available role names
+  // ---------- Available role names
   function useAvailableRoles(
     restaurantId: string,
-    options?: Omit<UseQueryOptions<readonly string[], unknown>, 'queryKey' | 'queryFn'>
+    options?: Omit<
+      UseQueryOptions<
+        readonly string[],
+        unknown,
+        readonly string[],
+        ReturnType<typeof employeeKeys.roleNames>
+      >,
+      "queryKey" | "queryFn"
+    >
   ) {
-    return useQuery<readonly string[], unknown>({
+    return useQuery<
+      readonly string[],
+      unknown,
+      readonly string[],
+      ReturnType<typeof employeeKeys.roleNames>
+    >({
       queryKey: employeeKeys.roleNames(restaurantId),
       queryFn: () => api.getAvailableRoles(restaurantId),
       enabled: Boolean(restaurantId),
@@ -85,7 +138,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
     });
   }
 
-  // Add employee
+  // ---------- Mutations
   function useAddEmployee(
     restaurantId: string,
     options?: UseMutationOptions<void, unknown, AddEmployeeDto, unknown>
@@ -97,12 +150,11 @@ export function createEmployeeHooks(api: EmployeeApi) {
       ...options,
       onSuccess: async (data, vars, ctx) => {
         await queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, ctx);
       },
     });
   }
 
-  // Update employee
   function useUpdateEmployee(
     restaurantId: string,
     userId: string,
@@ -118,12 +170,11 @@ export function createEmployeeHooks(api: EmployeeApi) {
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, ctx);
       },
     });
   }
 
-  // Update default location
   function useUpdateDefaultLocation(
     restaurantId: string,
     userId: string,
@@ -139,12 +190,11 @@ export function createEmployeeHooks(api: EmployeeApi) {
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, ctx);
       },
     });
   }
 
-  // Update employee roles
   function useUpdateEmployeeRoles(
     restaurantId: string,
     userId: string,
@@ -160,12 +210,11 @@ export function createEmployeeHooks(api: EmployeeApi) {
           queryClient.invalidateQueries({ queryKey: employeeKeys.roles(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, ctx);
       },
     });
   }
 
-  // Delete a single role from employee
   function useDeleteEmployeeRole(
     restaurantId: string,
     userId: string,
@@ -181,7 +230,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
           queryClient.invalidateQueries({ queryKey: employeeKeys.roles(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, ctx);
       },
     });
   }

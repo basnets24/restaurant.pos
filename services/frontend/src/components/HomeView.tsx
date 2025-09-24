@@ -87,7 +87,8 @@ export function Dashboard({
     const roles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
-    const { data: status } = hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
+    // Removed unused 'status' variable
+        hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
     // Show Admin button only for Admin or Owner
     const canAccessAdmin = roles.includes("Admin") || roles.includes("Owner");
     const { data: tablesData } = useDomainTables();
@@ -108,7 +109,7 @@ export function Dashboard({
     const quickStats = [
         { label: "Today's Sales", value: "$2,847.50", change: "+12.5%", trend: "up" as const },
         { label: "Active Orders", value: String(activeOrdersCount), change: "", trend: "neutral" as const },
-        { label: "Staff On Duty", value: String(employees.data?.total ?? 0), change: "", trend: "neutral" as const },
+        { label: "Staff On Duty", value: String(employees.data?.total), change: "", trend: "neutral" as const },
         { label: "Tables Occupied", value: `${stats.occupied}/${stats.total}`, change: stats.capacityText, trend: "neutral" as const },
     ];
 

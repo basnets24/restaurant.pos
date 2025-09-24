@@ -1,4 +1,4 @@
-import StaffUsersCard from "@/features/management/components/StaffCard";
+import StaffUsersCard from "@/features/management/components/StaffUsersCard";
 import { useCan } from "@/auth/permissions";
 
 export default function StaffTab() {
