@@ -15,7 +15,7 @@ It is consumed by the services in this repo and can be published as a package fo
 
 From GitHub Packages (example):
 
-1) Add your GitHub NuGet source and credentials to `NuGet.config` or via CLI.
+1) Add your GitHub NuGet source and credentials to `NuGet.config` or via CLI (dotnet add package Play.Common).
 2) Reference the package in your `.csproj`:
 
 ```xml
@@ -23,6 +23,11 @@ From GitHub Packages (example):
   <PackageReference Include="Common.Library" Version="1.0.*" />
 </ItemGroup>
 ```
+
+
+## Creating a package 
+
+
 
 Namespaces live under `Common.Library.*`.
 
@@ -107,6 +112,5 @@ App settings (illustrative):
 
 - Target framework: .NET 8
 - Semantic versioning (1.x)
-- Open to PRs/issues when published; breaking changes are called out in release notes.
 
 License: Proprietary (internal); permission required to redistribute.

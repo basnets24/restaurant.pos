@@ -1,6 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageId>Common.Library</PackageId>
+    <Version>1.0.13</Version>
+    <IsPackable>true</IsPackable>
+    <Authors>basnets24</Authors>
+    <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Shared utilities for Restaurant POS.</Description>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EnablePackageValidation>true</EnablePackageValidation>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -22,5 +32,17 @@
       <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
       <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
     </ItemGroup>
+    <ItemGroup>
+      <!-- Stop any wildcard or global rule from grabbing another README -->
+      <None Remove="**/README.md" />
+
+      <!-- Include exactly THIS project's README -->
+      <None Include="$(MSBuildThisFileDirectory)README.md"
+            Pack="true"
+            PackagePath="README.md" />
+    </ItemGroup>
 
 </Project>
+
+
+
