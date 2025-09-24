@@ -5,12 +5,8 @@ import { userManager } from './oidc';
 import { clearApiTokenCache } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
+import { bindAuthAccessors } from "@/auth/runtime";
 
-declare global {
-    interface Window {
-        POS_SHELL_AUTH?: { getToken?: () => string | undefined; getTenant?: () => { restaurantId?: string; locationId?: string } | undefined };
-    }
-}
 
 type AuthState = {
     isReady: boolean;
@@ -40,7 +36,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         setAccessToken(u?.access_token);
         const sub = (u?.profile as any)?.sub as string | undefined;
         if (sub && lastSubRef.current && lastSubRef.current !== sub) {
-            try { clearApiTokenCache(); } catch {}
+            try { clearApiTokenCache(); } catch { }
         }
         lastSubRef.current = sub;
     };
@@ -63,8 +59,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const onLoaded = (u: User) => setFromUser(u);
         const onUnloaded = () => {
             setFromUser(undefined);
-            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch {}
-            try { clearApiTokenCache(); } catch {}
+            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch { }
+            try { clearApiTokenCache(); } catch { }
         };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
@@ -73,7 +69,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 setFromUser(u);
             } catch {
                 setFromUser(undefined);
-                try { clearApiTokenCache(); } catch {}
+                try { clearApiTokenCache(); } catch { }
             }
         };
 
@@ -147,7 +143,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     const signOut = async (returnUrl?: string) => {
         // Signal to the next login attempt to skip silent once
-        try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch {}
+        try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch { }
         await userManager.signoutRedirect({
             state: { returnUrl },
             post_logout_redirect_uri: `${window.location.origin}${AuthorizationPaths.LogOutCallback}`,
@@ -162,8 +158,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             localStorage.removeItem('token');
             localStorage.removeItem('rid');
             localStorage.removeItem('lid');
-        } catch {}
-        try { clearApiTokenCache(); } catch {}
+        } catch { }
+        try { clearApiTokenCache(); } catch { }
 
         const to =
             (res?.state as any)?.returnUrl ??
@@ -177,16 +173,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     useEffect(() => {
-        window.POS_SHELL_AUTH = {
+        bindAuthAccessors({
             getToken: () => accessToken,
             getTenant: () => {
                 const rid = (profile as any)?.restaurant_id ?? (profile as any)?.restaurantId;
                 const lid = (profile as any)?.location_id ?? (profile as any)?.locationId;
                 return rid ? { restaurantId: rid as string, locationId: (lid as string | undefined) } : undefined;
-            }
-        };
+            },
+        });
     }, [accessToken, profile]);
-    
+
 
     const value = useMemo<AuthState>(
         () => ({
@@ -202,7 +198,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         }),
         [isReady, isAuthenticated, accessToken, profile]
     );
-    
+
 
     return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 };

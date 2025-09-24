@@ -4,11 +4,12 @@ import type { HubConnection } from "@microsoft/signalr";
 import type { TableViewDto as Table } from "@/domain/tables/types";
 import { API_BASE, getToken } from "@/lib/config";
 import { TablesApi } from "@/domain/tables/api";
+import { tenantAccessor } from "@/auth/runtime";
 
 export function useTables() {
     const [tables, setTables] = useState<Table[]>([]);
     const connRef = useRef<HubConnection | null>(null);
-    const tenant = (window as any)?.POS_SHELL_AUTH?.getTenant?.();
+    const tenant = tenantAccessor();
 
     // Only load tables after tenant context is available
     useEffect(() => {

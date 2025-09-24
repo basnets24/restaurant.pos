@@ -1,15 +1,10 @@
 // src/auth/oidc.ts
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 import { ApplicationName, AuthorizationPaths } from './ApiAuthorizationConstants';
+import { ENV } from '@/config/env';
 
 const origin = window.location.origin;
-const authority = import.meta.env.VITE_IDENTITY_URL;
-
-if (!authority) {
-    throw new Error(
-        'VITE_IDENTITY_URL is missing. Set it in your Vite env (e.g. .env.development or .env.local).'
-    );
-}
+const authority = ENV.IDENTITY_URL;
 
 const scope = import.meta.env.VITE_OIDC_SCOPE ?? 'openid profile roles tenancy tenant.claims.read';
 

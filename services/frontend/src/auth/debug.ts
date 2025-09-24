@@ -39,7 +39,8 @@ export function logToken(token: string, label = "token") {
 }
 
 export function logCurrentBaseToken() {
-  const t = (window as any)?.POS_SHELL_AUTH?.getToken?.();
+  const { tokenAccessor } = require("@/auth/runtime");
+  const t = tokenAccessor?.() as string | undefined;
   if (!t) {
     console.warn("[auth] no base token available");
     return;

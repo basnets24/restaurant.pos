@@ -1,89 +1,97 @@
-# Restaurant POS Frontend (React + TypeScript + Vite)
+# Restaurant POS Frontend
 
-Modern POS UI for restaurant operations: tables, ordering, payments, management, and admin. Built with React, TypeScript, Vite, TanStack Query, and a small auth layer for OIDC + multi‑tenant APIs.
+Single-page web app for restaurant operations (tables, orders, payments, management). Built with React, TypeScript, and Vite. Served as static assets behind Nginx.
 
-## Quick Start
+## Features
 
-1) Install and run:
+- Tables and floor plan: view active tables and seats
+- Ordering workflow: browse menu, add to cart, place orders
+- Payments: client flow to initiate payment sessions
+- Management dashboard: inventory, menu, staff, and analytics views
+- Admin area: organization profile and basic tenant info
+- Authentication: OIDC login/logout with silent renew
+- Multi-tenant: implicit headers and tenant-aware data fetching
 
-```
-npm i
+## Tech Overview
+
+- Framework: React 18 + TypeScript, Vite build tool
+- State/Data: TanStack Query for server cache, lightweight local state
+- HTTP: axios with centralized interceptors (auth + tenant headers)
+- Auth: oidc-client-ts (Authorization Code + PKCE), silent renew
+- Realtime: @microsoft/signalr for live table updates
+- UI: Tailwind CSS + component primitives (buttons, cards, tabs, etc.)
+- Config: runtime `public/config.js` (no build-time secrets in bundle)
+
+## Quick Start (Dev)
+
+```bash
+npm install
 npm run dev
 ```
 
-## Auth Model (OIDC + Scopes)
+App runs on http://localhost:5173/ by default.
 
-- Base login scopes (minimal): `openid profile roles tenancy tenant.claims.read`
-  - tenancy adds tenant claims to the ID token for UI
-  - tenant.claims.read ensures the Token audience includes `Tenant` when needed
-- Per‑API scopes are requested on demand (no `resource` parameter):
-  - Catalog (Menu): `menu.read`, `menu.write`
-  - Order (Orders/Cart/Tables): `order.read`, `order.write`
-  - Inventory: `inventory.read`, `inventory.write`
-  - Payment: `payment.read`, `payment.charge`, `payment.refund`
-  - Identity (local admin APIs): `IdentityServerApi`
+## Configuration
 
-Tokens are fetched via `src/auth/getApiToken.ts` using `signinSilent({ scope })`. The axios request interceptor respects per‑request Authorization headers and won’t overwrite scoped tokens.
+Service URLs are provided via `public/config.js`. This file is loaded before the app and defines globals like:
 
-## Multi‑Tenancy
+```js
+window.IDENTITY_SERVICE_URL = 'http://localhost:5200';
+window.TENANT_SERVICE_URL = 'http://localhost:5210';
+window.CATALOG_SERVICE_URL = 'http://localhost:5220';
+window.INVENTORY_SERVICE_URL = 'http://localhost:5230';
+window.ORDER_SERVICE_URL = 'http://localhost:5240';
+window.PAYMENT_SERVICE_URL = 'http://localhost:5250';
+window.RABBITMQ_URL = 'amqp://localhost:5672';
+```
 
-- Tenant headers: `x-restaurant-id`, `x-location-id`
-  - Set explicitly by domain APIs; also inferred from the base token in `src/lib/http.ts` if missing.
-- Tenant context (rid/lid) is hydrated by `ProtectedRoute` using onboarding status from the Tenant service, and stored in `TenantContext`.
+- Local development: adjust `public/config.js` as needed.
+- Other environments: swap or mount a different `config.js` at `/usr/share/nginx/html/config.js`.
 
-## Permissions and UI Gating
+## Architecture
 
-- Roles are evaluated in `src/auth/permissions.ts` via the in‑app store `src/auth/store.ts`.
-- Read permissions use scopes (e.g., `menuRead` checks `menu.read`).
-- Write controls are shown based on roles (Admin/Manager/…); API calls still request write scopes at call time.
-- Hook: `useCan('inventoryWrite')`, `useCan('menuWrite')`, etc.
+- Routing: client-side routes with SPA fallback in Nginx
+- Runtime config: `config.js` defines `window.*` service URLs consumed via `src/config/env.ts`
+- Auth accessors: token/tenant surfaced via module accessors bound in `AuthProvider`
+- HTTP layer: `src/lib/http.ts` injects Authorization and tenant headers; robust JWT parsing
+- Data patterns: paginated responses via `PageResult<T>` (e.g., Menu, Orders)
+- Code-splitting: route-level chunks produced by Vite for faster loads
 
-## Domain APIs (high level)
+## Build & Preview
 
-- Menu (Catalog): `src/domain/menu/service.ts` — reads `menu.read`, writes `menu.write`.
-- Orders/Cart (Order): `src/domain/orders/api.ts`, `src/domain/cart/api.ts` — `order.read`/`order.write` (+ `payment.charge` on checkout).
-- Tables (Order): `src/domain/tables/api.ts` — reads/writes as above + tenant headers.
-- Inventory: `src/domain/inventory/service.ts` — reads `inventory.read`, writes `inventory.write`.
-- Payments: `src/domain/payments/api.ts` — `payment.read` to poll session URL.
-- Identity (admin users/roles): `src/domain/identity/service.ts`, `src/domain/employee/*` — `IdentityServerApi`.
+```bash
+npm run build
+npm run preview  # serves dist/ on http://localhost:4173/
+```
 
-## Routes
+## Docker
 
-- POS: `/pos/tables`, `/pos/table/:tableId/menu` …
-- Payments: success/cancel under `/pos/table/:tableId/checkout/success|cancel`
-- Management: `/management` (tabs for Inventory/Menu/etc.)
-- Admin: `/admin/*` (hidden from dashboard unless Admin/Owner; guarded via `ProtectedRoute`)
+Build and run the static image served by Nginx:
 
-## Dev & Debugging
+```bash
+docker build -t pos-frontend:dev .
+docker run --rm -p 8080:80 pos-frontend:dev
+```
 
-- Token debug: enable in console `window.AUTH_DEBUG = true`, then trigger actions — scoped token details (aud/scope/roles) are logged.
-- Or import in console: `const m = await import('/src/auth/debug.ts'); m.logCurrentBaseToken();`
-- Vite Fast Refresh: context providers for Tenant/Employee opt‑out (`/* @refresh skip */`) to avoid HMR export shape warnings.
+Override config per environment by mounting a different `config.js`:
 
-## Troubleshooting
-
-- Audience validation failed (e.g., `Audiences: 'Tenant' did not match 'Catalog'`):
-  - Ensure the call uses a scoped token for that API (e.g., `menu.read`), and the interceptor didn’t overwrite Authorization.
-- `expected scope IdentityServerApi` (Identity endpoints):
-  - These calls request `IdentityServerApi` via `getApiToken` and set Authorization per request.
-- 401 loops at home:
-  - Global 401 redirect is disabled; `ProtectedRoute` handles auth vs onboarding. Check onboarding status and rid/lid.
-
-## Scripts
-
-- `npm run dev` — start Vite dev server
-- `npm run build` — type‑check + build
-- `npm run preview` — preview built app
-
-## Notable Files
-
-- `src/api-authorization/oidc.ts` — OIDC client config
-- `src/auth/getApiToken.ts` — scoped token retrieval (no resource indicators)
-- `src/auth/permissions.ts` — permissions map + `useCan`
-- `src/lib/http.ts` — axios instance + headers
-- `src/app/router.tsx` — routes
+```bash
+docker run --rm -p 8080:80 \
+  -v $(pwd)/ops/prod/config.js:/usr/share/nginx/html/config.js:ro \
+  pos-frontend:dev
+```
 
 ## Notes
 
-- With per‑API audiences, request at least one scope from each API you call; scopes imply audiences in the issued token.
-- Roles alone are not sufficient for writes; server checks scopes and roles. The UI shows controls early (roles), but the mutation will request a write scope when called.
+- SPA routing: Nginx is configured with a fallback to `index.html`.
+- Ports: dev (5173), preview (4173), Docker example (8080). Adjust mappings as needed.
+
+## Project Layout Highlights
+
+- `src/app` — router and top-level providers
+- `src/api-authorization` — OIDC wiring and auth provider
+- `src/config/env.ts` — typed runtime config from `window.*` globals
+- `src/lib` — axios/http, react-query client, shared helpers
+- `src/domain/*` — feature domains (menu, orders, inventory, etc.) with api/hooks/types
+- `src/components/` — UI components
+
