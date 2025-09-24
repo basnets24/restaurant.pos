@@ -70,7 +70,7 @@ Build and run the static image served by Nginx:
 
 ```bash
 docker build -t pos-frontend:dev .
-docker run --rm -p 8080:80 pos-frontend:dev
+docker run --rm -p 5173:80 pos-frontend:dev
 ```
 
 Override config per environment by mounting a different `config.js`:
