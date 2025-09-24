@@ -1,15 +1,21 @@
 import { oidc, BASE_ID_SCOPES } from "./oidc";
 import { useAuth } from "./store";
 import { logToken } from "./debug";
+import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
 type Audience = "Tenant" | "Catalog" | "Order" | "Inventory" | "Payment" | "IdentityServerApi";
 
 const cache = new Map<string, { token: string; exp: number }>();
 
-function parseExp(jwt: string) {
-  const [, payload] = jwt.split(".");
-  const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-  return json.exp as number;
+function parseExp(jwt: string): number | undefined {
+  try {
+    const [, payload] = jwt.split(".");
+    if (!payload) return undefined;
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof json.exp === "number" ? json.exp : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getApiToken(_resource: Audience, neededScopes: string[]) {
@@ -25,10 +31,27 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   if (hit && hit.exp > now) return hit.token;
 
   const scope = `${BASE_ID_SCOPES} ${neededScopes.join(" ")}`.trim();
-  const user = await oidc.signinSilent({ scope });
+  let user: Awaited<ReturnType<typeof oidc.signinSilent>> | null = null;
+  try {
+    user = await oidc.signinSilent({ scope });
+  } catch (err: any) {
+    const msg = String(err?.message || err || "signinSilent failed").toLowerCase();
+    // If the OP requires interactive login, send user to login preserving returnUrl
+    if (msg.includes("login_required") || msg.includes("consent_required") || msg.includes("interaction_required")) {
+      const returnUrl = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const url = `${AuthorizationPaths.Login}?${QueryParameterNames.ReturnUrl}=${encodeURIComponent(returnUrl)}`;
+      window.location.assign(url);
+      // Return a never-resolving promise to halt callers after redirect
+      return new Promise<string>(() => { });
+    }
+    throw err;
+  }
 
-  const token = user!.access_token!;
-  const exp = parseExp(token);
+  const token = user?.access_token;
+  if (!token || typeof token !== "string") {
+    throw new Error("Missing access token from OIDC");
+  }
+  const exp = parseExp(token) ?? (Math.floor(Date.now() / 1000) + 60); // fallback short cache
   cache.set(key, { token, exp });
 
   // merge granted scopes into UI store so permissions update

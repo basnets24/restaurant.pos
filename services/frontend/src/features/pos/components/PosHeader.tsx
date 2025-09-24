@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,6 @@ import {
   UtensilsCrossed,
   ReceiptText,
   CircleUserRound,
-  User,
-  ShieldCheck,
-  Bell,
   LogOut,
 } from "lucide-react";
 
@@ -55,7 +52,6 @@ export function PosHeader({
   counts,
   rightExtra,
 }: PosHeaderProps) {
-  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { displayName } = useUserDisplayName();
   const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
@@ -162,7 +158,7 @@ export function PosHeader({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-      </div>
+        </div>
 
         {/* Mobile nav row */}
         <div className="md:hidden pt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
