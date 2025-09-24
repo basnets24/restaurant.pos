@@ -15,7 +15,9 @@ http.interceptors.request.use((config) => {
         if (token) {
             const [, payload] = token.split(".");
             if (payload) {
-                const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+                const toBase64 = (s: string) => s.replace(/-/g, "+").replace(/_/g, "/");
+                const pad = (s: string) => s + "===".slice(((s.length + 3) % 4));
+                const json = JSON.parse(atob(pad(toBase64(payload))));
                 const rid = json["restaurant_id"] ?? json["restaurantId"];
                 const lid = json["location_id"] ?? json["locationId"];
                 if (rid && !(config.headers as any)["x-restaurant-id"]) (config.headers as any)["x-restaurant-id"] = rid as string;

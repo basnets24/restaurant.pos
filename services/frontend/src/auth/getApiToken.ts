@@ -7,6 +7,10 @@ type Audience = "Tenant" | "Catalog" | "Order" | "Inventory" | "Payment" | "Iden
 
 const cache = new Map<string, { token: string; exp: number }>();
 
+export function clearApiTokenCache() {
+  cache.clear();
+}
+
 function parseExp(jwt: string): number | undefined {
   try {
     const [, payload] = jwt.split(".");
