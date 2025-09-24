@@ -66,9 +66,36 @@ jobs:
 
       - name: Run container (smoke)
         run: |
+          set -e
+          echo "Starting container..."
           docker run -d -p 8080:80 --name pos-frontend-ci pos-frontend:ci
-          sleep 3
-          curl -fS http://localhost:8080/ > /dev/null
-          curl -fS http://localhost:8080/config.js > /dev/null
-          docker logs pos-frontend-ci --tail=50 || true
+          
+          echo "Waiting for container to be ready..."
+          max_attempts=30
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if curl -fsSL --max-time 2 http://localhost:8080/ > /dev/null 2>&1; then
+              echo "Container is ready after $attempt attempts"
+              break
+            fi
+            echo "Attempt $attempt/$max_attempts: Container not ready, waiting..."
+            sleep 2
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "Container failed to start properly"
+            docker logs pos-frontend-ci --tail=50 || true
+            docker rm -f pos-frontend-ci
+            exit 1
+          fi
+          
+          echo "Running smoke tests..."
+          curl -fsSL http://localhost:8080/ > /dev/null && echo "✓ Root page OK"
+          curl -fsSL http://localhost:8080/config.js > /dev/null && echo "✓ Config.js OK"
+          
+          echo "Container logs:"
+          docker logs pos-frontend-ci --tail=20 || true
+          
+          echo "Cleaning up..."
           docker rm -f pos-frontend-ci
