@@ -51,15 +51,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Debug - List files
+        run: |
+          echo "Repository root contents:"
+          ls -la
+          echo "Services/frontend contents:"
+          ls -la services/frontend/
+          echo "Dockerfile exists:"
+          ls -la services/frontend/Dockerfile
 
       - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: services/frontend
-          load: true
-          tags: pos-frontend:ci
+        run: |
+          cd services/frontend
+          docker build -t pos-frontend:ci .
 
       - name: Run container (smoke)
         run: |
