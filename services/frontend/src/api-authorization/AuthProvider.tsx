@@ -36,7 +36,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         setAccessToken(u?.access_token);
         const sub = (u?.profile as any)?.sub as string | undefined;
         if (sub && lastSubRef.current && lastSubRef.current !== sub) {
-            try { clearApiTokenCache(); } catch { }
+
+            try { clearApiTokenCache(); } catch {}
         }
         lastSubRef.current = sub;
     };
@@ -59,8 +60,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const onLoaded = (u: User) => setFromUser(u);
         const onUnloaded = () => {
             setFromUser(undefined);
-            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch { }
-            try { clearApiTokenCache(); } catch { }
+            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch {}
+            try { clearApiTokenCache(); } catch {}
         };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
@@ -69,7 +70,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 setFromUser(u);
             } catch {
                 setFromUser(undefined);
-                try { clearApiTokenCache(); } catch { }
+
+                try { clearApiTokenCache(); } catch {}
             }
         };
 
@@ -158,8 +160,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             localStorage.removeItem('token');
             localStorage.removeItem('rid');
             localStorage.removeItem('lid');
-        } catch { }
-        try { clearApiTokenCache(); } catch { }
+
+        } catch {}
+        try { clearApiTokenCache(); } catch {}
+
 
         const to =
             (res?.state as any)?.returnUrl ??
