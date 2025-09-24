@@ -441,9 +441,11 @@ export default function MenuPage() {
             <Button
               onClick={async () => {
                 if (cartId) {
-                  try { await unlinkOrder.mutateAsync(cartId); } catch { }
+                  try { await unlinkOrder.mutateAsync(cartId); }
+                  catch (e: any) { toast.error(e?.message || "Failed to unlink order"); }
                 }
-                try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
+                try { await setTableStatus.mutateAsync({ status: "available" }); }
+                catch (e: any) { toast.error(e?.message || "Failed to set table available"); }
                 store.clearTableSession(tableId);
                 toast.success("Table released");
                 const b = blockerRef.current;

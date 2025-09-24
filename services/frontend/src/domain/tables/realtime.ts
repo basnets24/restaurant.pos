@@ -23,10 +23,13 @@ export function useFloorHub({ baseUrl = ENV.ORDER_URL, restaurantId, locationId,
       .withAutomaticReconnect()
       .build();
 
-    conn.on("TableUpdated", () => qc.invalidateQueries({ queryKey: tableKeys.all }));
+    const onUpdated = () => qc.invalidateQueries({ queryKey: tableKeys.all });
+    conn.on("TableUpdated", onUpdated);
     conn.start().catch(console.error);
     connRef.current = conn;
 
-    return () => { conn.stop().catch(() => {}); };
+    return () => {
+      try { conn.off("TableUpdated", onUpdated); } finally { conn.stop().catch(() => { }); }
+    };
   }, [baseUrl, restaurantId, locationId, accessTokenFactory, qc]);
 }

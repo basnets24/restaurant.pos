@@ -59,7 +59,7 @@ export default function InventoryStockCard() {
                                     canWrite={canWrite}
                                     onUpdate={(dto) =>
                                         updateMut.mutate(
-                                            { id: it.id, dto, menuItemId: it.menuItemId } as any,
+                                            { id: it.id, dto, menuItemId: it.menuItemId },
                                             {
                                                 onSuccess: () => {
                                                     const msg =
@@ -75,7 +75,7 @@ export default function InventoryStockCard() {
                                     }
                                     onAdjust={(delta) =>
                                         adjustMut.mutate(
-                                            { id: it.id, delta, menuItemId: it.menuItemId } as any,
+                                            { id: it.id, delta, menuItemId: it.menuItemId },
                                             {
                                                 onSuccess: () => toast.success(delta > 0 ? "Quantity +1" : "Quantity −1"),
                                             }
