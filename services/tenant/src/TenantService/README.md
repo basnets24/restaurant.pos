@@ -1,48 +1,47 @@
-# TenantService (Restaurant POS)
+# TenantService
 
-Multi‑tenant management service for the Restaurant POS platform. Provides APIs for onboarding restaurants, joining by code, listing a user’s restaurants, and an internal endpoint used by IdentityService to resolve tenant claims (restaurant/location/roles). Built with .NET 8, EF Core (PostgreSQL), and JWT Bearer auth.
+Multi‑tenant management service for the Restaurant POS platform. Built with .NET 8, EF Core (PostgreSQL), and JWT Bearer auth.
 
-## Features
-- Onboarding: create restaurant + first location; add creator as Owner/Admin
-- Join by code: join via restaurant ID or slug and default active location
-- My tenants: list restaurants for the current user
-- Internal tenant claims API for IdentityService (`tenant.claims.read` scope)
-- Serilog + Seq logging, CORS for the frontend, Swagger in Development
-
-## Getting Started
-
-### Prerequisites
+## Prerequisites
 - .NET SDK 8.0+
-- PostgreSQL (local or container)
-- Optional: Seq for structured logs
-
-### Configuration
-Settings live in `appsettings.json` and can be overridden with environment variables or User Secrets.
-
-- ServiceSettings
-  - Authority: OIDC authority used by JWT Bearer auth
-- PostgresSettings
-  - Host, Port, Database, Username, Password
-- Cors
-  - AllowedOrigins: array of allowed frontend origins
-- SeqSettings
-  - Host, Port for Seq
-
-Example: set local secrets
-```bash
-# from this project directory
-dotnet user-secrets set "ServiceSettings:Authority" "https://localhost:7163"
-dotnet user-secrets set "PostgresSettings:Password" "your-dev-password"
-```
-
-### Database
-Schema is defined in `Tenant.Domain` (referenced project). Ensure your Postgres database exists and is migrated accordingly. If you maintain migrations separately, run them before starting the service.
+- PostgreSQL database
 
 ### Run
 ```bash
 dotnet run
 ```
 - Swagger UI: `/swagger` (Development only)
+
+### Docker
+
+#### Build and Run with Docker
+
+1. **Set up GitHub Personal Access Token** (required for private NuGet packages):
+   ```bash
+   export GH_OWNER=basnets24
+   export GH_PAT="your_github_personal_access_token_here"
+   ```
+
+2. **Build the Docker image** (run from repository root):
+   ```bash
+   docker build --secret id=GH_OWNER --secret id=GH_PAT -f services/tenant/src/TenantService/DockerFile -t tenant-service:1.0.0 .
+   ```
+
+3. **Run the container**:
+   ```bash
+   docker run -d \
+     --name tenant-service \
+     -p 5200:5200 \
+     -e PostgresSettings__Password="your-password" \
+     tenant-service:1.0.0
+   ```
+
+4. **Check container logs**:
+   ```bash
+   docker logs tenant-service
+   ```
+
+**Note**: The Docker build requires GitHub Personal Access Token with `read:packages` permission to access private NuGet packages.
 
 ## API Overview
 
