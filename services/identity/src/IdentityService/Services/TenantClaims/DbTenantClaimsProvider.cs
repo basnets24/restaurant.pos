@@ -1,12 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Data;
+using Microsoft.Extensions.Logging;
 
 namespace IdentityService.Services;
 
 public class DbTenantClaimsProvider : ITenantClaimsProvider
 {
     private readonly TenantDbContext _tenantDb;
-    public DbTenantClaimsProvider(TenantDbContext tenantDb) => _tenantDb = tenantDb;
+    private readonly ILogger<DbTenantClaimsProvider> _logger;
+    public DbTenantClaimsProvider(TenantDbContext tenantDb, ILogger<DbTenantClaimsProvider> logger)
+    { _tenantDb = tenantDb; _logger = logger; }
 
     public async Task<TenantClaimResult?> GetAsync(Guid userId, CancellationToken ct)
     {
@@ -17,7 +20,10 @@ public class DbTenantClaimsProvider : ITenantClaimsProvider
             .FirstOrDefaultAsync(ct);
 
         if (membership is null)
+        {
+            _logger.LogWarning("No tenant membership found for user {UserId}", userId);
             return null;
+        }
 
         var rid = membership.RestaurantId;
         var locId = membership.DefaultLocationId;
@@ -37,7 +43,7 @@ public class DbTenantClaimsProvider : ITenantClaimsProvider
             .Select(r => r.RoleName)
             .Distinct()
             .ToListAsync(ct);
-
+        _logger.LogDebug("Resolved tenant claims from DB for user {UserId}: RestaurantId={RestaurantId} LocationId={LocationId} RolesCount={RolesCount}", userId, rid, locId, roles.Count);
         return new TenantClaimResult(rid, locId, roles);
     }
 }

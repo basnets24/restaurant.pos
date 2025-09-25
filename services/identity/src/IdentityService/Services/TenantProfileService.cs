@@ -19,7 +19,10 @@ public class TenantProfileService : IProfileService
     {
         var subjectId = context.Subject.FindFirstValue("sub");
         if (string.IsNullOrWhiteSpace(subjectId) || !Guid.TryParse(subjectId, out var userId))
+        {
+            _logger.LogWarning("Skipping profile enrichment: missing or invalid subject claim 'sub' value '{SubjectId}'", subjectId);
             return;
+        }
 
         var requested = context.RequestedClaimTypes?.ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
         var wantRestaurant = requested.Count == 0 || requested.Contains(RestaurantIdClaim);
@@ -27,10 +30,17 @@ public class TenantProfileService : IProfileService
         var wantRoles = requested.Count == 0 || requested.Contains("role");
 
         if (!wantRestaurant && !wantLocation && !wantRoles)
+        {
+            _logger.LogDebug("No tenant-related claim types requested for user {UserId}; skipping", userId);
             return;
+        }
 
         var claims = await _claims.GetAsync(userId, CancellationToken.None);
-        if (claims is null) return;
+        if (claims is null)
+        {
+            _logger.LogWarning("No tenant membership/claims resolved for user {UserId}; issuing no tenant/location/role claims", userId);
+            return;
+        }
 
         if (wantRestaurant && !string.IsNullOrEmpty(claims.RestaurantId))
             context.IssuedClaims.Add(new Claim(RestaurantIdClaim, claims.RestaurantId));
@@ -38,15 +48,24 @@ public class TenantProfileService : IProfileService
         if (wantLocation && !string.IsNullOrEmpty(claims.LocationId))
             context.IssuedClaims.Add(new Claim(LocationIdClaim, claims.LocationId));
 
-        context.IssuedClaims.RemoveAll(c => c.Type == "role");
+        var preExistingRoleClaims = context.IssuedClaims.Count(c => c.Type == "role");
+        if (preExistingRoleClaims > 0)
+        {
+            _logger.LogDebug("Replacing {ExistingRoleClaims} pre-existing role claims with tenant-scoped roles for user {UserId}", preExistingRoleClaims, userId);
+            context.IssuedClaims.RemoveAll(c => c.Type == "role");
+        }
         if (wantRoles)
         {
             foreach (var role in claims.Roles)
                 context.IssuedClaims.Add(new Claim("role", role));
+            _logger.LogInformation("Issued {TenantRoleCount} tenant role claims for user {UserId}", claims.Roles.Count, userId);
         }
 
-        _logger.LogDebug("Issued tenant claims for user {UserId}: restaurant_id={RestaurantId} location_id={LocationId}", 
-            userId, claims.RestaurantId, context.IssuedClaims.FirstOrDefault(c => c.Type == LocationIdClaim)?.Value);
+        _logger.LogDebug("Tenant claim summary for user {UserId}: RestaurantId={RestaurantId} LocationId={LocationId} RolesCount={RolesCount}",
+            userId,
+            claims.RestaurantId,
+            context.IssuedClaims.FirstOrDefault(c => c.Type == LocationIdClaim)?.Value,
+            context.IssuedClaims.Count(c => c.Type == "role"));
     }
 
     public Task IsActiveAsync(IsActiveContext context)
