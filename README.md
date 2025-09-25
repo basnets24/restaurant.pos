@@ -98,7 +98,18 @@ Packages are automatically published to GitHub Packages when you push changes to
 **Manual workflow:** You can also trigger publishing via GitHub Actions UI if needed.
 
 ## Consuming Packages
-**Authentication is already configured** in `NuGet.config` with GitHub Packages source.
+**Prerequisites:** You need a GitHub Personal Access Token (PAT) with `read:packages` scope.
+
+**Setup (one-time):**
+```bash
+# Set your GitHub PAT as environment variable
+export GH_PAT=ghp_your_personal_access_token_here
+
+# Add to your shell profile to persist
+echo 'export GH_PAT=ghp_your_personal_access_token_here' >> ~/.zshrc
+```
+
+**Authentication is configured** in `NuGet.config` to use the `%GH_PAT%` environment variable.
 
 **To use updated packages:**
 1. **Update version** in your service's `.csproj`:
@@ -118,6 +129,11 @@ Packages are automatically published to GitHub Packages when you push changes to
 - Messaging.Contracts: 1.0.6
 - Common.Library: 1.0.13  
 - Tenant.Domain: 1.0.0
+
+**Troubleshooting:**
+- **401 Unauthorized**: Check that `GH_PAT` environment variable is set correctly
+- **Missing types**: Clear NuGet cache and restore: `dotnet nuget locals all --clear && dotnet restore`
+- **Package not found**: Verify the package was published successfully in GitHub Actions
 
 
 ---
