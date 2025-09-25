@@ -5,7 +5,7 @@ namespace Tenant.Domain.Data;
 
 public class TenantDbContext : DbContext
 {
-    public TenantDbContext(DbContextOptions<TenantDbContext> options) : base(options) {}
+    public TenantDbContext(DbContextOptions<TenantDbContext> options) : base(options) { }
 
     public DbSet<Restaurant> Restaurants => Set<Restaurant>();
     public DbSet<Location> Locations => Set<Location>();

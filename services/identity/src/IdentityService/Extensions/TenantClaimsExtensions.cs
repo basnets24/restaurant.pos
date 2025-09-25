@@ -35,7 +35,7 @@ public static class TenantClaimsExtensions
                 TenantServiceMode.Embedded => sp.GetRequiredService<EmbeddedTenantDirectory>(),
                 _ => throw new InvalidOperationException($"Unsupported tenant service mode: {options.Mode}")
             };
-            
+
             // Wrap with caching layer
             return new CachedTenantDirectory(
                 innerDirectory,

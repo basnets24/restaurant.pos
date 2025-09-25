@@ -18,10 +18,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
-builder.Services.AddLocalApiAuthentication(); 
+builder.Services.AddLocalApiAuthentication();
 builder.Services.AddControllers();
 builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
-builder.Services.AddHostedService<IdentitySeedHostedService>(); 
+builder.Services.AddHostedService<IdentitySeedHostedService>();
 builder.Services.AddScoped<TenantUserProfileService>();
 builder.Services.AddTenantClaimsProvider(builder.Configuration);
 
