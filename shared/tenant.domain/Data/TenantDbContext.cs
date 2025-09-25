@@ -19,6 +19,7 @@ public class TenantDbContext : DbContext
         b.Entity<Location>(e =>
         {
             e.HasIndex(x => new { x.RestaurantId, x.Name }).IsUnique();
+            e.HasIndex(x => new { x.RestaurantId, x.IsActive });
             e.HasOne<Restaurant>().WithMany()
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -27,11 +28,13 @@ public class TenantDbContext : DbContext
         b.Entity<RestaurantMembership>(e =>
         {
             e.HasIndex(x => new { x.UserId, x.RestaurantId }).IsUnique();
+            e.HasIndex(x => x.UserId);
         });
 
         b.Entity<RestaurantUserRole>(e =>
         {
             e.HasIndex(x => new { x.UserId, x.RestaurantId, x.RoleName }).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.RestaurantId });
         });
     }
 }

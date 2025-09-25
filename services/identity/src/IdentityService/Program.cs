@@ -12,6 +12,7 @@ builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 builder.Services.AddPostgresWithIdentity(builder.Configuration);
 builder.Services.AddRestaurantPosIdentityServer(builder.Configuration);
+builder.Services.AddMemoryCache();
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

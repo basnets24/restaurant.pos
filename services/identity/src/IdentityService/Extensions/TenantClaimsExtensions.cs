@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using IdentityService.Services;
@@ -20,21 +21,27 @@ public static class TenantClaimsExtensions
                 : TenantServiceMode.Embedded;
         });
 
-        // Register implementations based on mode
+        // Register specific implementations (uncached)
+        services.AddScoped<EmbeddedTenantDirectory>();
+        services.AddScoped<HttpTenantDirectory>();
+
+        // Register cached wrapper around concrete implementations
         services.AddScoped<ITenantDirectory>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<TenantServiceOptions>>().Value;
-            return options.Mode switch
+            ITenantDirectory innerDirectory = options.Mode switch
             {
                 TenantServiceMode.Http => sp.GetRequiredService<HttpTenantDirectory>(),
                 TenantServiceMode.Embedded => sp.GetRequiredService<EmbeddedTenantDirectory>(),
                 _ => throw new InvalidOperationException($"Unsupported tenant service mode: {options.Mode}")
             };
+            
+            // Wrap with caching layer
+            return new CachedTenantDirectory(
+                innerDirectory,
+                sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<ILogger<CachedTenantDirectory>>());
         });
-
-        // Register specific implementations
-        services.AddScoped<EmbeddedTenantDirectory>();
-        services.AddScoped<HttpTenantDirectory>();
 
         // Register claims provider (uses ITenantDirectory)
         services.AddScoped<ITenantClaimsProvider, DbTenantClaimsProvider>();
