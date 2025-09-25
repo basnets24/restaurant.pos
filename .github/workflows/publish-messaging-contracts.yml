@@ -3,11 +3,6 @@ name: Publish Messaging.Contracts
 # Tag pattern: messaging.contracts-v1.2.3
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Semantic version (MAJOR.MINOR.PATCH) e.g. 1.0.4'
-        required: true
-        default: '1.0.4'
 
 permissions:
   contents: read
@@ -23,23 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  generate-version:
-    runs-on: ubuntu-latest
-    outputs:
-      new-version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Resolve version
-        id: version
-        run: |
-          VERSION='${{ inputs.version }}'
-          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version '$VERSION'" >&2
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
   pack-and-push:
-    needs: generate-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +33,6 @@ jobs:
       - name: Pack
         run: |
          dotnet pack ${{ env.PROJECT_PATH }} --configuration Release \
-         -p:PackageVersion=${{ needs.generate-version.outputs.new-version}} \
          -p:RepositoryUrl="https://github.com/${{github.repository_owner}}/restaurant.pos" \
          -o Packages
 
