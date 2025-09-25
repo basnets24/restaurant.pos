@@ -1,0 +1,79 @@
+name: Publish Messaging.Contracts
+
+# Tag pattern: messaging.contracts-v1.2.3
+on:
+  push:
+    tags:
+      - 'messaging.contracts-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version (MAJOR.MINOR.PATCH) e.g. 1.0.0'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  PACKAGE_ID: Messaging.Contracts
+  PROJECT_PATH: shared/messaging.contracts/Messaging.Contracts.csproj
+
+concurrency:
+  group: publish-messaging.contracts-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  pack-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: |
+          dotnet restore "$PROJECT_PATH"
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            RAW_TAG="${GITHUB_REF_NAME}"
+            VERSION="${RAW_TAG#messaging.contracts-v}"
+          else
+            VERSION='${{ inputs.version }}'
+          fi
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version '$VERSION'" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Pack
+        run: |
+          VERSION='${{ steps.version.outputs.version }}'
+          dotnet pack "$PROJECT_PATH" -c Release -p:PackageVersion=$VERSION --no-restore -o ./packages
+
+      - name: Push to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION='${{ steps.version.outputs.version }}'
+          dotnet nuget push "./packages/${PACKAGE_ID}.${VERSION}.nupkg" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --api-key "$GITHUB_TOKEN" \
+            --skip-duplicate
