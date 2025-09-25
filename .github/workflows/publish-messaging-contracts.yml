@@ -2,15 +2,12 @@ name: Publish Messaging.Contracts
 
 # Tag pattern: messaging.contracts-v1.2.3
 on:
-  push:
-    tags:
-      - 'messaging.contracts-v*.*.*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Semantic version (MAJOR.MINOR.PATCH) e.g. 1.0.0'
+        description: 'Semantic version (MAJOR.MINOR.PATCH) e.g. 1.0.4'
         required: true
-        default: '1.0.0'
+        default: '1.0.4'
 
 permissions:
   contents: read
@@ -34,12 +31,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            RAW_TAG="${GITHUB_REF_NAME}"
-            VERSION="${RAW_TAG#messaging.contracts-v}"
-          else
-            VERSION='${{ inputs.version }}'
-          fi
+          VERSION='${{ inputs.version }}'
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version '$VERSION'" >&2
             exit 1

@@ -2,9 +2,6 @@ name: Publish Tenant.Domain
 
 # Tag pattern: tenant.domain-v1.2.3
 on:
-  push:
-    tags:
-      - 'tenant.domain-v*.*.*'
   workflow_dispatch:
     inputs:
       version:
@@ -33,12 +30,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            RAW_TAG="${GITHUB_REF_NAME}"
-            VERSION="${RAW_TAG#tenant.domain-v}"
-          else
-            VERSION='${{ inputs.version }}'
-          fi
+          VERSION='${{ inputs.version }}'
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version '$VERSION'" >&2
             exit 1

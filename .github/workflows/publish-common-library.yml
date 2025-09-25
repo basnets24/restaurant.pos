@@ -4,15 +4,12 @@ name: Publish Common.Library
 # 1. Tag push: common.library-v1.2.3
 # 2. Manual dispatch with explicit version input
 on:
-  push:
-    tags:
-      - 'common.library-v*.*.*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Semantic version (MAJOR.MINOR.PATCH) e.g. 1.0.0'
+        description: 'Semantic version (MAJOR.MINOR.PATCH) e.g. 1.0.13'
         required: true
-        default: '1.0.0'
+        default: '1.0.13'
 
 permissions:
   contents: read
@@ -35,12 +32,7 @@ jobs:
       - name: Resolve version
         id: version
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            RAW_TAG="${GITHUB_REF_NAME}"
-            VERSION="${RAW_TAG#common.library-v}"
-          else
-            VERSION='${{ inputs.version }}'
-          fi
+          VERSION='${{ inputs.version }}'
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version '$VERSION'" >&2
             exit 1
