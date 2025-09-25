@@ -73,17 +73,26 @@ public class TenantsController : ControllerBase
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
         if (!await IsTenantAdminAsync(userId, restaurantId, ct)) return Forbid();
 
-        var name = string.IsNullOrWhiteSpace(dto.Name) ? "Main" : dto.Name.Trim();
-        var exists = await _tenantDb.Locations.AnyAsync(l => l.RestaurantId == restaurantId && l.Name == name, ct);
+        // Validate restaurant exists
+        var restaurantExists = await _tenantDb.Restaurants.AnyAsync(r => r.Id == restaurantId, ct);
+        if (!restaurantExists) return NotFound("Restaurant not found.");
+
+        // Business rule validation for location name uniqueness
+        var sanitizedName = SanitizeInput(dto.Name.Trim());
+        var exists = await _tenantDb.Locations.AnyAsync(l => l.RestaurantId == restaurantId && l.Name == sanitizedName, ct);
         if (exists) return Conflict("Location name already exists for this restaurant.");
 
         var loc = new Location
         {
             RestaurantId = restaurantId,
-            Name = name,
+            Name = sanitizedName,
             TimeZoneId = dto.TimeZoneId,
             IsActive = true
         };
+
+        _logger.LogInformation("Creating location {LocationName} for restaurant {RestaurantId} by user {UserId}",
+            sanitizedName, restaurantId, userId);
+
         _tenantDb.Locations.Add(loc);
         await _tenantDb.SaveChangesAsync(ct);
 
@@ -99,15 +108,20 @@ public class TenantsController : ControllerBase
         if (!await IsTenantAdminAsync(userId, restaurantId, ct)) return Forbid();
 
         var loc = await _tenantDb.Locations.FirstOrDefaultAsync(l => l.Id == locationId && l.RestaurantId == restaurantId, ct);
-        if (loc is null) return NotFound();
+        if (loc is null) return NotFound("Location not found.");
 
-        var newName = string.IsNullOrWhiteSpace(dto.Name) ? loc.Name : dto.Name.Trim();
-        if (!string.Equals(newName, loc.Name, StringComparison.Ordinal))
+        var sanitizedNewName = SanitizeInput(dto.Name.Trim());
+        if (!string.Equals(sanitizedNewName, loc.Name, StringComparison.Ordinal))
         {
-            var dup = await _tenantDb.Locations.AnyAsync(l => l.RestaurantId == restaurantId && l.Name == newName && l.Id != locationId, ct);
+            // Business rule validation for location name uniqueness
+            var dup = await _tenantDb.Locations.AnyAsync(l => l.RestaurantId == restaurantId && l.Name == sanitizedNewName && l.Id != locationId, ct);
             if (dup) return Conflict("Another location with this name exists.");
-            loc.Name = newName;
+
+            _logger.LogInformation("Updating location {LocationId} name from '{OldName}' to '{NewName}' by user {UserId}",
+                locationId, loc.Name, sanitizedNewName, userId);
+            loc.Name = sanitizedNewName;
         }
+
         loc.IsActive = dto.IsActive;
         loc.TimeZoneId = dto.TimeZoneId;
 
@@ -120,6 +134,26 @@ public class TenantsController : ControllerBase
         return await _tenantDb.RestaurantUserRoles
             .AsNoTracking()
             .AnyAsync(r => r.UserId == userId && r.RestaurantId == restaurantId && r.RoleName == "Admin", ct);
+    }
+
+    private static string SanitizeInput(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return input;
+
+        // Remove potentially dangerous characters but keep normal business text
+        var sanitized = input
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;")
+            .Replace("'", "&#x27;")
+            .Replace("&", "&amp;")
+            .Replace("/", "&#x2F;");
+
+        // Remove excessive whitespace
+        sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"\s+", " ");
+
+        return sanitized.Trim();
     }
 }
 
