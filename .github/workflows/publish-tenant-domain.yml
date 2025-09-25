@@ -25,29 +25,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pack-and-push:
+  generate-version:
     runs-on: ubuntu-latest
+    outputs:
+      new-version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Restore
-        run: |
-          dotnet restore "$PROJECT_PATH"
-
       - name: Resolve version
         id: version
         run: |
@@ -63,17 +45,25 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+  pack-and-push:
+    needs: generate-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          source-url: "https://nuget.pkg.github.com/${{github.repository_owner}}/index.json"
+        env: 
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Pack
         run: |
-          VERSION='${{ steps.version.outputs.version }}'
-          dotnet pack "$PROJECT_PATH" -c Release -p:PackageVersion=$VERSION --no-restore -o ./packages
+         dotnet pack ${{ env.PROJECT_PATH }} --configuration Release \
+         -p:PackageVersion=${{ needs.generate-version.outputs.new-version}} \
+         -p:RepositoryUrl="https://github.com/${{github.repository_owner}}/restaurant.pos" \
+         -o Packages
 
-      - name: Push to GitHub Packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION='${{ steps.version.outputs.version }}'
-          dotnet nuget push "./packages/${PACKAGE_ID}.${VERSION}.nupkg" \
-            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-            --api-key "$GITHUB_TOKEN" \
-            --skip-duplicate
+      - name: Publish
+        run: dotnet nuget push Packages/*.nupkg
