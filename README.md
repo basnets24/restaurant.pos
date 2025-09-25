@@ -73,20 +73,69 @@ For detailed Docker documentation, see [DOCKER.md](./DOCKER.md).
 
 ## Shared Libraries
 
-- Play.Common (Common.Library) — logging, tenancy, MongoDB repo, MassTransit, identity helpers
-  - docs: [shared/common.library/README.md](./shared/common.library/README.md)
-  - publish: `git tag common.library-v<version> && git push origin common.library-v<version>`
+- Play.Common (Common.Library) — logging, tenancy, MongoDB repo, MassTransit, identity helpers  
+  docs: [shared/common.library/README.md](./shared/common.library/README.md)
   
-- Tenant.Domain — EF Core domain + DbContext for tenant data
-  - docs: [shared/tenant.domain/README.md](./shared/tenant.domain/README.md)
-  - publish: `git tag tenant.domain-v<version> && git push origin tenant.domain-v<version>`
+- Tenant.Domain — EF Core domain + DbContext for tenant data  
+  docs: [shared/tenant.domain/README.md](./shared/tenant.domain/README.md)
 
-- Messaging.Contracts — shared event contracts used by all services
-  - docs: [shared/messaging.contracts/README.md](./shared/messaging.contracts/README.md)
-  - publish: `git tag messaging.contracts-v<version> && git push origin messaging.contracts-v<version>`
+- Messaging.Contracts — shared event contracts used by all services  
+  docs: [shared/messaging.contracts/README.md](./shared/messaging.contracts/README.md)
+
+### Manual Package Publishing (CI Removed)
+Since automated publish workflows were removed, packages are published manually. Replace `<PACKAGE_ID>` and `<VERSION>` accordingly.
+
+1. Bump version in the target `.csproj` (e.g. `<Version>1.0.3</Version>`).
+2. Clean & build (optional but safer):
+   ```bash
+   dotnet clean shared/<folder>/<Project>.csproj
+   dotnet build shared/<folder>/<Project>.csproj -c Release
+   ```
+3. Pack:
+   ```bash
+   dotnet pack shared/<folder>/<Project>.csproj -c Release -o packages
+   # or explicitly set version
+   dotnet pack shared/<folder>/<Project>.csproj -c Release -p:PackageVersion=<VERSION> -o packages
+   ```
+4. Inspect the nupkg (ensure DLL is present):
+   ```bash
+   unzip -l packages/<PACKAGE_ID>.<VERSION>.nupkg | grep -i lib
+   ```
+5. Push to GitHub Packages:
+   ```bash
+   dotnet nuget push packages/<PACKAGE_ID>.<VERSION>.nupkg \
+     --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json" \
+     --api-key $GH_PAT \
+     --skip-duplicate
+   ```
+6. Consumers update references:
+   ```bash
+   dotnet add <path-to-csproj> package <PACKAGE_ID> --version <VERSION>
+   ```
+7. Clear caches if you suspect stale DLLs:
+   ```bash
+   dotnet nuget locals all --clear
+   ```
+
+Common folders to substitute:
+```
+shared/common.library/Common.Library.csproj
+shared/tenant.domain/Tenant.Domain.csproj
+shared/Messaging.Contracts/Messaging.Contracts.csproj
+```
+
+Verification tip:
+```bash
+strings packages/Messaging.Contracts.<VERSION>.nupkg | grep -i PaymentRequested || true
+```
+If not found inside the dll, extract and inspect the assembly directly:
+```bash
+unzip -p packages/Messaging.Contracts.<VERSION>.nupkg lib/net8.0/Messaging.Contracts.dll > /tmp/Messaging.Contracts.dll
+strings /tmp/Messaging.Contracts.dll | grep -i PaymentRequested
+```
 
 ## Consuming lib packages
-  1. Add your GitHub NuGet source(one time) and credentials to `NuGet.config` or via CLI.
+  1. Add your GitHub NuGet source (one time) and credentials to `NuGet.config` or via CLI.
 
       dotnet nuget add source "https://nuget.pkg.github.com/<YOUR_GH_USERNAME>/index.json" \
       --name "github" \
@@ -94,7 +143,7 @@ For detailed Docker documentation, see [DOCKER.md](./DOCKER.md).
       --password "<YOUR_PAT_with_read:packages>" \
       --store-password-in-clear-text
 
-  2. Reference the package in your `.csproj` or dotnet add package Common.Library  --version 1.0.*:
+  2. Reference the package in your `.csproj` (or use `dotnet add package`):
       ```xml
       <ItemGroup>
         <PackageReference Include="Common.Library" Version="1.0.*" />
