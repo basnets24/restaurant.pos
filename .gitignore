@@ -38,6 +38,7 @@ Thumbs.db
 *.snupkg
 
 # Docker
+secrets/
 
 # Launch profiles
 **/launchSettings.json

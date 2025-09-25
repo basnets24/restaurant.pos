@@ -180,9 +180,9 @@ services:
 
 secrets:
   GH_OWNER:
-    environment: GH_OWNER
+    file: ./secrets/GH_OWNER
   GH_PAT:
-    environment: GH_PAT
+    file: ./secrets/GH_PAT
 
 networks:
   pos-net:
