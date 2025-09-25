@@ -10,7 +10,7 @@
     order/
     ...
 
-## 0) Prereqs (one-time)
+## 0. Prereqs (one-time)
 
 Each library you want to publish must be packable and versioned in its .csproj:
 
@@ -56,7 +56,31 @@ dotnet nuget update source github \
   --store-password-in-clear-text
 ```
 
-##  1) Pack a library
+##  1. Tag-driven publish (CI)
+
+Preferred: push a tag and let CI pack + publish.
+
+```bash
+# Examples
+git tag common.library-v1.0.14
+git push origin common.library-v1.0.14
+
+git tag messaging.contracts-v1.0.1
+git push origin messaging.contracts-v1.0.1
+
+git tag tenant.domain-v1.0.1
+git push origin tenant.domain-v1.0.1
+```
+
+CI will run:
+```
+dotnet pack <project>.csproj -c Release -p:PackageVersion=<version>
+dotnet nuget push <package>.nupkg --skip-duplicate
+```
+
+Manual workflow_dispatch also supported (provide version input).
+
+##  2. Pack a library (local manual)
 
 Pack to the repo-level `./packages` folder (created if needed):
 
@@ -70,7 +94,7 @@ dotnet pack shared/tenant.domain/Tenant.Domain.csproj -c Release -o ./packages
 The package version comes from each `.csproj` `<Version>`.
 The repository link comes from `<RepositoryUrl>`.
 
-## 2) Publish to GitHub Packages (private)
+## 3. Publish to GitHub Packages (manual backup)
 
 ```bash
 # Push all recently packed packages
@@ -87,7 +111,7 @@ dotnet nuget push ./packages/Common.Library.1.0.0.nupkg --source github --api-ke
 If you see 409 Conflict, bump <Version> in that library’s .csproj, repack, and push again.
 
 
-## 3) Consume packages from services
+## 4. Consume packages from services
 ```bash
 # add a package by ID and version
 dotnet add package Common.Library --version 1.0.*
@@ -98,7 +122,7 @@ dotnet add package Tenant.Domain --version 1.0.*
 dotnet restore
 ```
 
-## 4) Docker restore
+## 5. Docker restore
 When building service images that restore from your private feed, pass the token as a build secret
 #Example
 ```bash
@@ -127,7 +151,7 @@ DOCKER_BUILDKIT=1 docker build \
   -t order-service:dev -f services/order/Dockerfile .
 ```
 
-## 5) Troubleshooting
+## 6. Troubleshooting
 
 401/403 on push/restore: token scopes wrong or source URL owner mismatch.
 

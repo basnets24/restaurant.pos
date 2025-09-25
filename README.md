@@ -26,12 +26,15 @@ Minimal docs and quick links for core backend services in this repository.
 
 - Play.Common (Common.Library) — logging, tenancy, MongoDB repo, MassTransit, identity helpers
   - docs: [shared/common.library/README.md](./shared/common.library/README.md)
+  - publish: `git tag common.library-v<version> && git push origin common.library-v<version>`
   
 - Tenant.Domain — EF Core domain + DbContext for tenant data
   - docs: [shared/tenant.domain/README.md](./shared/tenant.domain/README.md)
+  - publish: `git tag tenant.domain-v<version> && git push origin tenant.domain-v<version>`
 
 - Messaging.Contracts — shared event contracts used by all services
   - docs: [shared/messaging.contracts/README.md](./shared/messaging.contracts/README.md)
+  - publish: `git tag messaging.contracts-v<version> && git push origin messaging.contracts-v<version>`
 
 ## Consuming lib packages
   1. Add your GitHub NuGet source(one time) and credentials to `NuGet.config` or via CLI.
