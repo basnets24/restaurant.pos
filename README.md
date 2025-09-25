@@ -82,32 +82,42 @@ For detailed Docker documentation, see [DOCKER.md](./DOCKER.md).
 - Messaging.Contracts — shared event contracts used by all services  
   docs: [shared/messaging.contracts/README.md](./shared/messaging.contracts/README.md)
 
-### Manual Package Publishing (CI Removed)
-Short version: bump version, pack, push, consume. See `docs/PACKAGE_PUBLISHING.md` for details.
-```bash
-# Example
-dotnet pack shared/Messaging.Contracts/Messaging.Contracts.csproj -c Release -o packages
-dotnet nuget push packages/Messaging.Contracts.<VERSION>.nupkg \
-  --source "https://nuget.pkg.github.com/$GH_OWNER/index.json" \
-  --api-key $GH_PAT --skip-duplicate
-dotnet add services/order/src/OrderService/OrderService.csproj package Messaging.Contracts --version <VERSION>
-```
+### Automatic Package Publishing
+Packages are automatically published to GitHub Packages when you push changes to shared libraries:
 
-## Consuming lib packages
-  1. Add your GitHub NuGet source (one time) and credentials to `NuGet.config` or via CLI.
+**How it works:**
+1. **Edit version** in the library's `.csproj` file (e.g., `<Version>1.0.7</Version>`)
+2. **Commit and push** changes to `dev` or `main` branch
+3. **GitHub Actions** automatically builds and publishes the updated package
 
-      dotnet nuget add source "https://nuget.pkg.github.com/<YOUR_GH_USERNAME>/index.json" \
-      --name "github" \
-      --username "<YOUR_GH_USERNAME>" \
-      --password "<YOUR_PAT_with_read:packages>" \
-      --store-password-in-clear-text
+**Triggers:**
+- `shared/Messaging.Contracts/**` → publishes Messaging.Contracts  
+- `shared/common.library/**` → publishes Common.Library
+- `shared/tenant.domain/**` → publishes Tenant.Domain
 
-  2. Reference the package in your `.csproj` (or use `dotnet add package`):
-      ```xml
-      <ItemGroup>
-        <PackageReference Include="Common.Library" Version="1.0.*" />
-      </ItemGroup>
-      ```
+**Manual workflow:** You can also trigger publishing via GitHub Actions UI if needed.
+
+## Consuming Packages
+**Authentication is already configured** in `NuGet.config` with GitHub Packages source.
+
+**To use updated packages:**
+1. **Update version** in your service's `.csproj`:
+   ```xml
+   <PackageReference Include="Messaging.Contracts" Version="1.0.6" />
+   ```
+2. **Restore packages**:
+   ```bash
+   dotnet restore
+   ```
+3. **Clear cache** if needed:
+   ```bash
+   dotnet nuget locals all --clear
+   ```
+
+**Current Versions:**
+- Messaging.Contracts: 1.0.6
+- Common.Library: 1.0.13  
+- Tenant.Domain: 1.0.0
 
 
 ---
