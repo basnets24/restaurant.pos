@@ -25,9 +25,20 @@ From GitHub Packages (example):
 ```
 
 
-## Creating a package 
+## Creating a package
 
+Tag-driven publish (CI):
 
+```bash
+git tag common.library-v1.0.14
+git push origin common.library-v1.0.14
+```
+
+Local dry run (no publish):
+
+```bash
+dotnet pack shared/common.library/Common.Library.csproj -c Release -p:PackageVersion=1.0.14 -o ./packages
+```
 
 Namespaces live under `Common.Library.*`.
 

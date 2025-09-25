@@ -80,14 +80,17 @@ await publishEndpoint.Publish(new PaymentRequested(
 
 ## Creating a Package
 
-To create and publish a new version:
+Tag-driven publish (CI):
 
 ```bash
-# Build and pack locally
-dotnet pack --configuration Release --output ../../packages
+git tag messaging.contracts-v1.0.1
+git push origin messaging.contracts-v1.0.1
+```
 
-# Publish to GitHub Packages (requires authentication)
-dotnet nuget push ../../packages/Messaging.Contracts.1.0.0.nupkg --source "github"
+Local dry run pack:
+
+```bash
+dotnet pack shared/messaging.contracts/Messaging.Contracts.csproj -c Release -p:PackageVersion=1.0.1 -o ./packages
 ```
 
 ## Versioning
