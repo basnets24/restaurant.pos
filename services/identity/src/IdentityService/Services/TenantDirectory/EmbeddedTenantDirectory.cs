@@ -34,7 +34,7 @@ public class EmbeddedTenantDirectory : ITenantDirectory
         }
         else
         {
-            _logger.LogDebug("Primary membership for user {UserId}: RestaurantId={RestaurantId} DefaultLocationId={DefaultLocationId}", 
+            _logger.LogDebug("Primary membership for user {UserId}: RestaurantId={RestaurantId} DefaultLocationId={DefaultLocationId}",
                 userId, membership.RestaurantId, membership.DefaultLocationId);
         }
 

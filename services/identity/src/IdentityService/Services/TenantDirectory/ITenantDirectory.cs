@@ -10,12 +10,12 @@ public interface ITenantDirectory
     /// Get the most recent membership for a user, or null if none exists.
     /// </summary>
     Task<TenantMembershipResult?> GetPrimaryMembershipAsync(Guid userId, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get the default or fallback location ID for a restaurant, or null if none active.
     /// </summary>
     Task<string?> GetDefaultLocationAsync(string restaurantId, string? preferredLocationId = null, CancellationToken ct = default);
-    
+
     /// <summary>
     /// Get all role names for a user within a specific restaurant.
     /// </summary>

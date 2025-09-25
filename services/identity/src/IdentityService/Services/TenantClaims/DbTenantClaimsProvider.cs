@@ -6,7 +6,7 @@ public class DbTenantClaimsProvider : ITenantClaimsProvider
 {
     private readonly ITenantDirectory _directory;
     private readonly ILogger<DbTenantClaimsProvider> _logger;
-    
+
     public DbTenantClaimsProvider(ITenantDirectory directory, ILogger<DbTenantClaimsProvider> logger)
     { _directory = directory; _logger = logger; }
 
