@@ -89,14 +89,17 @@ public class RestaurantService
 
 ## Creating a Package
 
-To create and publish a new version:
+Tag-driven publish (CI):
 
 ```bash
-# Build and pack locally
-dotnet pack --configuration Release --output ../../packages
+git tag tenant.domain-v1.0.1
+git push origin tenant.domain-v1.0.1
+```
 
-# Publish to GitHub Packages (requires authentication)
-dotnet nuget push ../../packages/Tenant.Domain.1.0.0.nupkg --source "github" --api-key $ApiKey
+Local dry run pack:
+
+```bash
+dotnet pack shared/tenant.domain/Tenant.Domain.csproj -c Release -p:PackageVersion=1.0.1 -o ./packages
 ```
 
 ## Data Model Features
