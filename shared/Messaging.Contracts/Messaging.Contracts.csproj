@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Messaging.Contracts</PackageId>
-    <Version>1.0.1</Version>
+  <Version>1.0.0</Version>
     <IsPackable>true</IsPackable>
     <Authors>basnets24</Authors>
     <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
