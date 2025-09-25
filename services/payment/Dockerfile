@@ -13,7 +13,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 COPY ["PaymentService/PaymentService.csproj", "PaymentService/"]
 
 RUN --mount=type=secret,id=GH_OWNER --mount=type=secret,id=GH_PAT \
-    dotnet nuget add source --username USERNAME --password $(cat /run/secrets/GH_PAT) --store-password-in-clear-text --name github "https://nuget.pkg.github.com/$(cat /run/secrets/GH_OWNER)/index.json"
+    dotnet nuget add source --username $(cat /run/secrets/GH_OWNER) --password $(cat /run/secrets/GH_PAT) --store-password-in-clear-text --name github "https://nuget.pkg.github.com/$(cat /run/secrets/GH_OWNER)/index.json"
 RUN dotnet restore "PaymentService/PaymentService.csproj"
 COPY ./PaymentService ./PaymentService
 WORKDIR "/PaymentService"
