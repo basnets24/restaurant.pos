@@ -167,7 +167,7 @@ public class MenuItemsController : Controller
     [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<string>>> GetCategoriesAsync()
     {
-        return Ok(MenuCategories.All);
+        return Ok(await Task.FromResult(MenuCategories.All));
     }
     
     [HttpPost("{id:guid}:availability")]

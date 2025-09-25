@@ -1,6 +1,7 @@
 using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
+using Messaging.Contracts.Events.Payment;
 using Microsoft.AspNetCore.Mvc;
 using PaymentService.Entities;
 using Stripe;
