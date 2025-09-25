@@ -1,6 +1,55 @@
 # Restaurant POS Services
 
-Minimal docs and quick links for core backend services in this repository.
+Minimal docs and quick links f## Docker Deployment
+
+### Quick Start
+Run the complete Restaurant POS system with Docker Compose:
+
+```bash
+# Set up environment variables
+export GH_OWNER=your-github-username
+export GH_PAT=your-github-personal-access-token
+
+# Start infrastructure + all services
+docker-compose -f infra/docker-compose.yml -f docker-compose.yml up --build
+```
+
+### Access Points
+- **Frontend**: http://localhost:5173
+- **Identity Service**: http://localhost:5265
+- **Tenant Service**: http://localhost:5200
+- **Menu Service**: http://localhost:5062
+- **Inventory Service**: http://localhost:5094
+- **Order Service**: http://localhost:5236
+- **Payment Service**: http://localhost:5238
+
+### Prerequisites
+1. **GitHub Personal Access Token** with `read:packages` permission for private NuGet packages
+2. **Docker** and **Docker Compose** installed
+3. **Environment variables** configured (GH_OWNER, GH_PAT)
+
+### Infrastructure Services
+The system includes containerized infrastructure:
+- **PostgreSQL** (identity & tenant data)
+- **MongoDB** (business domain data)
+- **RabbitMQ** (inter-service messaging)
+- **Seq** (centralized logging)
+
+### Architecture
+- **Network**: All services communicate via `pos-net` Docker network
+- **Dependencies**: Services start in proper order with health checks
+- **Security**: Non-root containers, environment-based secrets
+- **Databases**: PostgreSQL for identity/tenant, MongoDB for menu/inventory/order/payment
+
+For detailed Docker documentation, see [DOCKER.md](./DOCKER.md).
+
+## Local Dev Notes
+
+- Most services expect JWT validation with `ServiceSettings:Authority`.
+- Frontend origin(s) must be listed under each service's `Cors:AllowedOrigins`.
+- MongoDB, RabbitMQ, and PostgreSQL settings are configured per service.
+
+--- backend services in this repository.
 
 ## Services
 
@@ -52,14 +101,6 @@ Minimal docs and quick links for core backend services in this repository.
       </ItemGroup>
       ```
 
-
-
-
-## Local Dev Notes
-
-- Most services expect JWT validation with `ServiceSettings:Authority`.
-- Frontend origin(s) must be listed under each service’s `Cors:AllowedOrigins`.
-- MongoDB, RabbitMQ, and PostgreSQL settings are configured per service.
 
 ---
 

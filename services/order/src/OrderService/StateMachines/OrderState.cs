@@ -1,4 +1,5 @@
 using MassTransit;
+using Messaging.Contracts;
 using Messaging.Contracts.Events.Order;
 
 namespace OrderService.StateMachines;
