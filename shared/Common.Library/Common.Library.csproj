@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Common.Library</PackageId>
-    <Version>1.0.13</Version>
+    <Version>1.0.14</Version>
     <IsPackable>true</IsPackable>
     <Authors>basnets24</Authors>
     <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
