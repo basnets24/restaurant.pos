@@ -83,55 +83,14 @@ For detailed Docker documentation, see [DOCKER.md](./DOCKER.md).
   docs: [shared/messaging.contracts/README.md](./shared/messaging.contracts/README.md)
 
 ### Manual Package Publishing (CI Removed)
-Since automated publish workflows were removed, packages are published manually. Replace `<PACKAGE_ID>` and `<VERSION>` accordingly.
-
-1. Bump version in the target `.csproj` (e.g. `<Version>1.0.3</Version>`).
-2. Clean & build (optional but safer):
-   ```bash
-   dotnet clean shared/<folder>/<Project>.csproj
-   dotnet build shared/<folder>/<Project>.csproj -c Release
-   ```
-3. Pack:
-   ```bash
-   dotnet pack shared/<folder>/<Project>.csproj -c Release -o packages
-   # or explicitly set version
-   dotnet pack shared/<folder>/<Project>.csproj -c Release -p:PackageVersion=<VERSION> -o packages
-   ```
-4. Inspect the nupkg (ensure DLL is present):
-   ```bash
-   unzip -l packages/<PACKAGE_ID>.<VERSION>.nupkg | grep -i lib
-   ```
-5. Push to GitHub Packages:
-   ```bash
-   dotnet nuget push packages/<PACKAGE_ID>.<VERSION>.nupkg \
-     --source "https://nuget.pkg.github.com/${GH_OWNER}/index.json" \
-     --api-key $GH_PAT \
-     --skip-duplicate
-   ```
-6. Consumers update references:
-   ```bash
-   dotnet add <path-to-csproj> package <PACKAGE_ID> --version <VERSION>
-   ```
-7. Clear caches if you suspect stale DLLs:
-   ```bash
-   dotnet nuget locals all --clear
-   ```
-
-Common folders to substitute:
-```
-shared/common.library/Common.Library.csproj
-shared/tenant.domain/Tenant.Domain.csproj
-shared/Messaging.Contracts/Messaging.Contracts.csproj
-```
-
-Verification tip:
+Short version: bump version, pack, push, consume. See `docs/PACKAGE_PUBLISHING.md` for details.
 ```bash
-strings packages/Messaging.Contracts.<VERSION>.nupkg | grep -i PaymentRequested || true
-```
-If not found inside the dll, extract and inspect the assembly directly:
-```bash
-unzip -p packages/Messaging.Contracts.<VERSION>.nupkg lib/net8.0/Messaging.Contracts.dll > /tmp/Messaging.Contracts.dll
-strings /tmp/Messaging.Contracts.dll | grep -i PaymentRequested
+# Example
+dotnet pack shared/Messaging.Contracts/Messaging.Contracts.csproj -c Release -o packages
+dotnet nuget push packages/Messaging.Contracts.<VERSION>.nupkg \
+  --source "https://nuget.pkg.github.com/$GH_OWNER/index.json" \
+  --api-key $GH_PAT --skip-duplicate
+dotnet add services/order/src/OrderService/OrderService.csproj package Messaging.Contracts --version <VERSION>
 ```
 
 ## Consuming lib packages
