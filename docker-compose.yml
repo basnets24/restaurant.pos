@@ -1,0 +1,190 @@
+services:
+  # Application Services
+  identity-service:
+    build:
+      context: ../services/identity
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: identity-service
+    ports:
+      - "5265:5265"
+    environment:
+      - PostgresSettings__Host=postgres
+      - PostgresSettings__Password=${POSTGRES_PASSWORD:-password}
+      - SeqSettings__Host=seq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  tenant-service:
+    build:
+      context: ../services/tenant
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: tenant-service
+    ports:
+      - "5200:5200"
+    environment:
+      - PostgresSettings__Host=postgres
+      - PostgresSettings__Password=${POSTGRES_PASSWORD:-password}
+      - ServiceSettings__Authority=http://localhost:5265
+      - SeqSettings__Host=seq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  menu-service:
+    build:
+      context: ../services/menu
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: menu-service
+    ports:
+      - "5062:5062"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=http://identity-service:5265
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  inventory-service:
+    build:
+      context: ../services/inventory
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: inventory-service
+    ports:
+      - "5094:5094"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=http://identity-service:5265
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  order-service:
+    build:
+      context: ../services/order
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: order-service
+    ports:
+      - "5236:5236"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=http://identity-service:5265
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  payment-service:
+    build:
+      context: ../services/payment
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: payment-service
+    ports:
+      - "5238:5238"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=http://identity-service:5265
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  frontend:
+    build:
+      context: ../services/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      identity-service:
+        condition: service_started
+      tenant-service:
+        condition: service_started
+      menu-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    networks:
+      - pos-net
+
+secrets:
+  GH_OWNER:
+    environment: GH_OWNER
+  GH_PAT:
+    environment: GH_PAT
+
+networks:
+  pos-net:
+    external: true
+    name: infra_pos-net
