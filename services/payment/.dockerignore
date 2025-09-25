@@ -1,0 +1,48 @@
+# .dockerignore for Payment Service
+
+# Ignore everything by default
+**
+
+# Include what we need
+!PaymentService/**
+
+# Exclude build artifacts and temporary files
+PaymentService/bin/
+PaymentService/obj/
+PaymentService/.vs/
+PaymentService/*.user
+PaymentService/*.suo
+PaymentService/*.cache
+PaymentService/launchSettings.json
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Runtime and temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+*.md

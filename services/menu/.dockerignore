@@ -1,0 +1,55 @@
+# .dockerignore for Menu Service
+
+# Ignore everything by default
+**
+
+# Include what we need
+!src/MenuService/**
+!../../NuGet.config
+!../../Restaurant.Pos.sln
+!../../shared/messaging.contracts/**
+
+# Exclude build artifacts and temporary files
+src/MenuService/bin/
+src/MenuService/obj/
+src/MenuService/.vs/
+src/MenuService/*.user
+src/MenuService/*.suo
+src/MenuService/*.cache
+src/MenuService/launchSettings.json
+
+# Exclude messaging.contracts build artifacts
+../../shared/messaging.contracts/bin/
+../../shared/messaging.contracts/obj/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Runtime and temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+*.md
