@@ -62,6 +62,38 @@ The `IdentitySeedHostedService` runs on startup to:
 - Ensure required roles exist (e.g., `Admin`)
 - Create an initial admin user from `IdentitySettings` if it does not exist
 
+### Docker
+
+#### Build and Run with Docker
+
+1. **Set up GitHub Personal Access Token** (required for private NuGet packages):
+   ```bash
+   export GH_OWNER=basnets24
+   export GH_PAT="your_github_personal_access_token_here"
+   ```
+
+2. **Build the Docker image** (run from services/identity directory):
+   ```bash
+   cd services/identity
+   docker build --secret id=GH_OWNER --secret id=GH_PAT -t identity-service:1.0.0 .
+   ```
+
+3. **Run the container**:
+   ```bash
+   docker run -d \
+     --name identity-service \
+     -p 5265:5265 \
+     -e PostgresSettings__Password="your-password" \
+     identity-service:1.0.0
+   ```
+
+4. **Check container logs**:
+   ```bash
+   docker logs identity-service
+   ```
+
+**Note**: The Docker build requires GitHub Personal Access Token with `read:packages` permission to access private NuGet packages.
+
 ## API Overview
 
 All endpoints are protected with IdentityServer’s Local API policy unless noted. Key routes:

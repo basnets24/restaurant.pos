@@ -22,9 +22,10 @@ dotnet run
    export GH_PAT="your_github_personal_access_token_here"
    ```
 
-2. **Build the Docker image** (run from repository root):
+2. **Build the Docker image** (run from services/tenant directory):
    ```bash
-   docker build --secret id=GH_OWNER --secret id=GH_PAT -f services/tenant/src/TenantService/DockerFile -t tenant-service:1.0.0 .
+   cd services/tenant
+   docker build --secret id=GH_OWNER --secret id=GH_PAT -t tenant-service:1.0.0 .
    ```
 
 3. **Run the container**:
