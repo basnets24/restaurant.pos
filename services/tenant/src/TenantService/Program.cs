@@ -3,12 +3,12 @@ using Common.Library.Logging;
 using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using Common.Library.Identity;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Tenant.Domain.Data;
 using TenantService.Services;
 using TenantService.Settings;
+using TenantService.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +32,20 @@ builder.Services.AddDbContext<TenantDbContext>(options =>
 
 // services + controllers
 builder.Services.AddScoped<RestaurantOnboardingService>();
-builder.Services.AddControllers();
+
+// Health checks
+builder.Services.AddHealthChecks()
+    .AddNpgSql(pg!.GetConnectionString(), name: "database")
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Service is running"));
+
+// Validation and error handling
+builder.Services.AddValidationAndErrorHandling();
+
+builder.Services.AddControllers(options =>
+{
+    // Suppress async suffix in action names for cleaner API
+    options.SuppressAsyncSuffixInActionNames = false;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -49,6 +62,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Global exception handling middleware (must be first)
+app.UseGlobalExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -60,6 +76,18 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
+
+// Health check endpoints
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready") || check.Name == "self" || check.Name == "database"
+});
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Name == "self"
+});
+
 app.MapControllers();
 
 app.Run();
