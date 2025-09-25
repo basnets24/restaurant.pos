@@ -27,6 +27,8 @@ public static class TenantClaimsExtensions
         }
         else
         {
+            // Register tenant directory (embedded implementation for DB mode)
+            services.AddScoped<ITenantDirectory, EmbeddedTenantDirectory>();
             services.AddScoped<ITenantClaimsProvider, DbTenantClaimsProvider>();
         }
 
