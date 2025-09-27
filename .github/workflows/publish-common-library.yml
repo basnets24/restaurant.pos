@@ -7,7 +7,7 @@ on:
   push:
     branches: [dev, main]
     paths:
-      - 'shared/common.library/**'
+      - 'shared/Common.Library/**'
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ permissions:
 
 env:
   PACKAGE_ID: Common.Library
-  PROJECT_PATH: shared/common.library/Common.Library.csproj
+  PROJECT_PATH: shared/Common.Library/Common.Library.csproj
 
 concurrency:
   group: publish-${{ github.workflow }}-${{ github.ref_name }}
