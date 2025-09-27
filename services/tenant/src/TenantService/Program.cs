@@ -33,6 +33,9 @@ builder.Services.AddDbContext<TenantDbContext>(options =>
 // services + controllers
 builder.Services.AddScoped<RestaurantOnboardingService>();
 
+// Auto-migration on startup
+builder.Services.AddHostedService<TenantService.HostedServices.DatabaseMigrationHostedService>();
+
 // Health checks
 builder.Services.AddHealthChecks()
     .AddNpgSql(pg!.GetConnectionString(), name: "database")
