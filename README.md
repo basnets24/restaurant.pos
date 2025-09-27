@@ -2,10 +2,6 @@
 
 Minimal docs and quick links f## Docker Deployment
 
-<!-- TODO: Update Docker Compose setup to use individual pre-built images (restaurant-pos/*:1.0.0) 
-     instead of building from source. This will improve startup time and deployment consistency.
-     Consider creating a production docker-compose.prod.yml that references the tagged images. -->
-
 ### Quick Start
 Run the complete Restaurant POS system with Docker Compose:
 
@@ -127,10 +123,10 @@ Packages are automatically published to GitHub Packages when you push changes to
 **Setup (one-time):**
 ```bash
 # Set your GitHub PAT as environment variable
-export GH_PAT=ghp_your_personal_access_token_here
+export GH_PAT=your_personal_access_token_here
 
 # Add to your shell profile to persist
-echo 'export GH_PAT=ghp_your_personal_access_token_here' >> ~/.zshrc
+echo 'export GH_PAT=your_personal_access_token_here' >> ~/.zshrc
 ```
 
 **Authentication is configured** in `NuGet.config` to use the `%GH_PAT%` environment variable.

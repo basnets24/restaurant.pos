@@ -15,50 +15,6 @@ builder.Host.UseSerilog();
 builder.Services.AddPostgresWithIdentity(builder.Configuration);
 builder.Services.AddRestaurantPosIdentityServer(builder.Configuration);
 
-// Configure cookie settings for HTTP development (API Gateway architecture)
-// Configure all cookie-based authentication schemes for HTTP development
-builder.Services.PostConfigure<CookieAuthenticationOptions>(
-    CookieAuthenticationDefaults.AuthenticationScheme,
-    options =>
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Allow HTTP cookies
-        options.Cookie.IsEssential = true;
-    });
-
-// Configure ASP.NET Identity application cookie
-builder.Services.PostConfigure<CookieAuthenticationOptions>(
-    "Identity.Application",
-    options =>
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Allow HTTP cookies
-        options.Cookie.IsEssential = true;
-    });
-
-// Configure IdentityServer session cookie explicitly
-builder.Services.Configure<IdentityServerOptions>(options =>
-{
-    options.Authentication.CookieSameSiteMode = SameSiteMode.Lax;
-});
-
-// Configure the IdentityServer authentication cookie scheme directly
-builder.Services.PostConfigure<CookieAuthenticationOptions>(
-    "idsrv",
-    options =>
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
-        options.Cookie.IsEssential = true;
-    });
-
-// Configure global cookie policy for HTTP development
-builder.Services.Configure<CookiePolicyOptions>(options =>
-{
-    options.MinimumSameSitePolicy = SameSiteMode.Lax;
-    options.Secure = CookieSecurePolicy.None; // Allow HTTP cookies
-});
-
 builder.Services.AddMemoryCache();
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
@@ -102,8 +58,6 @@ if (app.Environment.IsDevelopment())
 // }
 app.UseStaticFiles();
 
-// Apply cookie policy for HTTP development
-app.UseCookiePolicy();
 
 app.UseRouting();
 
@@ -114,6 +68,10 @@ app.UseSerilogRequestLogging();
 app.UseIdentityServer();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCookiePolicy( new CookiePolicyOptions
+{
+    MinimumSameSitePolicy = SameSiteMode.Lax
+});
 app.MapRazorPages();
 app.MapControllers();
 

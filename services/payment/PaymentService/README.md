@@ -45,7 +45,25 @@ dotnet user-secrets set "Stripe:WebhookSecret" "whsec_xxx"
 dotnet user-secrets set "Frontend:PublicBaseUrl" "http://localhost:5173"
 ```
 
-### Run
+### Build and Run Scripts
+
+#### Setup & Run
+```bash
+cd services/payment/PaymentService
+dotnet restore
+dotnet run  # http://localhost:5238
+```
+
+#### Docker Build
+```bash
+cd services/payment
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/payment-service:1.0.0 .
+docker run -d -p 5238:5238 restaurant-pos/payment-service:1.0.0
+```
+
+### Manual Steps
+
+#### Run
 ```bash
 dotnet run
 ```

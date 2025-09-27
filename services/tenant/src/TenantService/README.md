@@ -6,7 +6,30 @@ Multi‑tenant management service for the Restaurant POS platform. Built with .N
 - .NET SDK 8.0+
 - PostgreSQL database
 
-### Run
+### Build and Run Scripts
+
+#### Setup & Run
+```bash
+#!/bin/bash
+# Build and run Tenant Service
+cd services/tenant/src/TenantService
+dotnet restore
+dotnet ef database update
+dotnet run  # http://localhost:5200
+```
+
+#### Docker Build
+```bash
+#!/bin/bash
+# Build Docker image
+cd services/tenant
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/tenant-service:1.0.0 .
+docker run -d -p 5200:5200 restaurant-pos/tenant-service:1.0.0
+```
+
+### Manual Steps
+
+#### Run
 ```bash
 dotnet run
 ```
@@ -18,7 +41,7 @@ dotnet run
 
 1. **Set up GitHub Personal Access Token** (required for private NuGet packages):
    ```bash
-   export GH_OWNER=basnets24
+   export GH_OWNER=your-github-username
    export GH_PAT="your_github_personal_access_token_here"
    ```
 
@@ -30,11 +53,11 @@ dotnet run
 
 3. **Run the container**:
    ```bash
-   docker run -d \
-     --name tenant-service \
-     -p 5200:5200 \
-     -e PostgresSettings__Password="your-password" \
-     tenant-service:1.0.0
+   docker run -d -p 5200:5200 \
+  -e PostgresSettings__ConnectionString="Host=identity-postgres;Port=5432;Database=identity_db;Username=postgres;Password=your-secure-password" \
+  --network pos_pos-net \
+  --name tenant-service-v101 \
+  restaurant-pos/tenant-service:1.0.1
    ```
 
 4. **Check container logs**:

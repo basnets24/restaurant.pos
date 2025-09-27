@@ -20,11 +20,7 @@ services:
       - ASPNETCORE_Kestrel__Certificates__Default__Password=${CERT_PASSWORD}
 
       - IdentitySettings__AdminUserPassword=${IDENTITY_ADMIN_PASSWORD}
-      - PostgresSettings__Host=postgres
-      - PostgresSettings__Port=5432
-      - PostgresSettings__Database=identity_db
-      - PostgresSettings__Username=postgres
-      - PostgresSettings__Password=${POSTGRES_PASSWORD}
+      - PostgresSettings__ConnectionString=${POSTGRES_CONNECTION_STRING}
       - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
       # Use embedded mode for tenant claims (direct database access, no HTTP calls needed)
@@ -48,11 +44,7 @@ services:
     ports:
       - "5200:5200"
     environment:
-      - PostgresSettings__Host=postgres
-      - PostgresSettings__Port=5432
-      - PostgresSettings__Database=identity_db
-      - PostgresSettings__Username=postgres
-      - PostgresSettings__Password=${POSTGRES_PASSWORD}
+      - PostgresSettings__ConnectionString=${POSTGRES_CONNECTION_STRING}
       - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
     depends_on:

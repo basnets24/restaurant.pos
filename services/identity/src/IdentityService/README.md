@@ -37,21 +37,53 @@ Example: set secrets for local development
 ```bash
 # from this project directory
 dotnet user-secrets set "IdentitySettings:AdminUserEmail" "admin@pos.local"
-dotnet user-secrets set "IdentitySettings:AdminUserPassword" "Passw0rd!"
+dotnet user-secrets set "IdentitySettings:AdminUserPassword" "YourSecurePassword123!"
 # if using Http tenant mode, set confidential client secret out of appsettings
-dotnet user-secrets set "TenantService:ClientSecret" "dev-identity-tenant-secret"
+dotnet user-secrets set "TenantService:ClientSecret" "your-secure-client-secret"
 ```
 
 
 
-### Database
+### Build and Run Scripts
+
+#### Setup & Run
+```bash
+#!/bin/bash
+# Build and run Identity Service
+cd services/identity/src/IdentityService
+dotnet restore
+dotnet ef database update
+dotnet run  # http://localhost:5265
+```
+
+#### Docker Build
+```bash
+#!/bin/bash
+# Build Docker image
+cd services/identity
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/identity-service:1.0.0 .
+
+
+docker run -d -p 5265:5265 \
+  -e PostgresSettings__ConnectionString="Host=identity-postgres;Port=5432;Database=identity_db;Username=postgres;Password=your-secure-password" \
+  -e IdentitySettings__AdminUserPassword="YourSecurePassword123!" \
+  --network pos_pos-net \
+  --name identity-service-v1.0.1 \
+  restaurant-pos/identity-service:1.0.1
+
+
+```
+
+### Manual Steps
+
+#### Database
 Apply migrations to your local PostgreSQL database:
 ```bash
 dotnet ef database update
 ```
 Connection string is built from `PostgresSettings`.
 
-### Run
+#### Run
 ```bash
 dotnet run
 ```
@@ -68,7 +100,7 @@ The `IdentitySeedHostedService` runs on startup to:
 
 1. **Set up GitHub Personal Access Token** (required for private NuGet packages):
    ```bash
-   export GH_OWNER=basnets24
+   export GH_OWNER=your-github-username
    export GH_PAT="your_github_personal_access_token_here"
    ```
 

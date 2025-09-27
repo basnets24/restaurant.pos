@@ -40,7 +40,29 @@ Example: set local secrets
 Dotnet user-secrets set "ServiceSettings:Authority" "https://localhost:7163"
 ```
 
-### Run
+### Build and Run Scripts
+
+#### Setup & Run
+```bash
+#!/bin/bash
+# Build and run Menu Service (requires MongoDB, RabbitMQ, Identity Service)
+cd services/menu/src/MenuService
+dotnet restore
+dotnet run  # http://localhost:5062
+```
+
+#### Docker Build
+```bash
+#!/bin/bash
+# Build Docker image
+cd services/menu
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/menu-service:1.0.0 .
+docker run -d -p 5062:5062 restaurant-pos/menu-service:1.0.0
+```
+
+### Manual Steps
+
+#### Run
 ```bash
 dotnet run
 ```

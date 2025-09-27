@@ -3,6 +3,7 @@ using IdentityService.Settings;
 using Microsoft.AspNetCore.Identity;
 using Duende.IdentityServer.Models;
 using Common.Library.Settings;
+using System.Reflection;
 
 namespace IdentityService.Extensions;
 
@@ -47,7 +48,7 @@ public static class IdentityServerExtensions
                options.Authentication.CookieSameSiteMode = SameSiteMode.Lax;
 
                // Persist & rotate signing keys here (ensure a writable path in container)
-               // options.KeyManagement.KeyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+               options.KeyManagement.KeyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                // options.KeyManagement.Enabled = true; // default is true in recent Duende
            })
            .AddAspNetIdentity<ApplicationUser>()

@@ -22,6 +22,32 @@ Single-page web app for restaurant operations (tables, orders, payments, managem
 - UI: Tailwind CSS + component primitives (buttons, cards, tabs, etc.)
 - Config: runtime `public/config.js` (no build-time secrets in bundle)
 
+## Build and Run Scripts
+
+#### Setup & Run
+```bash
+# Build and run Frontend (requires backend services)
+cd services/frontend
+npm install
+npm run dev  # http://localhost:5173
+```
+
+#### Production Build
+```bash
+# Build for production
+cd services/frontend
+npm install
+npm run build  # Output to dist/
+```
+
+#### Docker Build
+```bash
+# Build Docker image
+cd services/frontend
+docker build -t restaurant-pos/frontend:1.0.0 .
+docker run -d -p 5173:80 restaurant-pos/frontend:1.0.0
+```
+
 ## Quick Start (Dev)
 
 ```bash
