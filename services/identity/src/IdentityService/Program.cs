@@ -1,8 +1,10 @@
 using Common.Library.Logging;
+using Duende.IdentityServer.Configuration;
 using IdentityService.Extensions;
 using IdentityService.HostedServices;
 using IdentityService.Settings;
 using IdentityService.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +14,26 @@ builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 builder.Services.AddPostgresWithIdentity(builder.Configuration);
 builder.Services.AddRestaurantPosIdentityServer(builder.Configuration);
+
+// Configure cookie settings for development (HTTP)
+if (builder.Environment.IsDevelopment())
+{
+    // Configure all cookie-based authentication schemes for HTTP development
+    builder.Services.PostConfigure<CookieAuthenticationOptions>(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        options =>
+        {
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        });
+
+    // Configure IdentityServer session cookie
+    builder.Services.PostConfigure<IdentityServerOptions>(options =>
+    {
+        options.Authentication.CookieSameSiteMode = SameSiteMode.Lax;
+    });
+}
+
 builder.Services.AddMemoryCache();
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
@@ -46,13 +68,19 @@ if (app.Environment.IsDevelopment())
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following lines if running services directly (without API Gateway):
+// if (!app.Environment.IsDevelopment())
+// {
+//     app.UseHttpsRedirection();
+// }
 app.UseStaticFiles();
 app.UseRouting();
-if (app.Environment.IsDevelopment())
-{
-    app.MapControllers().RequireCors(corsPolicy);
-}
+
+// (frontend needs to call identity service)
+app.UseCors(corsPolicy);
+
 app.UseSerilogRequestLogging();
 app.UseIdentityServer();
 app.UseAuthentication();
