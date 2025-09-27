@@ -16,11 +16,11 @@ builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 builder.Services
     .AddMongo()
-    .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)) );
+    .AddMassTransitWithRabbitMq(retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
 builder.Services.AddTenancy();
 builder.Services.AddTenantMongoRepository<MenuItem>("menuitems");
 
-builder.Services.AddMenuPolicies().AddPosJwtBearer(); 
+builder.Services.AddMenuPolicies().AddPosJwtBearer();
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
@@ -48,12 +48,20 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(corsPolicy);
 }
+
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
+
+app.UseRouting();
+
+// Enable CORS for all environments (frontend needs to call menu service)
+app.UseCors(corsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 app.UseTenancy();
 app.MapControllers();
 app.Run();

@@ -33,7 +33,7 @@ builder.Services.AddCors(options =>
 // Persistence / bus
 builder.Services.AddMongo();
 builder.Services.AddTenancy();
-builder.Services.AddTenantMongoRepository<Payment>("payments"); 
+builder.Services.AddTenantMongoRepository<Payment>("payments");
 
 builder.Services.AddMassTransitWithRabbitMq();
 
@@ -49,11 +49,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
 
-// CORS BEFORE controllers
+app.UseRouting();
+
+// Enable CORS for all environments (frontend needs to call payment service)
 app.UseCors(CorsPolicy);
-app.UseTenancy(); 
+
+app.UseTenancy();
 app.MapControllers();
 
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }));
