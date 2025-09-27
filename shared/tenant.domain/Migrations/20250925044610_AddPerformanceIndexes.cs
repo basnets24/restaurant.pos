@@ -12,7 +12,7 @@ namespace Tenant.Domain.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Only add performance indexes - tables already exist from previous migrations
-            
+
             // Performance indexes for query optimization
             migrationBuilder.CreateIndex(
                 name: "IX_RestaurantMemberships_UserId",

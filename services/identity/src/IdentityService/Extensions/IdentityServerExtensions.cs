@@ -2,6 +2,7 @@ using IdentityService.Entities;
 using IdentityService.Settings;
 using Microsoft.AspNetCore.Identity;
 using Duende.IdentityServer.Models;
+using Common.Library.Settings;
 
 namespace IdentityService.Extensions;
 
@@ -34,6 +35,13 @@ public static class IdentityServerExtensions
                options.Events.RaiseSuccessEvents = true;
                // Emit per‑API audiences so access tokens carry aud = ApiResource name (e.g., "Tenant").
                options.EmitStaticAudienceClaim = false;
+
+               // Set explicit issuer URI for consistent token validation across services
+               var serviceSettings = configuration.GetSection("ServiceSettings").Get<ServiceSettings>();
+               if (serviceSettings?.Authority != null)
+               {
+                   options.IssuerUri = serviceSettings.Authority;
+               }
 
                // Configure cookies for HTTP development (API Gateway architecture)
                options.Authentication.CookieSameSiteMode = SameSiteMode.Lax;

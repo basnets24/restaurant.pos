@@ -8,15 +8,24 @@ services:
         - GH_OWNER
         - GH_PAT
     container_name: identity-service
+    volumes:
+      - ${PWD}/certs:/https:ro
     ports:
+      - "7163:443" # expose HTTPS to host
       - "5265:5265"
     environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:5265
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/identity-service.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=${CERT_PASSWORD}
+
       - IdentitySettings__AdminUserPassword=${IDENTITY_ADMIN_PASSWORD}
       - PostgresSettings__Host=postgres
       - PostgresSettings__Port=5432
       - PostgresSettings__Database=identity_db
       - PostgresSettings__Username=postgres
       - PostgresSettings__Password=${POSTGRES_PASSWORD}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
       # Use embedded mode for tenant claims (direct database access, no HTTP calls needed)
       - TenantService__Mode=Embedded
@@ -69,7 +78,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
     depends_on:
       mongodb:
@@ -96,7 +105,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
     depends_on:
       mongodb:
@@ -123,7 +132,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
     depends_on:
       mongodb:
@@ -150,7 +159,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
       - Stripe__WebhookSecret=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
       - Stripe__SecretKey=${STRIPE_SECRET_KEY:-sk_test_placeholder}

@@ -2,6 +2,10 @@
 
 Minimal docs and quick links f## Docker Deployment
 
+<!-- TODO: Update Docker Compose setup to use individual pre-built images (restaurant-pos/*:1.0.0) 
+     instead of building from source. This will improve startup time and deployment consistency.
+     Consider creating a production docker-compose.prod.yml that references the tagged images. -->
+
 ### Quick Start
 Run the complete Restaurant POS system with Docker Compose:
 
@@ -148,7 +152,7 @@ echo 'export GH_PAT=ghp_your_personal_access_token_here' >> ~/.zshrc
 **Current Versions:**
 - Messaging.Contracts: 1.0.6
 - Common.Library: 1.0.13  
-- Tenant.Domain: 1.0.0
+- Tenant.Domain: 1.0.1
 
 **Troubleshooting:**
 - **401 Unauthorized**: Check that `GH_PAT` environment variable is set correctly
