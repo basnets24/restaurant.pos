@@ -35,11 +35,12 @@ public static class IdentityServerExtensions
                // Emit per‑API audiences so access tokens carry aud = ApiResource name (e.g., "Tenant").
                options.EmitStaticAudienceClaim = false;
 
+               // Configure cookies for HTTP development (API Gateway architecture)
+               options.Authentication.CookieSameSiteMode = SameSiteMode.Lax;
+
                // Persist & rotate signing keys here (ensure a writable path in container)
                // options.KeyManagement.KeyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                // options.KeyManagement.Enabled = true; // default is true in recent Duende
-
-
            })
            .AddAspNetIdentity<ApplicationUser>()
            .AddInMemoryIdentityResources(idp!.IdentityResources) // OpenId, Profile, Roles, etc.

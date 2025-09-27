@@ -87,7 +87,7 @@ public class CachedTenantDirectory : ITenantDirectory
     {
         var cacheKey = $"roles:{userId}:{restaurantId}";
 
-        if (_cache.TryGetValue(cacheKey, out IReadOnlyList<string>? cached))
+        if (_cache.TryGetValue(cacheKey, out IReadOnlyList<string>? cached) && cached is not null)
         {
             _logger.LogDebug("Cache hit for roles lookup: UserId={UserId}, RestaurantId={RestaurantId}",
                 userId, restaurantId);
