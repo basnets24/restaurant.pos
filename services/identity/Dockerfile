@@ -6,7 +6,8 @@ ENV ASPNETCORE_URLS=http://+:5265
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-dotnet-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+RUN adduser -u 5678 --disabled-password --gecos "" appuser && \
+    chown -R appuser /app
 USER appuser
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
@@ -22,4 +23,8 @@ RUN dotnet publish "IdentityService.csproj" -c Release -o /app/publish /p:UseApp
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+# Create keys directory for IdentityServer signing keys and set proper ownership
+USER root
+RUN mkdir -p /app/keys && chown -R appuser:appuser /app
+USER appuser
 ENTRYPOINT ["dotnet", "IdentityService.dll"]
