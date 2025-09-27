@@ -69,10 +69,15 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(corsPolicy);
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
+
+// (frontend needs to call tenant service)
+app.UseCors(corsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
