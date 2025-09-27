@@ -35,12 +35,12 @@ builder.Services.Configure<PricingSettings>(
 
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
-builder.Services.AddScoped<IDiningTableService, DiningTableService>(); 
+builder.Services.AddScoped<IDiningTableService, DiningTableService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 
 
-builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
+builder.Services.AddOrderPolicies().AddPosJwtBearer();
 const string corsPolicy = "frontend";
 builder.Services.AddCors(options =>
 {
