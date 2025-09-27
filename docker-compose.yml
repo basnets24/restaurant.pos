@@ -11,9 +11,15 @@ services:
     ports:
       - "5265:5265"
     environment:
+      - IdentitySettings__AdminUserPassword=${IDENTITY_ADMIN_PASSWORD}
       - PostgresSettings__Host=postgres
-      - PostgresSettings__Password=${POSTGRES_PASSWORD:-password}
+      - PostgresSettings__Port=5432
+      - PostgresSettings__Database=identity_db
+      - PostgresSettings__Username=postgres
+      - PostgresSettings__Password=${POSTGRES_PASSWORD}
       - SeqSettings__Host=seq
+      # Use embedded mode for tenant claims (direct database access, no HTTP calls needed)
+      - TenantService__Mode=Embedded
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,8 +40,11 @@ services:
       - "5200:5200"
     environment:
       - PostgresSettings__Host=postgres
-      - PostgresSettings__Password=${POSTGRES_PASSWORD:-password}
-      - ServiceSettings__Authority=http://localhost:5265
+      - PostgresSettings__Port=5432
+      - PostgresSettings__Database=identity_db
+      - PostgresSettings__Username=postgres
+      - PostgresSettings__Password=${POSTGRES_PASSWORD}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
       - SeqSettings__Host=seq
     depends_on:
       postgres:
@@ -60,7 +69,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=http://identity-service:5265
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
       - SeqSettings__Host=seq
     depends_on:
       mongodb:
@@ -87,7 +96,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=http://identity-service:5265
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
       - SeqSettings__Host=seq
     depends_on:
       mongodb:
@@ -114,7 +123,7 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=http://identity-service:5265
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
       - SeqSettings__Host=seq
     depends_on:
       mongodb:
@@ -141,8 +150,10 @@ services:
     environment:
       - MongoDbSettings__Host=mongodb
       - RabbitMqSettings__Host=rabbitmq
-      - ServiceSettings__Authority=http://identity-service:5265
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY:-http://identity-service:5265}
       - SeqSettings__Host=seq
+      - Stripe__WebhookSecret=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      - Stripe__SecretKey=${STRIPE_SECRET_KEY:-sk_test_placeholder}
     depends_on:
       mongodb:
         condition: service_started
@@ -180,11 +191,11 @@ services:
 
 secrets:
   GH_OWNER:
-    file: ./secrets/GH_OWNER
+    file: secrets/GH_OWNER
   GH_PAT:
-    file: ./secrets/GH_PAT
+    file: secrets/GH_PAT
 
 networks:
   pos-net:
     external: true
-    name: infra_pos-net
+    name: pos_pos-net

@@ -39,6 +39,7 @@ Thumbs.db
 
 # Docker
 secrets/
+infra/secrets/
 
 # Launch profiles
 **/launchSettings.json
