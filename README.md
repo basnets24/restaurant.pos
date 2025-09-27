@@ -11,7 +11,27 @@ export GH_OWNER=your-github-username
 export GH_PAT=your-github-personal-access-token
 
 # Start infrastructure + all services
-docker-compose -f infra/docker-compose.yml -f docker-compose.yml up --build
+docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml up --build
+
+# Start in background (detached mode)
+docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml up --build -d
+
+# Stop all services
+docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml down
+
+# Stop and remove volumes (clean slate)
+docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml down -v
+```
+
+### Infrastructure Only
+To run just the infrastructure services (PostgreSQL, MongoDB, RabbitMQ, Seq):
+
+```bash
+# Start infrastructure services
+docker-compose --env-file .env -f infra/docker-compose.yml up -d
+
+# Stop infrastructure services
+docker-compose --env-file .env -f infra/docker-compose.yml down
 ```
 
 ### Access Points
