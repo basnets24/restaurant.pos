@@ -7,7 +7,7 @@ on:
   push:
     branches: [dev, main]
     paths:
-      - 'shared/Common.Library/**'
+      - "shared/Common.Library/**"
   workflow_dispatch:
 
 permissions:
@@ -32,14 +32,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
           source-url: "https://nuget.pkg.github.com/${{github.repository_owner}}/index.json"
-        env: 
+        env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Pack
         run: |
-         dotnet pack ${{ env.PROJECT_PATH }} --configuration Release \
-         -p:RepositoryUrl="https://github.com/${{github.repository_owner}}/restaurant.pos" \
-         -o Packages
+          dotnet pack ${{ env.PROJECT_PATH }} --configuration Release \
+          -p:RepositoryUrl="https://github.com/${{github.repository_owner}}/restaurant.pos" \
+          -o Packages
 
       - name: Publish
         run: |
