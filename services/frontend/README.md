@@ -48,6 +48,29 @@ docker build -t restaurant-pos/frontend:1.0.0 .
 docker run -d -p 5173:80 restaurant-pos/frontend:1.0.0
 ```
 
+
+## Build the docker image
+```bash
+# Build the docker image in Bash
+version="1.0.0"
+ACR="acrpos"
+
+docker build -t "$ACR.azurecr.io/play.frontend:$version" .
+
+## amd 64 version
+docker buildx build --platform linux/amd64 \
+  -t "$ACR.azurecr.io/pos.frontend:$version" \
+  --push .
+```
+
+## Install the Helm chart
+```powershell
+namespace="frontend"
+helm install frontend-client ./helm --create-namespace -n $namespace
+```
+
+
+
 ## Quick Start (Dev)
 
 ```bash
