@@ -2,6 +2,6 @@ namespace Common.Library.Settings
 {
     public class ServiceBusSettings
     {
-        public string ConnectionString { get; init; }
+        public required string ConnectionString { get; init; }
     }
 }

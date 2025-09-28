@@ -39,7 +39,8 @@ public static class Extensions
         this IBusRegistrationConfigurator configure, 
         IConfiguration config,
         Action<IRetryConfigurator>? configureRetries = null,
-        Action<IBusRegistrationContext, IBusFactoryConfigurator>? configureBus = null)
+        Action<IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>? configureRabbitBus = null,
+        Action<IBusRegistrationContext, IServiceBusBusFactoryConfigurator>? configureServiceBus = null)
     { 
         var serviceSettings =  config.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
         switch (serviceSettings!.MessageBroker?.ToUpper())
@@ -47,13 +48,13 @@ public static class Extensions
             case ServiceBus:
                 configure.UsingRestaurantPosAzureServiceBus(
                     configureRetries,
-                    (context, bus) => configureBus?.Invoke(context, bus));
+                    configureServiceBus);
                 break;
             case RabbitMq:
             default:
                 configure.UsingRestaurantPosRabbitMq(
                     configureRetries,
-                    (context, bus) => configureBus?.Invoke(context, bus));
+                    configureRabbitBus);
                 break;
         }
         
@@ -93,11 +94,9 @@ public static class Extensions
         {
             var configuration = context.GetRequiredService<IConfiguration>();
             var serviceSettings = configuration.GetRequiredSection(nameof(ServiceSettings)).Get<ServiceSettings>()!;
-            var serviceBusConnection = configuration
-                .GetRequiredSection(nameof(ServiceBusSettings))
-                .GetValue<string>("ConnectionString")!;
+            var serviceBusSettings = configuration.GetRequiredSection(nameof(ServiceBusSettings)).Get<ServiceBusSettings>()!;
 
-            configurator.Host(serviceBusConnection);
+            configurator.Host(serviceBusSettings.ConnectionString);
 
             configurator.UseTenantPropagation(context);
             configurator.UseServiceBusMessageScheduler();
