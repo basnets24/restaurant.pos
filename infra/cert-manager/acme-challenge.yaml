@@ -20,3 +20,14 @@ spec:
   prefix: /.well-known/acme-challenge
   rewrite: ""
   service: acme-challenge-service
+
+---
+  apiVersion: getambassador.io/v3alpha1
+  kind: Mapping
+  metadata:
+    name: acme-challenge-mapping-www
+  spec:
+    hostname: www.spoontab.com
+    prefix: /.well-known/acme-challenge
+    rewrite: ""
+    service: acme-challenge-service
