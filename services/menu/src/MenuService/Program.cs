@@ -14,9 +14,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
-builder.Services
-    .AddMongo()
-    .AddMassTransitWithRabbitMq(retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
+builder.Services.AddMongo();
+builder.Services.AddMassTransitWithMessageBroker(
+    builder.Configuration,
+    retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
 builder.Services.AddTenancy();
 builder.Services.AddTenantMongoRepository<MenuItem>("menuitems");
 

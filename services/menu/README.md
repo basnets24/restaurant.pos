@@ -52,12 +52,15 @@ dotnet run  # http://localhost:5062
 #!/bin/bash
 # Build Docker image
 cd services/menu
-docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/menu-service:1.0.0 .
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/menu-service:1.0.3 .
+
 docker run -d -p 5062:5062 \
   -e MongoDbSettings__ConnectionString="$cosmosDbString" \
+  -e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
+  -e ServiceSettings__MessageBroker="SERVICEBUS" \
   --network pos_pos-net \
-  --name menu-service-v1.0.2 \
-  restaurant-pos/menu-service:1.0.2
+  --name menu-service-v1.0.3 \
+  restaurant-pos/menu-service:1.0.3
 
 ```
 
