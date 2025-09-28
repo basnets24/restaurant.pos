@@ -12,21 +12,21 @@ namespace MenuService.Controllers;
 
 [ApiController]
 [Route("menu-items")]
-public class MenuItemsController : Controller 
+public class MenuItemsController : Controller
 {
     private readonly IRepository<MenuItem> _repository;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ITenantContext _tenant;
 
-    public MenuItemsController(IRepository<MenuItem> repository, 
-        IPublishEndpoint publishEndpoint, 
+    public MenuItemsController(IRepository<MenuItem> repository,
+        IPublishEndpoint publishEndpoint,
         ITenantContext tenant)
     {
         _repository = repository;
         _publishEndpoint = publishEndpoint;
         _tenant = tenant;
     }
-    
+
     [HttpGet]
     [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
     [ProducesResponseType(typeof(PageResult<MenuItemDto>), StatusCodes.Status200OK)]
@@ -57,7 +57,7 @@ public class MenuItemsController : Controller
 
         return Ok(new PageResult<MenuItemDto>(items, page, size, total));
     }
-    
+
     [HttpGet("{id:guid}")]
     [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
     public async Task<ActionResult<MenuItemDto>> GetByIdAsync(Guid id)
@@ -69,7 +69,7 @@ public class MenuItemsController : Controller
         }
         return menuItem.ToDto();
     }
-    
+
     [HttpPost]
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult<MenuItemDto>> PostAsync(CreateMenuItemDto item)
@@ -98,11 +98,11 @@ public class MenuItemsController : Controller
             menuItem.IsAvailable,
             _tenant.RestaurantId,
             _tenant.LocationId
-            )); 
-        
-        return CreatedAtAction(nameof(GetByIdAsync), new {id = menuItem.Id}, menuItem.ToDto());
+            ));
+
+        return CreatedAtAction(nameof(GetByIdAsync), new { id = menuItem.Id }, menuItem.ToDto());
     }
-    
+
     [HttpPatch("{id}")]
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult<MenuItemDto>> PatchAsync(Guid id, UpdateMenuItemDto item)
@@ -112,7 +112,7 @@ public class MenuItemsController : Controller
         {
             return NotFound();
         }
-        
+
         // Only update fields if they were provided
         if (item.Name is not null)
             menuItem.Name = item.Name;
@@ -122,7 +122,7 @@ public class MenuItemsController : Controller
 
         if (item.Price is not null)
             menuItem.Price = item.Price.Value;
-    
+
         var normalized = MenuCategories.Normalize(item.Category);
         if (normalized is null)
             return BadRequest(new { error = "Invalid category", allowed = MenuCategories.All });
@@ -143,8 +143,8 @@ public class MenuItemsController : Controller
         ));
         return Ok(menuItem.ToDto());
     }
-    
-    
+
+
     [HttpDelete("{id}")]
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<ActionResult> DeleteAsync(Guid id)
@@ -155,12 +155,12 @@ public class MenuItemsController : Controller
             return NotFound();
         }
         await _repository.DeleteAsync(id);
-        await _publishEndpoint.Publish(new MenuItemDeleted(id, 
+        await _publishEndpoint.Publish(new MenuItemDeleted(id,
             _tenant.RestaurantId,
             _tenant.LocationId));
         return NoContent();
     }
-    
+
     // GET /menu-items/categories
     [HttpGet("categories")]
     [Authorize(Policy = MenuPolicyExtensions.ReadPolicy)]
@@ -169,7 +169,7 @@ public class MenuItemsController : Controller
     {
         return Ok(await Task.FromResult(MenuCategories.All));
     }
-    
+
     [HttpPost("{id:guid}:availability")]
     [Authorize(Policy = MenuPolicyExtensions.WritePolicy)]
     public async Task<IActionResult> SetAvailabilityAsync(Guid id, [FromBody] bool isAvailable)
