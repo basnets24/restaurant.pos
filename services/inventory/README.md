@@ -51,13 +51,17 @@ dotnet run  # http://localhost:5094
 #!/bin/bash
 # Build Docker image
 cd services/inventory
-docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/inventory-service:1.0.1 .
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/inventory-service:1.0.2 .
 docker run -d -p 5094:5094 \
   -e MongoDbSettings__ConnectionString="$cosmosDbString" \
+  -e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
+  -e ServiceSettings__MessageBroker="SERVICEBUS" \
   --network pos_pos-net \
-  --name inventory-service-v1.0.1 \
-  restaurant-pos/inventory-service:1.0.1
+  --name inventory-service-v1.0.2 \
+  restaurant-pos/inventory-service:1.0.2
 ```
+
+
 
 ## API Overview
 

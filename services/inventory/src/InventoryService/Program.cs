@@ -19,9 +19,10 @@ builder.Services.AddScoped<InventoryManager>();
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
-builder.Services.AddMongo()
-    .AddMassTransitWithRabbitMq(retryConfigurator =>
-        retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
+builder.Services.AddMongo();
+builder.Services.AddMassTransitWithMessageBroker(
+    builder.Configuration,
+    retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
 
 builder.Services.AddTenancy();
 builder.Services.AddTenantMongoRepository<InventoryItem>("inventoryitems")
@@ -74,4 +75,3 @@ app.UseAuthorization();
 app.UseTenancy();
 app.MapControllers();
 app.Run();
-
