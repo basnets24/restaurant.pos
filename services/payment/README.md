@@ -57,15 +57,26 @@ dotnet run  # http://localhost:5238
 #### Docker Build
 ```bash
 cd services/payment
-docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/payment-service:1.0.1 .
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/payment-service:1.0.2 .
 docker run -d -p 5238:5238 \
 -e MongoDbSettings__ConnectionString="$cosmosDbString" \
+-e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
+-e ServiceSettings__MessageBroker="SERVICEBUS" \
 -e Stripe__SecretKey="$STRIPE_SECRET_KEY" \
 -e Stripe__WebhookSecret="$STRIPE_WEBHOOK_SECRET" \
 --network pos_pos-net \
---name payment-service-v1.0.1 \
-restaurant-pos/payment-service:1.0.1
+--name payment-service-v1.0.2 \
+restaurant-pos/payment-service:1.0.2
 ```
+
+### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
+export version=1.0.0
+
+docker buildx build \
+  --platform linux/amd64 \
+  --secret id=GH_OWNER --secret id=GH_PAT \
+  -t "$ACR.azurecr.io/pos.payment:$version" \
+  --push .  
 
 ### Manual Steps
 

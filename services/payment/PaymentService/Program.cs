@@ -35,7 +35,7 @@ builder.Services.AddMongo();
 builder.Services.AddTenancy();
 builder.Services.AddTenantMongoRepository<Payment>("payments");
 
-builder.Services.AddMassTransitWithRabbitMq();
+builder.Services.AddMassTransitWithMessageBroker(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
