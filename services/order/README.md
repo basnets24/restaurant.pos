@@ -73,6 +73,16 @@ restaurant-pos/order-service:1.0.2
 
 ```
 
+### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
+export version=1.0.0
+
+docker buildx build \
+  --platform linux/amd64 \
+  --secret id=GH_OWNER --secret id=GH_PAT \
+  -t "$ACR.azurecr.io/pos.order:$version" \
+  --push .  
+
+
 ### Manual Steps
 
 #### Run

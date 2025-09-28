@@ -96,6 +96,16 @@ The `IdentitySeedHostedService` runs on startup to:
    docker logs identity-service
    ```
 
+### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
+export version=1.0.0
+export ACR=acrpos
+
+docker buildx build \
+  --platform linux/amd64 \
+  --secret id=GH_OWNER --secret id=GH_PAT \
+  -t "$ACR.azurecr.io/pos.identity:$version" \
+  --push .  
+
 **Note**: The Docker build requires GitHub Personal Access Token with `read:packages` permission to access private NuGet packages.
 
 ## API Overview

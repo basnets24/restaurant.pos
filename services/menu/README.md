@@ -61,8 +61,16 @@ docker run -d -p 5062:5062 \
   --network pos_pos-net \
   --name menu-service-v1.0.3 \
   restaurant-pos/menu-service:1.0.3
-
 ```
+
+### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
+export version=1.0.0
+
+docker buildx build \
+  --platform linux/amd64 \
+  --secret id=GH_OWNER --secret id=GH_PAT \
+  -t "$ACR.azurecr.io/pos.menu:$version" \
+  --push .  
 
 
 ## API Overview
