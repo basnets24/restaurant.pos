@@ -62,12 +62,14 @@ dotnet run  # http://localhost:5236
 #!/bin/bash
 # Build Docker image
 cd services/order
-docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/order-service:1.0.1 .
+docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/order-service:1.0.2 .
 docker run -d -p 5236:5236 \
 -e MongoDbSettings__ConnectionString="$cosmosDbString" \
+-e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
+-e ServiceSettings__MessageBroker="SERVICEBUS" \
 --network pos_pos-net \
---name order-service-v1.0.1 \
-restaurant-pos/order-service:1.0.1
+--name order-service-v1.0.2 \
+restaurant-pos/order-service:1.0.2
 
 ```
 

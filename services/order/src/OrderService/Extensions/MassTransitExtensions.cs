@@ -46,10 +46,11 @@ public static class MassTransitExtensions
                 r.DatabaseName = service.ServiceName;
             });
 
-            // Bus + endpoints (uses your helper overload with a configureBus hook)
-            cfg.UsingRestaurantPosRabbitMq(
+            // Bus + endpoints (uses broker-agnostic helper with RabbitMQ customization hook)
+            cfg.UsingRestaurantPosMessageBroker(
+                config,
                 retry => retry.Interval(3, TimeSpan.FromSeconds(5)),
-                (context, bus) =>
+                configureRabbitBus: (context, bus) =>
                 {
                     // --- Explicit endpoint for the POS read-model projector ---
                     // Single endpoint, shared partitioner: ensures per-MenuItemId ordering
