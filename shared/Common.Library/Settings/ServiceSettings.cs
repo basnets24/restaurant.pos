@@ -6,5 +6,7 @@ public class ServiceSettings
     public string Authority { get; init; } = null!;
     
     public string MessageBroker { get; init; } = "RABBITMQ"; // or "SERVICEBUS"
+
+    public string KeyVaultName { get; init; } = null!;
     
 }
