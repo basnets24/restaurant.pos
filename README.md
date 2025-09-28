@@ -1,39 +1,5 @@
 # Restaurant POS Services
 
-Minimal docs and quick links f## Docker Deployment
-
-### Quick Start
-Run the complete Restaurant POS system with Docker Compose:
-
-```bash
-# Set up environment variables
-export GH_OWNER=your-github-username
-export GH_PAT=your-github-personal-access-token
-
-# Start infrastructure + all services
-docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml up --build
-
-# Start in background (detached mode)
-docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml up --build -d
-
-# Stop all services
-docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml down
-
-# Stop and remove volumes (clean slate)
-docker-compose --env-file .env -f infra/docker-compose.yml -f docker-compose.yml down -v
-```
-
-### Infrastructure Only
-To run just the infrastructure services (PostgreSQL, MongoDB, RabbitMQ, Seq):
-
-```bash
-# Start infrastructure services
-docker-compose --env-file .env -f infra/docker-compose.yml up -d
-
-# Stop infrastructure services
-docker-compose --env-file .env -f infra/docker-compose.yml down
-```
-
 ### Access Points
 - **Frontend**: http://localhost:5173
 - **Identity Service**: http://localhost:5265
@@ -46,7 +12,7 @@ docker-compose --env-file .env -f infra/docker-compose.yml down
 ### Prerequisites
 1. **GitHub Personal Access Token** with `read:packages` permission for private NuGet packages
 2. **Docker** and **Docker Compose** installed
-3. **Environment variables** configured (GH_OWNER, GH_PAT)
+3. **Environment variables** configured
 
 ### Infrastructure Services
 The system includes containerized infrastructure:
@@ -57,7 +23,6 @@ The system includes containerized infrastructure:
 
 ### Architecture
 - **Network**: All services communicate via `pos-net` Docker network
-- **Dependencies**: Services start in proper order with health checks
 - **Security**: Non-root containers, environment-based secrets
 - **Databases**: PostgreSQL for identity/tenant, MongoDB for menu/inventory/order/payment
 
@@ -115,10 +80,9 @@ Packages are automatically published to GitHub Packages when you push changes to
 - `shared/common.library/**` → publishes Common.Library
 - `shared/tenant.domain/**` → publishes Tenant.Domain
 
-**Manual workflow:** You can also trigger publishing via GitHub Actions UI if needed.
-
 ## Consuming Packages
 **Prerequisites:** You need a GitHub Personal Access Token (PAT) with `read:packages` scope.
+
 
 **Setup (one-time):**
 ```bash
@@ -140,22 +104,12 @@ echo 'export GH_PAT=your_personal_access_token_here' >> ~/.zshrc
    ```bash
    dotnet restore
    ```
-3. **Clear cache** if needed:
-   ```bash
-   dotnet nuget locals all --clear
-   ```
 
 **Current Versions:**
 - Messaging.Contracts: 1.0.6
 - Common.Library: 1.0.13  
 - Tenant.Domain: 1.0.1
 
-**Troubleshooting:**
-- **401 Unauthorized**: Check that `GH_PAT` environment variable is set correctly
-- **Missing types**: Clear NuGet cache and restore: `dotnet nuget locals all --clear && dotnet restore`
-- **Package not found**: Verify the package was published successfully in GitHub Actions
-
 
 ---
 
-License: Proprietary (internal project).
