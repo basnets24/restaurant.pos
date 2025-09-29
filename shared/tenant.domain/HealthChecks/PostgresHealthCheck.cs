@@ -1,12 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using IdentityService.Settings;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using Tenant.Domain.Settings;
 
-namespace IdentityService.HealthChecks;
+namespace Tenant.Domain.HealthChecks;
 
 public sealed class PostgresHealthCheck : IHealthCheck
 {

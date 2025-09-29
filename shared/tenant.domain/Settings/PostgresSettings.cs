@@ -1,4 +1,4 @@
-namespace IdentityService.Settings;
+namespace Tenant.Domain.Settings;
 
 public class PostgresSettings
 {
@@ -8,7 +8,7 @@ public class PostgresSettings
     public string Username { get; set; } = null!;
     public string Password { get; set; } = null!;
 
-    private string _connectionString = null!;
+    private string? _connectionString;
 
     public string ConnectionString
     {
@@ -18,11 +18,11 @@ public class PostgresSettings
 
     public string GetConnectionString()
     {
-        // If ConnectionString is directly set (from env var), use it
-        if (!string.IsNullOrEmpty(_connectionString))
+        if (!string.IsNullOrWhiteSpace(_connectionString))
+        {
             return _connectionString;
+        }
 
-        // Otherwise, build from individual components
         return $"Host={Host};Port={Port};Database={Database};Username={Username};Password={Password}";
     }
 }

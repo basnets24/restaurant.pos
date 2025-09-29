@@ -7,8 +7,12 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Tenant.Domain.Data;
 using TenantService.Services;
-using TenantService.Settings;
+using Tenant.Domain.HealthChecks;
+using Tenant.Domain.Settings;
 using TenantService.Extensions;
+using TenantService.HostedServices;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +30,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // db
+builder.Services.ConfigureTenantPostgres(builder.Configuration);
 var pg = builder.Configuration.GetSection("PostgresSettings").Get<PostgresSettings>();
 builder.Services.AddDbContext<TenantDbContext>(options =>
     options.UseNpgsql(pg!.GetConnectionString()));
@@ -34,12 +39,12 @@ builder.Services.AddDbContext<TenantDbContext>(options =>
 builder.Services.AddScoped<RestaurantOnboardingService>();
 
 // Auto-migration on startup
-builder.Services.AddHostedService<TenantService.HostedServices.DatabaseMigrationHostedService>();
+builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 
 // Health checks
 builder.Services.AddHealthChecks()
-    .AddNpgSql(pg!.GetConnectionString(), name: "database")
-    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Service is running"));
+    .AddCheck("self", () => HealthCheckResult.Healthy("Service is running"), tags: new[] { "live" })
+    .AddPostgresHealthCheck(name: "database", tags: new[] { "ready" });
 
 // Validation and error handling
 builder.Services.AddValidationAndErrorHandling();
@@ -86,12 +91,12 @@ app.UseAuthorization();
 app.UseTenancy();
 
 // Health check endpoints
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("ready") || check.Name == "self" || check.Name == "database"
 });
 
-app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Name == "self"
 });
