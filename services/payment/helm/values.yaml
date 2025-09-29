@@ -1,0 +1,28 @@
+microserviceName: "payment"
+
+image:
+  repository: acrpos.azurecr.io/pos.payment
+  tag: 1.0.1
+
+envVariables:
+  ServiceSettings__Authority: https://spoontab.com/identity-svc
+  ServiceSettings__KeyVaultName: keyv-pos
+  ServiceSettings__MessageBroker: SERVICEBUS
+  SeqSettings__Host: seq.observability
+  SeqSettings__Port: "5341"
+  JaegerSettings__Host: jaeger-query.observability
+  JaegerSettings__Port: "6831"
+  ASPNETCORE_URLS: "http://+:5238"
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "75m"
+  limits:
+    memory: "256Mi"
+    cpu: "150m"
+
+container:
+  port: 5238
+
+identityClientId: a42d81a2-32bc-42a2-9fea-3508d69f7d44

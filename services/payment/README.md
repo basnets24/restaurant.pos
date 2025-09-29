@@ -70,13 +70,53 @@ restaurant-pos/payment-service:1.0.2
 ```
 
 ### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
-export version=1.0.0
+export version=1.0.1
+export ACR=acrpos
 
 docker buildx build \
   --platform linux/amd64 \
   --secret id=GH_OWNER --secret id=GH_PAT \
   -t "$ACR.azurecr.io/pos.payment:$version" \
   --push .  
+
+**Note**: The Docker build requires GitHub Personal Access Token with `read:packages` permission to access private NuGet packages.
+
+
+## Create Kubernetes namespace 
+```bash 
+export namespace="payment"
+kubectl create namespace $namespace 
+
+## Creating Azure Managed Identity and granting it access to Key Vault Store 
+```bash
+
+az identity create --resource-group $RG --name $namespace 
+
+export IDENTITY_CLIENT_ID=$(az identity show -g "$RG" -n "$namespace" --query clientId -o tsv)
+export SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+az role assignment create \
+  --assignee "$IDENTITY_CLIENT_ID" \
+  --role "Key Vault Secrets User" \
+  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.KeyVault/vaults/$KV"
+
+```
+
+## Establish the related Identity Credential
+```bash
+export AKS_OIDC_ISSUER="$(az aks show -n $AKS -g $RG --query "oidcIssuerProfile.issuerUrl" -otsv)"
+
+az identity federated-credential create --name ${namespace} --identity-name "${namespace}" --resource-group "${RG}" --issuer "${AKS_OIDC_ISSUER}" --subject system:serviceaccount:"${namespace}":"${namespace}-serviceaccount" --audience api://AzureADTokenExchange
+```
+## install helm chart 
+```bash 
+helmUser="00000000-0000-0000-0000-000000000000"
+helmPassword=$(az acr login --name $ACR --expose-token --output tsv --query accessToken)
+helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword 
+
+chartVersion="0.1.1"
+helm upgrade pos-$namespace-service oci://$ACR.azurecr.io/helm/pos-microservice --version $chartVersion -f ./helm/values.yaml -n $namespace --install
+``` 
 
 ### Manual Steps
 
