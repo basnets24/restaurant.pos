@@ -97,7 +97,7 @@ The `IdentitySeedHostedService` runs on startup to:
    ```
 
 ### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
-export version=1.0.2
+export version=1.0.3
 export ACR=acrpos
 
 docker buildx build \

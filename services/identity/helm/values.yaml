@@ -1,9 +1,9 @@
 microserviceName: "identity"
 
-image: 
+image:
   repository: acrpos.azurecr.io/pos.identity
-  tag : 1.0.3
-  
+  tag: 1.0.3
+
 envVariables:
   IdentitySettings__PathBase: /identity-svc
   IdentitySettings__CertificateCerFilePath: "/certificates/certificate.crt"
@@ -19,7 +19,7 @@ resources:
   limits:
     memory: "256Mi"
     cpu: "150m"
-    
+
 container:
   port: 5265
   volumeMounts:
@@ -39,6 +39,5 @@ volumes:
 certificate:
   secretName: signing-cert
   hostname: "spoontab.com"
-    
+
 identityClientId: 4a2f053f-da19-4daa-ab0e-5b9107b5f7a3
-    
