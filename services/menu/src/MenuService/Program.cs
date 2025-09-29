@@ -4,17 +4,24 @@ using Common.Library.MassTransit;
 using MenuService.Entities;
 using Common.Library.MongoDB;
 using Common.Library.Tenancy;
+using Common.Library.Configuration;
 using MassTransit;
 using MenuService.Auth;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Common.Library.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Host.ConfigureAzureKeyVault();
 builder.Services.AddMongo();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMongoDb();
 builder.Services.AddMassTransitWithMessageBroker(
     builder.Configuration,
     retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
@@ -64,5 +71,6 @@ app.UseCors(corsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
+app.MapPosHealthChecks();
 app.MapControllers();
 app.Run();
