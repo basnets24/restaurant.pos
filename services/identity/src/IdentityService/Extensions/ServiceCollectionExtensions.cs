@@ -1,9 +1,11 @@
 using IdentityService.Entities;
 using IdentityService.Data;
-using Tenant.Domain.Data;
+using IdentityService.HealthChecks;
 using IdentityService.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Tenant.Domain.Data;
 
 namespace IdentityService.Extensions;
 
@@ -36,6 +38,20 @@ public static class ServiceCollectionExtensions
             .AddDefaultTokenProviders()
             .AddDefaultUI();
         
+        return services;
+    }
+
+    public static IServiceCollection AddIdentityHealthChecks(
+        this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddHealthChecks()
+            .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+            .AddCheck<PostgresHealthCheck>(
+                name: "postgres",
+                tags: new[] { "ready" });
+
         return services;
     }
 }

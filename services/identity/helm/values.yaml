@@ -1,0 +1,44 @@
+microserviceName: "identity"
+
+image: 
+  repository: acrpos.azurecr.io/pos.identity
+  tag : 1.0.2
+  
+envVariables:
+  IdentitySettings__PathBase: /identity-svc
+  IdentitySettings__CertificateCerFilePath: "/certificates/certificate.crt"
+  IdentitySettings__CertificateKeyFilePath: "/certificates/certificate.key"
+  IdentityServerSettings__Clients__1__RedirectUris__0: https://spoontab.com/authentication/login-callback
+  IdentityServerSettings__Clients__1__PostLogoutRedirectUris__0: https://spoontab.com/authentication/logout-callback
+  ASPNETCORE_URLS: "http://+:5265"
+
+resources:
+  requests:
+    memory: "192Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "150m"
+    
+container:
+  port: 5265
+  volumeMounts:
+    - name: certificate-volume
+      mountPath: /certificates
+
+volumes:
+  - name: certificate-volume
+    secret:
+      secretName: signing-cert
+      items:
+        - key: tls.key
+          path: certificate.key
+        - key: tls.crt
+          path: certificate.crt
+
+certificate:
+  secretName: signing-cert
+  hostname: "spoontab.com"
+    
+identityClientId: 4a2f053f-da19-4daa-ab0e-5b9107b5f7a3
+    
