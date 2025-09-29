@@ -1,3 +1,5 @@
+using Common.Library.Configuration;
+using Common.Library.HealthChecks;
 using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MassTransit;
@@ -7,6 +9,7 @@ using InventoryService.Auth;
 using InventoryService.Entities;
 using InventoryService.Services;
 using MassTransit;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -15,11 +18,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddScoped<InventoryManager>();
 
+builder.Host.ConfigureAzureKeyVault();
 // Register Serilog first
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
 builder.Services.AddMongo();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMongoDb();
 builder.Services.AddMassTransitWithMessageBroker(
     builder.Configuration,
     retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
@@ -73,5 +80,6 @@ app.UseCors(corsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
+app.MapPosHealthChecks();
 app.MapControllers();
 app.Run();

@@ -1,0 +1,22 @@
+microserviceName: "inventory"
+
+image:
+  repository: acrpos.azurecr.io/pos.inventory
+  tag: 1.0.0
+
+envVariables:
+  ServiceSettings__Authority: https://spoontab.com/identity-svc
+  ASPNETCORE_URLS: "http://+:5094"
+
+resources:
+  requests:
+    memory: "160Mi"
+    cpu: "75m"
+  limits:
+    memory: "256Mi"
+    cpu: "150m"
+
+container:
+  port: 5094
+
+identityClientId: ccbe5952-fdd8-4e3b-ab1b-a2fdc6ce1fb2
