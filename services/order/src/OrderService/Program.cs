@@ -11,15 +11,22 @@ using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
 using Serilog;
+using Common.Library.Configuration;
+using Common.Library.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.ConfigureAzureKeyVault();
 // Add services to the container.
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
 // OrderService/Program.cs
 builder.Services.AddMongo();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMongoDb();
 builder.Services.AddTenancy();
 
 builder.Services.AddPosCatalogReadModel();
@@ -90,6 +97,7 @@ app.UseCors(corsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
+app.MapPosHealthChecks();
 app.MapControllers();
 app.MapTablesModule();
 app.Run();
