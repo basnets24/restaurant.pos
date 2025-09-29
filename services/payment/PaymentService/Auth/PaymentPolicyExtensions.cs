@@ -18,12 +18,12 @@ public static class PaymentPolicyExtensions
             o.AddPolicy(Charge, p =>
             {
                 p.Requirements.Add(new ScopeRequirement("payment.charge"));
-                p.RequireRole("Admin", "Manager");
+                p.RequireRole("Admin", "Manager", "Server", "Cashier");
             });
             o.AddPolicy(Refund, p =>
             {
                 p.Requirements.Add(new ScopeRequirement("payment.refund"));
-                p.RequireRole("Admin");
+                p.RequireRole("Admin", "Manager", "Cashier");
             });
         });
         return services;

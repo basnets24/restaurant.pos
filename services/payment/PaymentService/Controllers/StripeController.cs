@@ -4,13 +4,17 @@ using Common.Library;
 using Common.Library.Tenancy;
 using PaymentService.Entities;
 using PaymentService.Settings;
+using Stripe;
 using Stripe.Checkout;
+using Microsoft.AspNetCore.Authorization;
+using PaymentService.Auth;
 
 namespace PaymentService.Controllers;
 
 
 [ApiController]
 [Route("api/payments/stripe")]
+[Authorize]
 public class StripeController : ControllerBase
 {
     private readonly IRepository<Payment> _payments;
@@ -18,22 +22,30 @@ public class StripeController : ControllerBase
     private readonly FrontendSettings _frontend;
     private readonly ILogger<StripeController> _logger;
     private readonly ITenantContext _tenant;
+    private readonly IStripeClient _stripeClient;
 
     public StripeController(
         IRepository<Payment> payments,
         IOptions<StripeSettings> stripeOptions,
         IOptions<FrontendSettings> frontendOptions,
         ILogger<StripeController> logger,
-        ITenantContext tenant)
+        ITenantContext tenant,
+        IStripeClient stripeClient)
     {
         _payments = payments;
         _stripe = stripeOptions.Value;
         _frontend = frontendOptions.Value;
         _logger = logger;
         _tenant = tenant;
+        _stripeClient = stripeClient;
+        if (string.IsNullOrWhiteSpace(_stripe.SecretKey))
+        {
+            throw new InvalidOperationException("Stripe:SecretKey is not configured.");
+        }
     }
-    
+
     // POST /api/payments/stripe/checkout/session
+    [Authorize(Policy = PaymentPolicyExtensions.Charge)]
     [HttpPost("checkout/session")]
     public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutRequest? req)
     {
@@ -128,7 +140,8 @@ public class StripeController : ControllerBase
             };
 
             _logger.LogDebug("Creating Stripe checkout session via API for Payment {PaymentId}", payment.Id);
-            var session = await new Stripe.Checkout.SessionService().CreateAsync(opts);
+            var sessionService = new SessionService(_stripeClient);
+            var session = await sessionService.CreateAsync(opts);
             _logger.LogInformation("Stripe checkout session created {SessionId}", session.Id);
 
             payment.ProviderRef = session.Id;
@@ -155,6 +168,7 @@ public class StripeController : ControllerBase
         }
     }
     
+    [Authorize(Policy = PaymentPolicyExtensions.Read)]
     [HttpPost("checkout/confirm")]
     public async Task<IActionResult> Confirm([FromQuery] string sessionId)
     {
@@ -167,7 +181,8 @@ public class StripeController : ControllerBase
         try
         {
             _logger.LogInformation("Confirming Stripe session {SessionId} trace {TraceId}", sessionId, HttpContext.TraceIdentifier);
-            var session = await new Stripe.Checkout.SessionService().GetAsync(sessionId, new Stripe.Checkout.SessionGetOptions { Expand = ["payment_intent"] });
+            var sessionService = new SessionService(_stripeClient);
+            var session = await sessionService.GetAsync(sessionId, new SessionGetOptions { Expand = ["payment_intent"] });
             var paid = string.Equals(session.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase);
 
             string? currency = null;
@@ -180,7 +195,8 @@ public class StripeController : ControllerBase
                 amount = pi.AmountReceived;
                 try
                 {
-                    var charges = await new Stripe.ChargeService().ListAsync(new Stripe.ChargeListOptions
+                    var chargeService = new ChargeService(_stripeClient);
+                    var charges = await chargeService.ListAsync(new ChargeListOptions
                     {
                         PaymentIntent = pi.Id,
                         Limit = 1

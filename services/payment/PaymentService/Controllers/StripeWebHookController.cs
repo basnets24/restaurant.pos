@@ -2,8 +2,11 @@ using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using PaymentService.Entities;
+using PaymentService.Settings;
 using Stripe;
 
 
@@ -12,6 +15,7 @@ namespace PaymentService.Controllers;
 
 [ApiController]
 [Route("/webhooks/stripe")]
+[AllowAnonymous]
 public class StripeWebhookController : ControllerBase
 {
     private readonly IRepository<Payment> _repo;
@@ -19,18 +23,26 @@ public class StripeWebhookController : ControllerBase
     private readonly string _secret;
     private readonly TenantMiddleware.TenantContextHolder _tenantHolder;
     private readonly ILogger<StripeWebhookController> _logger;
+    private readonly IStripeClient _stripeClient;
 
     public StripeWebhookController(IRepository<Payment> repo, 
         IPublishEndpoint publish, 
-        IConfiguration cfg, 
         ILogger<StripeWebhookController> logger,
-        TenantMiddleware.TenantContextHolder tenantHolder)
+        TenantMiddleware.TenantContextHolder tenantHolder,
+        IOptions<StripeSettings> stripeOptions,
+        IStripeClient stripeClient)
     {
         _repo = repo;
         _publish = publish;
-        _secret = cfg["Stripe:WebhookSecret"] ?? throw new InvalidOperationException("Missing Stripe:WebhookSecret");
         _logger = logger;
         _tenantHolder = tenantHolder;
+        var options = stripeOptions.Value;
+        if (string.IsNullOrWhiteSpace(options.WebhookSecret))
+        {
+            throw new InvalidOperationException("Stripe:WebhookSecret is not configured.");
+        }
+        _secret = options.WebhookSecret;
+        _stripeClient = stripeClient;
     }
 
     [HttpPost]
@@ -163,7 +175,8 @@ public class StripeWebhookController : ControllerBase
                 {
                     if (!string.IsNullOrWhiteSpace(s.PaymentIntentId))
                     {
-                        var chargeList = await new Stripe.ChargeService().ListAsync(new Stripe.ChargeListOptions
+                        var chargeService = new ChargeService(_stripeClient);
+                        var chargeList = await chargeService.ListAsync(new ChargeListOptions
                         {
                             PaymentIntent = s.PaymentIntentId,
                             Limit = 1
@@ -320,7 +333,8 @@ public class StripeWebhookController : ControllerBase
                 // Derive a receipt URL by querying the latest charge for this payment intent
                 try
                 {
-                    var chargeList = await new Stripe.ChargeService().ListAsync(new Stripe.ChargeListOptions
+                    var chargeService = new ChargeService(_stripeClient);
+                    var chargeList = await chargeService.ListAsync(new ChargeListOptions
                     {
                         PaymentIntent = pi.Id,
                         Limit = 1
