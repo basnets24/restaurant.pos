@@ -1,24 +1,26 @@
 using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.Tenancy;
-using Microsoft.EntityFrameworkCore;
+using Common.Library.Configuration;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Tenant.Domain.Data;
-using TenantService.Services;
 using Tenant.Domain.HealthChecks;
 using Tenant.Domain.Settings;
 using TenantService.Extensions;
 using TenantService.HostedServices;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using TenantService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // logging
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Host.ConfigureAzureKeyVault();
 
 // auth + tenancy
 builder.Services.AddPosJwtBearer();
