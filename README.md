@@ -1,6 +1,16 @@
 # Restaurant POS Services
 
-A microservices-based point-of-sale system for restaurants with separate services for identity, tenant management, menu, inventory, orders, and payments.
+A cloud-native restaurant management platform built with microservices architecture, deployed on Azure Kubernetes Service.
+
+## Technologies & Skills
+
+**Frontend**: React, TypeScript, TanStack Query, Tailwind CSS, SignalR  
+**Backend**: .NET 8 Microservices, ASP.NET Core Web API  
+**Databases**: MongoDB, PostgreSQL  
+**Cloud**: Azure Kubernetes Service, Cosmos DB, Service Bus, Container Registry  
+**DevOps**: Docker, Kubernetes, Helm, GitHub Actions, CI/CD  
+**Security**: OAuth 2.0/OpenID Connect, JWT Bearer tokens  
+**Patterns**: Event-driven architecture, CQRS, Multi-tenancy  
 
 ## Architecture Overview
 
@@ -10,6 +20,7 @@ A microservices-based point-of-sale system for restaurants with separate service
 - **Microservices**: Independent, domain-specific services
 - **Event-driven**: Services communicate via message broker
 - **Multi-tenancy**: Built for multiple restaurant operations
+- **Cloud-native**: Deployed on Azure Kubernetes Service (AKS)
 - **Containerized**: Docker-based deployment
 
 ### Infrastructure Components
@@ -17,94 +28,101 @@ A microservices-based point-of-sale system for restaurants with separate service
 - **MongoDB**: Business domain data storage
 - **RabbitMQ**: Service-to-service messaging
 - **Seq**: Centralized structured logging
+- **Azure Kubernetes Service**: Orchestration platform
+- **Azure Container Registry**: Container image repository
 
 ### Network Architecture
-- All services communicate via `pos-net` Docker network
-- Security: Non-root containers, environment-based secrets
+- Kubernetes services and ingress for external communication
+- Kubernetes namespaces for resource isolation
+- Security: Non-root containers, environment-based secrets, Azure Key Vault integration
 
-## Service Access Points
-- **Frontend**: http://localhost:5173
-- **Identity Service**: http://localhost:5265
-- **Tenant Service**: http://localhost:5200
-- **Menu Service**: http://localhost:5062
-- **Inventory Service**: http://localhost:5094
-- **Order Service**: http://localhost:5236
-- **Payment Service**: http://localhost:5238
+## Microservices
 
-## Core Services
+**Frontend**: React SPA with OIDC authentication, real-time updates, and tenant-aware UI  
+**Identity**: Authentication/authorization service with Duende IdentityServer  
+**Tenant**: Multi-tenant restaurant management and onboarding  
+**Menu**: Restaurant catalog with inventory integration  
+**Inventory**: Stock tracking with reservation workflows  
+**Order**: Cart, order processing, and real-time table management  
+**Payment**: Stripe integration with webhook processing
 
-### Identity Service
-- **Purpose**: Authentication and authorization service using Duende IdentityServer
-- **Responsibilities**: User management, JWT issuance, OAuth flows
-- **Documentation**: [services/identity/src/IdentityService/README.md](./services/identity/src/IdentityService/README.md)
+## System Design
 
-### Tenant Service
-- **Purpose**: Multi-tenant management system
-- **Responsibilities**: Restaurant onboarding, membership, tenant claims API
-- **Documentation**: [services/tenant/src/TenantService/README.md](./services/tenant/src/TenantService/README.md)
+### Event-Driven Communication
+- Services communicate via events through message brokers
+- Order → Payment → Inventory workflows managed via event chains
+- Real-time updates via SignalR for table status
 
-### Menu Service
-- **Purpose**: Menu management for each restaurant tenant
-- **Responsibilities**: Tenant-aware menu CRUD, events, inventory sync
-- **Documentation**: [services/menu/src/MenuService/README.md](./services/menu/src/MenuService/README.md)
+### Multi-Tenant Architecture
+- Data isolation per restaurant
+- JWT claims for tenant context
+- Shared infrastructure with logical separation
 
-### Inventory Service
-- **Purpose**: Inventory tracking and management
-- **Responsibilities**: Stock tracking, reserve/release workflow, events
-- **Documentation**: [services/inventory/src/InventoryService/README.md](./services/inventory/src/InventoryService/README.md)
+### Security Model
+- IdentityServer with OAuth 2.0
+- Role-based access with tenant context
+- API scopes for granular permissions
 
-### Order Service
-- **Purpose**: Order processing and management
-- **Responsibilities**: Carts, orders, dining tables, pricing, SignalR
-- **Documentation**: [services/order/src/OrderService/README.md](./services/order/src/OrderService/README.md)
+## Infrastructure & DevOps
 
-### Payment Service
-- **Purpose**: Payment processing integration
-- **Responsibilities**: Stripe Checkout sessions, webhooks, payment status
-- **Documentation**: [services/payment/PaymentService/README.md](./services/payment/PaymentService/README.md)
+### Development Workflow
+- Docker Compose for local development
+- Azure Kubernetes Service for production
+- GitHub Actions pipeline for CI/CD
+- Shared NuGet packages published via GitHub Packages
 
-## Shared Libraries
-
-### Common.Library
-- **Purpose**: Core infrastructure components and utilities
-- **Features**: Logging, tenancy, MongoDB repositories, MassTransit, identity helpers
-- **Documentation**: [shared/common.library/README.md](./shared/common.library/README.md)
-  
-### Tenant.Domain
-- **Purpose**: Tenant data structure and access
-- **Features**: EF Core domain + DbContext for tenant data
-- **Documentation**: [shared/tenant.domain/README.md](./shared/tenant.domain/README.md)
-
-### Messaging.Contracts
-- **Purpose**: Service communication contracts
-- **Features**: Shared event contracts used by all services
-- **Documentation**: [shared/messaging.contracts/README.md](./shared/messaging.contracts/README.md)
-
-## Development Setup
-
-### Prerequisites
-1. **GitHub Personal Access Token** with `read:packages` permission for private NuGet packages
-2. **Docker** and **Docker Compose** installed
-3. **Environment variables** configured
+### Key Architectural Patterns
+- Service-to-service communication via message bus
+- Repository pattern for data access
+- CQRS for business operations
+- Health checks and graceful degradation
 
 
-### Package Management
+## Project Structure
 
-#### Current Package Versions
-- **Messaging.Contracts**: 1.0.6
-- **Common.Library**: 1.0.13
-- **Tenant.Domain**: 1.0.1
+- **services/**: All microservices (frontend, identity, tenant, menu, inventory, order, payment)
+- **shared/**: Common libraries and contracts
+- **infra/**: Infrastructure configuration (Docker, Kubernetes, Helm)
+- **docs/**: Documentation and architectural diagrams
 
-#### Automatic Package Publishing
+## Quick Start
 
-Packages are automatically published to GitHub Packages when you push changes to shared libraries:
+### Local Development
+```bash
+# Configure GitHub package access
+export GH_PAT=your_token
 
-1. **Edit version** in the library's `.csproj` file (e.g., `<Version>1.0.7</Version>`)
-2. **Commit and push** changes to `dev` or `main` branch
-3. **GitHub Actions** automatically builds and publishes the updated package
+# Start infrastructure
+cd infra && docker-compose up -d
 
-**Publishing Triggers**:
-- `shared/Messaging.Contracts/**` → publishes Messaging.Contracts
-- `shared/common.library/**` → publishes Common.Library
-- `shared/tenant.domain/**` → publishes Tenant.Domain
+# Run services (each service directory has detailed instructions)
+cd ../services/identity && dotnet run
+```
+
+### Key Tools
+- **Seq**: Logging at http://localhost:5341
+- **RabbitMQ**: Message monitoring at http://localhost:15672
+- **Swagger**: API documentation at each service's /swagger endpoint
+
+### Common Issues
+- **Package Restore**: Check GH_PAT environment variable
+- **Service Communication**: Verify message broker connectivity
+- **Authentication**: Ensure correct tenant claims in JWT tokens
+
+## Cloud Deployment
+
+### Azure Resources
+- **AKS**: Kubernetes orchestration
+- **PostgreSQL**: Identity and tenant data
+- **Cosmos DB**: Business domain data
+- **Service Bus**: Messaging infrastructure
+- **Container Registry**: Docker images
+- **Application Insights**: Monitoring
+
+### Deployment Pipeline
+- GitHub Actions for CI/CD
+- Helm charts in `/infra/helm/`
+- Azure Key Vault integration
+
+For deployment instructions, see [AZURE_DEPLOYMENT.md](./docs/AZURE_DEPLOYMENT.md).
 
