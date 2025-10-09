@@ -1,0 +1,28 @@
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: spoontab-host
+  namespace: emissary
+spec:
+  hostname: spoontab.com
+  tlsSecret:
+    name: spoontab-tls
+  acmeProvider:
+    email: sneha.basnet2@gmail.com
+    
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: spoontab-host-www
+  namespace: emissary
+spec:
+  hostname: www.spoontab.com
+  tlsSecret:
+    name: spoontab-tls
+  acmeProvider:
+    email: sneha.basnet2@gmail.com
+  requestPolicy:
+    insecure:
+      action: Redirect      # HTTP -> HTTPS
+      additionalPort: 8080

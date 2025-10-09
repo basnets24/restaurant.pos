@@ -4,23 +4,31 @@ using Common.Library.MassTransit;
 using MenuService.Entities;
 using Common.Library.MongoDB;
 using Common.Library.Tenancy;
+using Common.Library.Configuration;
 using MassTransit;
 using MenuService.Auth;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Common.Library.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
-builder.Services
-    .AddMongo()
-    .AddMassTransitWithRabbitMq( retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)) );
+builder.Host.ConfigureAzureKeyVault();
+builder.Services.AddMongo();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMongoDb();
+builder.Services.AddMassTransitWithMessageBroker(
+    builder.Configuration,
+    retryConfigurator => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
 builder.Services.AddTenancy();
 builder.Services.AddTenantMongoRepository<MenuItem>("menuitems");
 
-builder.Services.AddMenuPolicies().AddPosJwtBearer(); 
+builder.Services.AddMenuPolicies().AddPosJwtBearer();
 builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
@@ -48,12 +56,21 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(corsPolicy);
 }
+
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
+
+app.UseRouting();
+
+// Enable CORS for all environments (frontend needs to call menu service)
+app.UseCors(corsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 app.UseTenancy();
+app.MapPosHealthChecks();
 app.MapControllers();
 app.Run();

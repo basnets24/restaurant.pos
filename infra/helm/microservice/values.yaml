@@ -1,0 +1,42 @@
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 0
+    maxUnavailable: 1
+
+envVariables:
+  ServiceSettings__MessageBroker: SERVICEBUS
+  ServiceSettings__KeyVaultName: keyv-pos
+ 
+resources:
+  requests:
+    memory: "384Mi"
+    cpu: "300m"
+  limits:
+    cpu: "1"
+    memory: 1Gi
+    
+container:
+  readiness:
+    path: /health/ready
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+  liveness:
+    path: /health/live
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+  startupProbe:
+    path: /health/live
+    failureThreshold: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+  
+service: 
+  type: ClusterIP
+  port: 80
+        
+    

@@ -1,0 +1,70 @@
+# Default values for frontend.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: acrpos.azurecr.io/pos.frontend
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+ 
+configValues:
+  - key: CATALOG_SERVICE_URL
+    value: >-
+      window.CATALOG_SERVICE_URL || `${window.location.origin}/catalog-svc`
+  - key: MENU_ITEMS_API_URL
+    value: >-
+      window.MENU_ITEMS_API_URL || `${window.CATALOG_SERVICE_URL}/menu-items`
+  - key: MENU_CATEGORIES_API_URL
+    value: >-
+      window.MENU_CATEGORIES_API_URL || `${window.CATALOG_SERVICE_URL}/menu-items/categories`
+  - key: INVENTORY_SERVICE_URL
+    value: >-
+      window.INVENTORY_SERVICE_URL || `${window.location.origin}/inventory-svc`
+  - key: INVENTORY_ITEMS_API_URL
+    value: >-
+      window.INVENTORY_ITEMS_API_URL || `${window.INVENTORY_SERVICE_URL}/inventory-items`
+  - key: IDENTITY_SERVICE_URL
+    value: >-
+      window.IDENTITY_SERVICE_URL || `${window.location.origin}/identity-svc`
+  - key: USERS_API_URL
+    value: >-
+      window.USERS_API_URL || `${window.IDENTITY_SERVICE_URL}/users`
+  - key: ORDER_SERVICE_URL
+    value: >-
+      window.ORDER_SERVICE_URL || `${window.location.origin}/order-svc`
+  - key: ORDERS_API_URL
+    value: >-
+      window.ORDERS_API_URL || `${window.ORDER_SERVICE_URL}/orders`
+  - key: TABLES_API_URL
+    value: >-
+      window.TABLES_API_URL || `${window.ORDER_SERVICE_URL}/api/tables`
+  - key: PAYMENT_SERVICE_URL
+    value: >-
+      window.PAYMENT_SERVICE_URL || `${window.location.origin}/payment-svc`
+  - key: RABBITMQ_URL
+    value: >-
+      window.RABBITMQ_URL || 'http://localhost:15672'
+  - key: TENANT_SERVICE_URL
+    value: >-
+      window.TENANT_SERVICE_URL || `${window.location.origin}/tenant-svc`
+
+podAnnotations: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    memory: "128Mi"
+    cpu: "150m"
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80

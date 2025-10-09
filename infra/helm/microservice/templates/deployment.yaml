@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Values.microserviceName }}-deployment"
+  labels:
+    app.kubernetes.io/name: {{ .Values.microserviceName }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if .Values.strategy }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.microserviceName }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.microserviceName }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: "{{ .Values.microserviceName }}-serviceaccount"
+      containers:
+        - name: {{ .Values.microserviceName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            {{- range $key, $value := .Values.envVariables }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          ports:
+            - containerPort: {{ .Values.container.port }}
+          {{- if .Values.container.startupProbe }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.container.startupProbe.path }}
+              port: {{ .Values.container.port }}
+            periodSeconds: {{ .Values.container.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.container.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.container.startupProbe.failureThreshold }}
+            {{- end }}
+          {{- if .Values.container.liveness }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.container.liveness.path }}
+              port: {{ .Values.container.port }}
+            initialDelaySeconds: {{ .Values.container.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.container.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.container.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.container.liveness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.container.readiness }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.container.readiness.path }}
+              port: {{ .Values.container.port }}
+            initialDelaySeconds: {{ .Values.container.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.container.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.container.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.container.readiness.failureThreshold }}
+          {{- end }}
+          volumeMounts:
+            {{- toYaml .Values.container.volumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.volumes | nindent 8 }}

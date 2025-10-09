@@ -22,6 +22,55 @@ Single-page web app for restaurant operations (tables, orders, payments, managem
 - UI: Tailwind CSS + component primitives (buttons, cards, tabs, etc.)
 - Config: runtime `public/config.js` (no build-time secrets in bundle)
 
+## Build and Run Scripts
+
+#### Setup & Run
+```bash
+# Build and run Frontend (requires backend services)
+cd services/frontend
+npm install
+npm run dev  # http://localhost:5173
+```
+
+#### Production Build
+```bash
+# Build for production
+cd services/frontend
+npm install
+npm run build  # Output to dist/
+```
+
+#### Docker Build
+```bash
+# Build Docker image
+cd services/frontend
+docker build -t restaurant-pos/frontend:1.0.0 .
+docker run -d -p 5173:80 restaurant-pos/frontend:1.0.0
+```
+
+
+## Build the docker image
+```bash
+# Build the docker image in Bash
+version="1.0.0"
+ACR="acrpos"
+
+docker build -t "$ACR.azurecr.io/play.frontend:$version" .
+
+## amd 64 version
+docker buildx build --platform linux/amd64 \
+  -t "$ACR.azurecr.io/pos.frontend:$version" \
+  --push .
+```
+
+## Install the Helm chart
+```powershell
+namespace="frontend"
+helm install frontend-client ./helm --create-namespace -n $namespace
+```
+
+
+
 ## Quick Start (Dev)
 
 ```bash
@@ -70,7 +119,7 @@ Build and run the static image served by Nginx:
 
 ```bash
 docker build -t pos-frontend:dev .
-docker run --rm -p 8080:80 pos-frontend:dev
+docker run --rm -p 5173:80 pos-frontend:dev
 ```
 
 Override config per environment by mounting a different `config.js`:

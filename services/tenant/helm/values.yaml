@@ -1,0 +1,22 @@
+microserviceName: "tenant"
+
+image:
+  repository: acrpos.azurecr.io/pos.tenant
+  tag: 1.0.0
+
+envVariables:
+  ServiceSettings__Authority: https://spoontab.com/identity-svc
+  ASPNETCORE_URLS: "http://+:5200"
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "75m"
+  limits:
+    memory: "256Mi"
+    cpu: "150m"
+
+container:
+  port: 5200
+
+identityClientId: 42d69c2d-f39d-45d6-84db-f2a20fa86462

@@ -5,10 +5,115 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+
 namespace Common.Library.MassTransit;
 
 public static class Extensions
 {
+    private const string RabbitMq = "RABBITMQ";
+    private const string ServiceBus = "SERVICEBUS";
+
+    // New method to add MassTransit with azure service bus
+    //  and default local rabbitmq configuration
+
+    public static IServiceCollection AddMassTransitWithMessageBroker(
+        this IServiceCollection services, 
+        IConfiguration config,
+        Action<IRetryConfigurator>? configureRetries = null)
+    {
+       var serviceSettings =  config.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
+       switch (serviceSettings!.MessageBroker?.ToUpper())
+       {
+           case ServiceBus:
+               services.AddMassTransitWithAzureServiceBus(configureRetries);
+               break;
+           case RabbitMq:
+           default:
+               services.AddMassTransitWithRabbitMq(configureRetries);
+               break;
+       }
+       return services;
+    }
+
+    public static void UsingRestaurantPosMessageBroker(
+        this IBusRegistrationConfigurator configure, 
+        IConfiguration config,
+        Action<IRetryConfigurator>? configureRetries = null,
+        Action<IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>? configureRabbitBus = null,
+        Action<IBusRegistrationContext, IServiceBusBusFactoryConfigurator>? configureServiceBus = null)
+    { 
+        var serviceSettings =  config.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
+        switch (serviceSettings!.MessageBroker?.ToUpper())
+        {
+            case ServiceBus:
+                configure.UsingRestaurantPosAzureServiceBus(
+                    configureRetries,
+                    configureServiceBus);
+                break;
+            case RabbitMq:
+            default:
+                configure.UsingRestaurantPosRabbitMq(
+                    configureRetries,
+                    configureRabbitBus);
+                break;
+        }
+        
+    }
+
+
+    public static IServiceCollection AddMassTransitWithAzureServiceBus(
+        this IServiceCollection services, 
+        Action<IRetryConfigurator>? configureRetries = null)
+    {
+        services.AddTenantBusTenancy();
+
+        services.AddMassTransit(configure =>
+        {
+            configure.AddServiceBusMessageScheduler();
+
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly is not null)
+                configure.AddConsumers(entryAssembly);
+
+            configure.UsingRestaurantPosAzureServiceBus(configureRetries);
+        }); 
+        return services;
+    }
+
+    public static void UsingRestaurantPosAzureServiceBus(
+        this IBusRegistrationConfigurator configure, 
+        Action<IRetryConfigurator>? configureRetries = null)
+        => UsingRestaurantPosAzureServiceBus(configure, configureRetries, null);
+
+    public static void UsingRestaurantPosAzureServiceBus(
+        this IBusRegistrationConfigurator configure, 
+        Action<IRetryConfigurator>? configureRetries,
+        Action<IBusRegistrationContext, IServiceBusBusFactoryConfigurator>? configureBus)
+    {
+        configure.UsingAzureServiceBus((context, configurator) =>
+        {
+            var configuration = context.GetRequiredService<IConfiguration>();
+            var serviceSettings = configuration.GetRequiredSection(nameof(ServiceSettings)).Get<ServiceSettings>()!;
+            var serviceBusSettings = configuration.GetRequiredSection(nameof(ServiceBusSettings)).Get<ServiceBusSettings>()!;
+
+            configurator.Host(serviceBusSettings.ConnectionString);
+
+            configurator.UseTenantPropagation(context);
+            configurator.UseServiceBusMessageScheduler();
+
+            configureBus?.Invoke(context, configurator);
+
+            configureRetries ??= retryConfigurator => retryConfigurator.Interval(3,  TimeSpan.FromSeconds(5));
+            configurator.UseMessageRetry(configureRetries);
+            configurator.UseInstrumentation(serviceName: serviceSettings.ServiceName);
+
+            configurator.ConfigureEndpoints(
+                context,
+                new KebabCaseEndpointNameFormatter(serviceSettings.ServiceName, false));
+        });
+    }
+    
+
     public static IServiceCollection AddMassTransitWithRabbitMq(
         this IServiceCollection services,
         Action<IRetryConfigurator>? configureRetries = null)

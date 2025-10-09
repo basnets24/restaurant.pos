@@ -1,22 +1,34 @@
+using Common.Library.Configuration;
+using Common.Library.HealthChecks;
+using Common.Library.Identity;
 using Common.Library.MassTransit;
 using Common.Library.MongoDB;
 using Common.Library.Tenancy;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using PaymentService.Auth;
 using PaymentService.Entities;
 using PaymentService.Settings;
 using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Host.ConfigureAzureKeyVault();
 builder.Services.AddControllers();
 
 // Bind options
-builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
-builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection("Frontend"));
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(nameof(StripeSettings)));
+builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection(nameof(FrontendSettings)));
 
-// Stripe secret key (server-side)
-var secretKey = builder.Configuration["Stripe:SecretKey"]
-                ?? throw new InvalidOperationException("Stripe:SecretKey is not configured.");
-StripeConfiguration.ApiKey = secretKey;
+builder.Services.AddScoped<IStripeClient>(sp =>
+{
+    var monitor = sp.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<StripeSettings>>();
+    var settings = monitor.CurrentValue;
+    if (string.IsNullOrWhiteSpace(settings.SecretKey))
+    {
+        throw new InvalidOperationException("StripeSettings:SecretKey is not configured.");
+    }
+
+    return new StripeClient(settings.SecretKey);
+});
 
 // CORS
 const string CorsPolicy = "frontend";
@@ -32,10 +44,13 @@ builder.Services.AddCors(options =>
 
 // Persistence / bus
 builder.Services.AddMongo();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMongoDb();
 builder.Services.AddTenancy();
-builder.Services.AddTenantMongoRepository<Payment>("payments"); 
-
-builder.Services.AddMassTransitWithRabbitMq();
+builder.Services.AddTenantMongoRepository<Payment>("payments");
+builder.Services.AddPaymentPolicies().AddPosJwtBearer();
+builder.Services.AddMassTransitWithMessageBroker(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -49,14 +64,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
 
-// CORS BEFORE controllers
+app.UseRouting();
+
+// Enable CORS for all environments (frontend needs to call payment service)
 app.UseCors(CorsPolicy);
-app.UseTenancy(); 
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseTenancy();
+app.MapPosHealthChecks();
 app.MapControllers();
-
-app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" }));
-app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
-
 app.Run();

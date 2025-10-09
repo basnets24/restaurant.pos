@@ -6,6 +6,7 @@ public class MongoDbSettings
     public int Port { get; init; }
 
     public string? ConnectionString { get; init; } 
+    public string? DatabaseName { get; init; }
     
     public string GetConnectionString()
     {

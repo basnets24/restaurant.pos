@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Microsoft.Extensions.Logging;
 
 namespace IdentityService.Services;
 
@@ -6,13 +7,15 @@ public class HttpTenantClaimsProvider : ITenantClaimsProvider
 {
     private readonly HttpClient _http;
     private readonly IConfiguration _config;
+    private readonly ILogger<HttpTenantClaimsProvider> _logger;
     private string? _cachedToken;
     private DateTimeOffset _cachedTokenExpiresAt;
 
-    public HttpTenantClaimsProvider(HttpClient http, IConfiguration config)
+    public HttpTenantClaimsProvider(HttpClient http, IConfiguration config, ILogger<HttpTenantClaimsProvider> logger)
     {
         _http = http;
         _config = config;
+        _logger = logger;
     }
 
     public async Task<TenantClaimResult?> GetAsync(Guid userId, CancellationToken ct)
@@ -24,11 +27,17 @@ public class HttpTenantClaimsProvider : ITenantClaimsProvider
 
         using var res = await SendWithRetryAsync(() => _http.SendAsync(req, ct), ct);
         if (!res.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Tenant claims HTTP request failed with status {StatusCode} for user {UserId}", (int)res.StatusCode, userId);
             return null;
+        }
 
         var payload = await res.Content.ReadFromJsonAsync<TenantClaimsDto>(cancellationToken: ct);
         if (payload is null || string.IsNullOrWhiteSpace(payload.restaurantId))
+        {
+            _logger.LogWarning("Tenant claims payload missing restaurantId for user {UserId}", userId);
             return null;
+        }
         IReadOnlyCollection<string> roles = payload.roles ?? new List<string>();
         return new TenantClaimResult(payload.restaurantId, payload.locationId, roles);
     }
@@ -50,7 +59,10 @@ public class HttpTenantClaimsProvider : ITenantClaimsProvider
         var clientSecret = _config["TenantService:ClientSecret"];
         var scope = _config["TenantService:Scope"] ?? "tenant.claims.read";
         if (string.IsNullOrWhiteSpace(authority) || string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+        {
+            _logger.LogWarning("Tenant claims token acquisition misconfigured (Authority/ClientId/Secret missing). Returning null token.");
             return null; // misconfigured, gracefully degrade
+        }
 
         using var tokenClient = new HttpClient { BaseAddress = new Uri(authority) };
         using var req = new HttpRequestMessage(HttpMethod.Post, "/connect/token")
@@ -65,13 +77,17 @@ public class HttpTenantClaimsProvider : ITenantClaimsProvider
         };
         using var res = await SendWithRetryAsync(() => tokenClient.SendAsync(req, ct), ct);
         if (!res.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Tenant claims token endpoint returned {StatusCode}", (int)res.StatusCode);
             return null;
+        }
 
         var payload = await res.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: ct);
         if (payload?.access_token is null) return null;
         _cachedToken = payload.access_token;
         var expiresIn = payload.expires_in <= 0 ? 300 : payload.expires_in;
         _cachedTokenExpiresAt = DateTimeOffset.UtcNow.AddSeconds(Math.Min(expiresIn, 300));
+        _logger.LogDebug("Acquired tenant claims access token (expires in ~{Seconds}s)", expiresIn);
         return _cachedToken;
     }
 
@@ -82,7 +98,7 @@ public class HttpTenantClaimsProvider : ITenantClaimsProvider
     private static bool IsTransient(Exception ex)
         => ex is HttpRequestException || ex is TaskCanceledException;
 
-    private static async Task<HttpResponseMessage> SendWithRetryAsync(Func<Task<HttpResponseMessage>> send, CancellationToken ct)
+    private async Task<HttpResponseMessage> SendWithRetryAsync(Func<Task<HttpResponseMessage>> send, CancellationToken ct)
     {
         var delays = new[] { 100, 300, 700 };
         HttpResponseMessage? last = null;
@@ -94,13 +110,16 @@ public class HttpTenantClaimsProvider : ITenantClaimsProvider
                 if (res.IsSuccessStatusCode || !IsTransient(res))
                     return res;
                 last = res;
+                _logger.LogDebug("Transient tenant claims HTTP status {StatusCode}; retry {Retry}/{Total}", (int)res.StatusCode, i + 1, delays.Length);
             }
             catch (Exception ex) when (IsTransient(ex) && i < delays.Length - 1)
             {
-                // swallow and retry
+                _logger.LogDebug(ex, "Transient exception during tenant claims HTTP call; retry {Retry}/{Total}", i + 1, delays.Length);
             }
             await Task.Delay(delays[i], ct);
         }
+        if (last is not null)
+            _logger.LogWarning("Exhausted retries for tenant claims HTTP call. Last status {StatusCode}", (int)last.StatusCode);
         return last ?? await send();
     }
 }

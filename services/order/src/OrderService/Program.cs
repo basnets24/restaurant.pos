@@ -11,15 +11,22 @@ using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
 using Serilog;
+using Common.Library.Configuration;
+using Common.Library.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.ConfigureAzureKeyVault();
 // Add services to the container.
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
 // OrderService/Program.cs
 builder.Services.AddMongo();
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddMongoDb();
 builder.Services.AddTenancy();
 
 builder.Services.AddPosCatalogReadModel();
@@ -35,10 +42,12 @@ builder.Services.Configure<PricingSettings>(
 
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
-builder.Services.AddScoped<IDiningTableService, DiningTableService>(); 
+builder.Services.AddScoped<IDiningTableService, DiningTableService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
-builder.Services.AddOrderPolicies().AddPosJwtBearer(); 
+
+
+builder.Services.AddOrderPolicies().AddPosJwtBearer();
 const string corsPolicy = "frontend";
 builder.Services.AddCors(options =>
 {
@@ -54,6 +63,10 @@ builder.Services.AddControllers(options =>
     options.SuppressAsyncSuffixInActionNames = false;
 });
 builder.Services.AddSignalR();
+
+// Add error handling
+builder.Services.AddErrorHandling();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -62,6 +75,9 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Global exception handling middleware (must be first)
+app.UseGlobalExceptionHandling();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -69,13 +85,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
+
 app.UseRouting();
+
+// Enable CORS for all environments (frontend needs to call order service)
 app.UseCors(corsPolicy);
-app.UseApiProblemDetails();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
+app.MapPosHealthChecks();
 app.MapControllers();
 app.MapTablesModule();
 app.Run();

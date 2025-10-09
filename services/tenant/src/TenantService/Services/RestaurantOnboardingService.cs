@@ -1,13 +1,39 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Data;
 using Tenant.Domain.Entities;
 using Tenant.Domain;
+using TenantService.Validation;
 
 namespace TenantService.Services;
 
-public record OnboardRestaurantReq(string Name, string? LocationName, string? TimeZoneId);
+public record OnboardRestaurantReq(
+    [Required(ErrorMessage = "Restaurant name is required")]
+    [StringLength(200, MinimumLength = 2, ErrorMessage = "Restaurant name must be between 2 and 200 characters")]
+    [RegularExpression(@"^[a-zA-Z0-9\s\-_.()&']+$", ErrorMessage = "Restaurant name contains invalid characters")]
+    [SafeName]
+    string Name,
+
+    [StringLength(100, ErrorMessage = "Location name cannot exceed 100 characters")]
+    [RegularExpression(@"^[a-zA-Z0-9\s\-_.()]+$", ErrorMessage = "Location name contains invalid characters")]
+    [SafeName]
+    string? LocationName,
+
+    [StringLength(100, ErrorMessage = "Time zone ID cannot exceed 100 characters")]
+    [ValidTimeZone]
+    string? TimeZoneId
+);
+
 public record OnboardRestaurantRes(string RestaurantId, string LocationId);
-public record JoinRestaurantReq(string Code);
+
+public record JoinRestaurantReq(
+    [Required(ErrorMessage = "Join code is required")]
+    [StringLength(100, MinimumLength = 3, ErrorMessage = "Join code must be between 3 and 100 characters")]
+    [RegularExpression(@"^[a-zA-Z0-9\-_]+$", ErrorMessage = "Join code contains invalid characters")]
+    [SafeName]
+    string Code
+);
+
 public record JoinCodeRes(string RestaurantId, string? Slug);
 
 public class RestaurantOnboardingService
@@ -20,11 +46,20 @@ public class RestaurantOnboardingService
 
     public async Task<OnboardRestaurantRes> OnboardAsync(Guid userId, OnboardRestaurantReq req, CancellationToken ct)
     {
-        var r = new Restaurant { Name = req.Name.Trim(), Slug = Slugify(req.Name) };
+        // Sanitize and validate input
+        var sanitizedName = SanitizeInput(req.Name.Trim());
+        var sanitizedLocationName = string.IsNullOrWhiteSpace(req.LocationName)
+            ? "Main"
+            : SanitizeInput(req.LocationName.Trim());
+
+        // Validate business rules
+        await ValidateRestaurantNameIsUniqueAsync(sanitizedName, ct);
+
+        var r = new Restaurant { Name = sanitizedName, Slug = Slugify(sanitizedName) };
         var loc = new Location
         {
             RestaurantId = r.Id,
-            Name = string.IsNullOrWhiteSpace(req.LocationName) ? "Main" : req.LocationName!.Trim(),
+            Name = sanitizedLocationName,
             TimeZoneId = req.TimeZoneId
         };
 
@@ -88,6 +123,35 @@ public class RestaurantOnboardingService
         if (r is null) return null;
 
         return new JoinCodeRes(r.Id, r.Slug);
+    }
+
+    private async Task ValidateRestaurantNameIsUniqueAsync(string name, CancellationToken ct)
+    {
+        var exists = await _db.Restaurants.AnyAsync(r => r.Name == name, ct);
+        if (exists)
+        {
+            throw new InvalidOperationException($"A restaurant with the name '{name}' already exists.");
+        }
+    }
+
+    private static string SanitizeInput(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return input;
+
+        // Remove potentially dangerous characters but keep normal business text
+        var sanitized = input
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;")
+            .Replace("'", "&#x27;")
+            .Replace("&", "&amp;")
+            .Replace("/", "&#x2F;");
+
+        // Remove excessive whitespace
+        sanitized = System.Text.RegularExpressions.Regex.Replace(sanitized, @"\s+", " ");
+
+        return sanitized.Trim();
     }
 
     private static string Slugify(string s) =>

@@ -9,24 +9,24 @@
 
 // ---- Global service URLs ----
 // You can override these via a custom config.js or using the Docker entrypoint.
-window.CATALOG_SERVICE_URL = window.CATALOG_SERVICE_URL || 'https://localhost:7226';
+window.CATALOG_SERVICE_URL = window.CATALOG_SERVICE_URL || 'http://localhost:5062';
 window.MENU_ITEMS_API_URL = `${window.CATALOG_SERVICE_URL}/menu-items`;
 window.MENU_CATEGORIES_API_URL = `${window.CATALOG_SERVICE_URL}/menu-items/categories`;
 
-window.INVENTORY_SERVICE_URL = window.INVENTORY_SERVICE_URL || 'https://localhost:7077';
+window.INVENTORY_SERVICE_URL = window.INVENTORY_SERVICE_URL || 'http://localhost:5094';
 window.INVENTORY_ITEMS_API_URL = `${window.INVENTORY_SERVICE_URL}/inventory-items`;
 
-window.IDENTITY_SERVICE_URL = window.IDENTITY_SERVICE_URL || 'https://localhost:7163';
+window.IDENTITY_SERVICE_URL = window.IDENTITY_SERVICE_URL || 'http://localhost:5265';
 
 window.USERS_API_URL = `${window.IDENTITY_SERVICE_URL}/users`;
 
-window.ORDER_SERVICE_URL = window.ORDER_SERVICE_URL || 'https://localhost:7288';
+window.ORDER_SERVICE_URL = window.ORDER_SERVICE_URL || 'http://localhost:5236';
 window.ORDERS_API_URL = `${window.ORDER_SERVICE_URL}/orders`;
 window.TABLES_API_URL = `${window.ORDER_SERVICE_URL}/api/tables`;
 
-window.PAYMENT_SERVICE_URL = window.PAYMENT_SERVICE_URL || 'https://localhost:7182';
+window.PAYMENT_SERVICE_URL = window.PAYMENT_SERVICE_URL || 'http://localhost:5238';
 // Payment session endpoint pattern: `${PAYMENT_SERVICE_URL}/orders/{orderId}/payment-session`
 
 window.RABBITMQ_URL = window.RABBITMQ_URL || 'http://localhost:15672';
 
-window.TENANT_SERVICE_URL = window.TENANT_SERVICE_URL || 'https://localhost:7180'; 
+window.TENANT_SERVICE_URL = window.TENANT_SERVICE_URL || 'http://localhost:5200'; 

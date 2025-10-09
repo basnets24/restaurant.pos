@@ -1,0 +1,48 @@
+# .dockerignore for Inventory Service
+
+# Ignore everything by default
+**
+
+# Include what we need
+!src/InventoryService/**
+
+# Exclude build artifacts and temporary files
+src/InventoryService/bin/
+src/InventoryService/obj/
+src/InventoryService/.vs/
+src/InventoryService/*.user
+src/InventoryService/*.suo
+src/InventoryService/*.cache
+src/InventoryService/launchSettings.json
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Runtime and temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+*.md

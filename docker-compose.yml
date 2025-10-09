@@ -1,0 +1,202 @@
+services:
+  # Application Services
+  identity-service:
+    build:
+      context: ../services/identity
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: identity-service
+    volumes:
+      - ${PWD}/certs:/https:ro
+    ports:
+      - "7163:443" # expose HTTPS to host
+      - "5265:5265"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:5265
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/identity-service.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=${CERT_PASSWORD}
+
+      - IdentitySettings__AdminUserPassword=${IDENTITY_ADMIN_PASSWORD}
+      - PostgresSettings__ConnectionString=${POSTGRES_CONNECTION_STRING}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
+      - SeqSettings__Host=seq
+      # Use embedded mode for tenant claims (direct database access, no HTTP calls needed)
+      - TenantService__Mode=Embedded
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  tenant-service:
+    build:
+      context: ../services/tenant
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: tenant-service
+    ports:
+      - "5200:5200"
+    environment:
+      - PostgresSettings__ConnectionString=${POSTGRES_CONNECTION_STRING}
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
+      - SeqSettings__Host=seq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  menu-service:
+    build:
+      context: ../services/menu
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: menu-service
+    ports:
+      - "5062:5062"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  inventory-service:
+    build:
+      context: ../services/inventory
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: inventory-service
+    ports:
+      - "5094:5094"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  order-service:
+    build:
+      context: ../services/order
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: order-service
+    ports:
+      - "5236:5236"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
+      - SeqSettings__Host=seq
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  payment-service:
+    build:
+      context: ../services/payment
+      dockerfile: Dockerfile
+      secrets:
+        - GH_OWNER
+        - GH_PAT
+    container_name: payment-service
+    ports:
+      - "5238:5238"
+    environment:
+      - MongoDbSettings__Host=mongodb
+      - RabbitMqSettings__Host=rabbitmq
+      - ServiceSettings__Authority=${SERVICE_AUTHORITY}
+      - SeqSettings__Host=seq
+      - Stripe__WebhookSecret=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      - Stripe__SecretKey=${STRIPE_SECRET_KEY:-sk_test_placeholder}
+    depends_on:
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      identity-service:
+        condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - pos-net
+
+  frontend:
+    build:
+      context: ../services/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      identity-service:
+        condition: service_started
+      tenant-service:
+        condition: service_started
+      menu-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+    networks:
+      - pos-net
+
+secrets:
+  GH_OWNER:
+    file: secrets/GH_OWNER
+  GH_PAT:
+    file: secrets/GH_PAT
+
+networks:
+  pos-net:
+    external: true
+    name: pos_pos-net

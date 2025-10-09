@@ -1,0 +1,47 @@
+name: Publish Tenant.Domain
+
+# Tag pattern: tenant.domain-v1.2.3
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'shared/tenant.domain/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  PACKAGE_ID: Tenant.Domain
+  PROJECT_PATH: shared/tenant.domain/Tenant.Domain.csproj
+
+concurrency:
+  group: publish-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  pack-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          source-url: "https://nuget.pkg.github.com/${{github.repository_owner}}/index.json"
+        env: 
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Pack
+        run: |
+         dotnet pack ${{ env.PROJECT_PATH }} --configuration Release \
+         -p:RepositoryUrl="https://github.com/${{github.repository_owner}}/restaurant.pos" \
+         -o Packages
+
+      - name: Publish
+        run: |
+          dotnet nuget push Packages/*.nupkg \
+            --source "https://nuget.pkg.github.com/${{github.repository_owner}}/index.json" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
+            --skip-duplicate

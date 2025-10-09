@@ -1,0 +1,48 @@
+# .dockerignore for Order Service
+
+# Ignore everything by default
+**
+
+# Include what we need
+!src/OrderService/**
+
+# Exclude build artifacts and temporary files
+src/OrderService/bin/
+src/OrderService/obj/
+src/OrderService/.vs/
+src/OrderService/*.user
+src/OrderService/*.suo
+src/OrderService/*.cache
+src/OrderService/launchSettings.json
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Runtime and temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+*.md

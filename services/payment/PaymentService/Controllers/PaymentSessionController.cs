@@ -1,5 +1,7 @@
 using Common.Library;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PaymentService.Auth;
 using PaymentService.Entities;
 
 namespace PaymentService.Controllers;
@@ -19,6 +21,7 @@ public class PaymentSessionController : ControllerBase
     }
 
     // GET orders/{orderId}/payment-session
+    [Authorize(Policy = PaymentPolicyExtensions.Read)]
     [HttpGet("{orderId:guid}/payment-session")]
     public async Task<IActionResult> GetPaymentSession([FromRoute] Guid orderId)
     {

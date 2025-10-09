@@ -1,20 +1,26 @@
 using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.Tenancy;
-using Microsoft.EntityFrameworkCore;
+using Common.Library.Configuration;
 using Microsoft.AspNetCore.Authorization;
-using Common.Library.Identity;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Tenant.Domain.Data;
+using Tenant.Domain.HealthChecks;
+using Tenant.Domain.Settings;
+using TenantService.Extensions;
+using TenantService.HostedServices;
 using TenantService.Services;
-using TenantService.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // logging
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Host.ConfigureAzureKeyVault();
 
 // auth + tenancy
 builder.Services.AddPosJwtBearer();
@@ -26,13 +32,30 @@ builder.Services.AddAuthorization(options =>
 });
 
 // db
+builder.Services.ConfigureTenantPostgres(builder.Configuration);
 var pg = builder.Configuration.GetSection("PostgresSettings").Get<PostgresSettings>();
 builder.Services.AddDbContext<TenantDbContext>(options =>
     options.UseNpgsql(pg!.GetConnectionString()));
 
 // services + controllers
 builder.Services.AddScoped<RestaurantOnboardingService>();
-builder.Services.AddControllers();
+
+// Auto-migration on startup
+builder.Services.AddHostedService<DatabaseMigrationHostedService>();
+
+// Health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy("Service is running"), tags: new[] { "live" })
+    .AddPostgresHealthCheck(name: "database", tags: new[] { "ready" });
+
+// Validation and error handling
+builder.Services.AddValidationAndErrorHandling();
+
+builder.Services.AddControllers(options =>
+{
+    // Suppress async suffix in action names for cleaner API
+    options.SuppressAsyncSuffixInActionNames = false;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -49,17 +72,37 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Global exception handling middleware (must be first)
+app.UseGlobalExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(corsPolicy);
 }
 
-app.UseHttpsRedirection();
+// Skip HTTPS redirection when running behind API Gateway
+// API Gateway handles TLS termination, services communicate via HTTP internally
+// Uncomment the following line if running service directly (without API Gateway):
+// app.UseHttpsRedirection();
+
+// (frontend needs to call tenant service)
+app.UseCors(corsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
+
+// Health check endpoints
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready") || check.Name == "self" || check.Name == "database"
+});
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Name == "self"
+});
+
 app.MapControllers();
 
 app.Run();
