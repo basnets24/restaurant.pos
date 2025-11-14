@@ -54,6 +54,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+var identitySettings = builder.Configuration.GetSection(nameof(IdentitySettings)).Get<IdentitySettings>();
+
 app.UseForwardedHeaders();
 //the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -71,13 +73,10 @@ if (app.Environment.IsDevelopment())
 //     app.UseHttpsRedirection();
 // }
 
-app.Use((context, next) =>
+if (!string.IsNullOrWhiteSpace(identitySettings?.PathBase))
 {
-    var identitySettings = builder.Configuration.GetSection(nameof(IdentitySettings)).Get<IdentitySettings>();
-    context.Request.PathBase = new PathString(identitySettings!.PathBase);
-    return next();
-});
-
+    app.UsePathBase(identitySettings.PathBase);
+}
 
 app.UseStaticFiles();
 
