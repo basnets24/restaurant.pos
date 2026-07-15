@@ -33,15 +33,15 @@ jobs:
             project: services/order/src/OrderService/OrderService.csproj
           - name: PaymentService
             project: services/payment/PaymentService/PaymentService.csproj
+    env:
+      # NuGet.config's github source reads credentials from %GH_PAT%
+      GH_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-          source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Restore
         run: dotnet restore ${{ matrix.project }}
