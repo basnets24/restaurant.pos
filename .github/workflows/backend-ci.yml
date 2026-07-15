@@ -1,0 +1,50 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ dev, main ]
+    paths: [ 'services/**', 'shared/**', '.github/workflows/backend-ci.yml' ]
+  pull_request:
+    branches: [ dev, main ]
+    paths: [ 'services/**', 'shared/**', '.github/workflows/backend-ci.yml' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: IdentityService
+            project: services/identity/src/IdentityService/IdentityService.csproj
+          - name: TenantService
+            project: services/tenant/src/TenantService/TenantService.csproj
+          - name: MenuService
+            project: services/menu/src/MenuService/MenuService.csproj
+          - name: InventoryService
+            project: services/inventory/src/InventoryService/InventoryService.csproj
+          - name: OrderService
+            project: services/order/src/OrderService/OrderService.csproj
+          - name: PaymentService
+            project: services/payment/PaymentService/PaymentService.csproj
+    env:
+      # NuGet.config's github source reads credentials from %GH_PAT%
+      GH_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore ${{ matrix.project }}
+
+      - name: Build
+        run: dotnet build ${{ matrix.project }} --configuration Release --no-restore
