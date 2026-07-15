@@ -1,17 +1,22 @@
 using Common.Library.Configuration;
 using Common.Library.Logging;
+using Common.Library.PostgreSQL;
 using Duende.IdentityServer.Configuration;
-using IdentityService.Extensions;
-using IdentityService.Identity.Extensions;
-using IdentityService.Identity.HostedServices;
-using IdentityService.Identity.Settings;
-using IdentityService.Tenancy.Extensions;
-using IdentityService.Tenancy.HostedServices;
-using IdentityService.Tenancy.Services;
+using IdentityService.Common.Extensions;
+using IdentityService.Common.Settings;
+using IdentityService.Data;
+using IdentityService.Features.Identity.Models;
+using IdentityService.Features.Identity.Repositories;
+using IdentityService.Features.Identity.Services;
+using IdentityService.Features.Tenancy.Repositories;
+using IdentityService.Features.Tenancy.Services;
+using IdentityService.HostedServices;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 using Microsoft.AspNetCore.HttpOverrides;
+using Tenant.Domain.Data;
+using Tenant.Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +36,24 @@ builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
 builder.Services.AddLocalApiAuthentication();
 builder.Services.AddControllers();
-builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
+builder.Services.Configure<Common.Settings.IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
 builder.Services.AddHostedService<IdentitySeedHostedService>();
 builder.Services.AddHostedService<TenantDatabaseMigrationHostedService>();
+
+// Identity Feature Services & Repositories
+builder.Services.AddEfRepository<ApplicationUser, ApplicationDbContext>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+// Tenancy Feature Services & Repositories
+builder.Services.AddEfRepository<Restaurant, TenantDbContext>();
+builder.Services.AddEfRepository<Location, TenantDbContext>();
+builder.Services.AddScoped<ITenantRepository, TenantRepository>();
+builder.Services.AddScoped<ILocationRepository, LocationRepository>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+
+// Existing services
 builder.Services.AddScoped<RestaurantOnboardingService>();
 builder.Services.AddTenantClaimsProvider();
 builder.Services.AddIdentityHealthChecks();

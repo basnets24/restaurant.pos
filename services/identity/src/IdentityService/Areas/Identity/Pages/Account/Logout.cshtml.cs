@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using IdentityService.Entities;
-using IdentityService.Identity.Settings;
+using IdentityService.Common.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
