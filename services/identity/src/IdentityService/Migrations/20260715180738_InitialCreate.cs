@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -33,8 +33,8 @@ namespace IdentityService.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     AccessCode = table.Column<string>(type: "text", nullable: true),
                     DisplayName = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    RestaurantId = table.Column<string>(type: "text", nullable: false),
-                    LocationId = table.Column<string>(type: "text", nullable: false),
+                    CurrentRestaurantId = table.Column<string>(type: "text", nullable: true),
+                    CurrentLocationId = table.Column<string>(type: "text", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Tenant.Domain.Migrations
 {
     /// <inheritdoc />
-    public partial class InitTenants : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -20,7 +20,7 @@ namespace Tenant.Domain.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     RestaurantId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     DefaultLocationId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
                     CreatedUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -36,7 +36,7 @@ namespace Tenant.Domain.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     RestaurantId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     RoleName = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false)
                 },
@@ -86,6 +86,12 @@ namespace Tenant.Domain.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_RestaurantMemberships_UserId",
+                schema: "tenant",
+                table: "RestaurantMemberships",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RestaurantMemberships_UserId_RestaurantId",
                 schema: "tenant",
                 table: "RestaurantMemberships",
@@ -93,11 +99,23 @@ namespace Tenant.Domain.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_RestaurantUserRoles_UserId_RestaurantId",
+                schema: "tenant",
+                table: "RestaurantUserRoles",
+                columns: new[] { "UserId", "RestaurantId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RestaurantUserRoles_UserId_RestaurantId_RoleName",
                 schema: "tenant",
                 table: "RestaurantUserRoles",
                 columns: new[] { "UserId", "RestaurantId", "RoleName" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TenantLocations_RestaurantId_IsActive",
+                schema: "tenant",
+                table: "TenantLocations",
+                columns: new[] { "RestaurantId", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_TenantLocations_RestaurantId_Name",

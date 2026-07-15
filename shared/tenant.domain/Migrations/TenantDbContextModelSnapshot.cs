@@ -50,6 +50,8 @@ namespace Tenant.Domain.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RestaurantId", "IsActive");
+
                     b.HasIndex("RestaurantId", "Name")
                         .IsUnique();
 
@@ -105,6 +107,8 @@ namespace Tenant.Domain.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.HasIndex("UserId", "RestaurantId")
                         .IsUnique();
 
@@ -131,6 +135,8 @@ namespace Tenant.Domain.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "RestaurantId");
 
                     b.HasIndex("UserId", "RestaurantId", "RoleName")
                         .IsUnique();

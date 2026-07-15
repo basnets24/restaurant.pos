@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Tenant.Domain</PackageId>
-    <Version>1.0.3</Version>
+    <Version>2.0.0</Version>
     <IsPackable>true</IsPackable>
     <Authors>basnets24</Authors>
     <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
@@ -24,6 +24,11 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.7" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
+    <!-- Design-time only, for `dotnet ef migrations` via TenantDbContextFactory; not needed at runtime by consumers -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.19">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250907021624_RecreateAppDbTables")]
-    partial class RecreateAppDbTables
+    [Migration("20260715180738_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,6 +66,12 @@ namespace IdentityService.Migrations
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CurrentLocationId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CurrentRestaurantId")
                         .HasColumnType("text");
 
                     b.Property<string>("DisplayName")
