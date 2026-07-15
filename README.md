@@ -66,7 +66,8 @@ A cloud-native restaurant management platform built with microservices architect
 ## Infrastructure & DevOps
 
 ### Development Workflow
-- Docker Compose for local development
+- Docker Compose for local infrastructure (MongoDB, PostgreSQL, RabbitMQ, Seq)
+- `scripts/dev.sh` runs services + frontend locally via `dotnet run` / `npm run dev`
 - Azure Kubernetes Service for production
 - GitHub Actions pipeline for CI/CD
 - Shared NuGet packages published via GitHub Packages
@@ -88,16 +89,27 @@ A cloud-native restaurant management platform built with microservices architect
 ## Quick Start
 
 ### Local Development
+
+**First-time setup**
 ```bash
-# Configure GitHub package access
-export GH_PAT=your_token
-
-# Start infrastructure
-cd infra && docker-compose up -d
-
-# Run services (each service directory has detailed instructions)
-cd ../services/identity && dotnet run
+cp .env.example .env
+# fill in GH_PAT (GitHub PAT with read:packages), POSTGRES_PASSWORD,
+# IdentitySettings__AdminUserPassword, and Stripe test keys if needed
 ```
+
+**Run everything**
+```bash
+# Start infra (mongo, postgres, rabbitmq, seq) + all services + frontend
+./scripts/dev.sh
+
+# Stop the services started by the script (infra keeps running)
+./scripts/dev.sh stop
+```
+
+Docker Compose (`infra/docker-compose.yml`) is used for infrastructure only.
+Services run directly via `dotnet run` (and the frontend via `npm run dev`),
+started and managed by `scripts/dev.sh`, which loads `.env`, waits for infra
+to be healthy, and trusts the local HTTPS dev certificate automatically.
 
 ### Key Tools
 - **Seq**: Logging at http://localhost:5341
@@ -105,7 +117,8 @@ cd ../services/identity && dotnet run
 - **Swagger**: API documentation at each service's /swagger endpoint
 
 ### Common Issues
-- **Package Restore**: Check GH_PAT environment variable
+- **Package Restore**: Check `GH_PAT` is set in `.env`
+- **Postgres auth errors**: `POSTGRES_PASSWORD` in `.env` must match what identity/tenant expect (`PostgresSettings__Password`, derived automatically by `scripts/dev.sh`)
 - **Service Communication**: Verify message broker connectivity
 - **Authentication**: Ensure correct tenant claims in JWT tokens
 

@@ -10,7 +10,7 @@ public class IdentitySettings
 
     public string LocationId { get; set; } = "Global";
 
-    public string PathBase { get; init; } = "/identity-svc";
+    public string PathBase { get; init; } = "";
 
     public string CertificateCerFilePath { get; init; } = "";
 

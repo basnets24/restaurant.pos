@@ -34,16 +34,24 @@ public class MenuItemCreatedConsumer : IConsumer<MenuItemCreated>
             return;
         }
         
-        // Save menu item snapshot
-        var menuItem = new MenuItem
+        // Save menu item snapshot (idempotent)
+        var menuItem = await _menuRepo.GetAsync(message.Id);
+        if (menuItem is null)
         {
-            Id = message.Id,
-            Name = message.Name,
-            Category = message.Category
-        }; 
-       await  _menuRepo.CreateAsync(menuItem);
-       _logger.LogInformation("Created local MenuItem {MenuItemName} - {MenuItemId}",
-           message.Name, message.Id);
+            menuItem = new MenuItem
+            {
+                Id = message.Id,
+                Name = message.Name,
+                Category = message.Category
+            };
+            await _menuRepo.CreateAsync(menuItem);
+            _logger.LogInformation("Created local MenuItem {MenuItemName} - {MenuItemId}",
+                message.Name, message.Id);
+        }
+        else
+        {
+            _logger.LogDebug("MenuItem {MenuItemId} already cached locally", message.Id);
+        }
        
        // Create an initial inventory item
         var inventoryItem = new InventoryItem

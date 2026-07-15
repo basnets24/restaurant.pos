@@ -1,8 +1,10 @@
 using Common.Library;
 using Common.Library.Tenancy;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace InventoryService.Entities;
 
+[BsonIgnoreExtraElements]
 public class MenuItem : IEntity, ITenantEntity
 {
     public Guid Id { get; set; }

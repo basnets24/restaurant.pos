@@ -11,8 +11,6 @@ export AKS=[AKS-NAME-HERE]
 export KV=[KEY-VAULT-NAME]
 ```
 
-
-
 ## Add GitHub Package source 
 
 ```bash 
@@ -107,4 +105,15 @@ kubectl apply -f ./emissary-ingress/tls-certificate.yaml -n "$namespace"
 ```bash
 kubectl apply -f ./emissary-ingress/host.yaml -n "$namespace"
 ```
+
+## Packaging and publishing microservice helm chart 
+```bash 
+helm package ./helm/microservice
+
+helmUser="00000000-0000-0000-0000-000000000000"
+helmPassword=$(az acr login --name $ACR --expose-token --output tsv --query accessToken)
+helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword 
+version=0.1.1
+helmchart=pos-microservice
+helm push $helmchart-$version.tgz oci://$ACR.azurecr.io/helm
 
