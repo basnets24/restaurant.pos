@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Data;
 using Tenant.Domain.Entities;
 using Tenant.Domain;
-using IdentityService.Tenancy.Validation;
+using IdentityService.Features.Tenancy.Validation;
 
 namespace IdentityService.Tenancy.Services;
 
