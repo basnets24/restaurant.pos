@@ -2,28 +2,26 @@ using Common.Library;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Interfaces;
+using OrderService.Projections;
 
 namespace OrderService.Services;
 
 public class CartService : ICartService
 {
     private readonly IRepository<Cart> _cartRepo;
-    private readonly IRepository<InventoryItem> _inventoryRepo;
-    private readonly IRepository<MenuItem> _menuItemRepo;
     private readonly IRepository<DiningTable> _tableRepo;
     private readonly IOrderService _orderService;
+    private readonly IRepository<PosCatalogItem> _posCatalog;
 
     public CartService(IRepository<Cart> cartRepo, 
         IRepository<DiningTable> tableRepo, 
         IOrderService orderService, 
-        IRepository<InventoryItem> inventoryRepo, 
-        IRepository<MenuItem> menuItemRepo)
+        IRepository<PosCatalogItem> posCatalog)
     {
         _cartRepo = cartRepo;
         _tableRepo = tableRepo;
         _orderService = orderService;
-        _inventoryRepo = inventoryRepo;
-        _menuItemRepo = menuItemRepo;
+        _posCatalog = posCatalog;
     }
 
     public async Task<Cart> GetAsync(Guid id)
@@ -70,14 +68,13 @@ public class CartService : ICartService
     public async Task AddItemAsync(Guid cartId, AddCartItemDto itemDto)
     {
         var cart = await _cartRepo.GetAsync(cartId);
-        var inv = await _inventoryRepo.GetAsync(i=> i.MenuId == itemDto.MenuItemId);
-        if (inv is null)
-            throw new InvalidOperationException("Inventory item not found.");
+        var posItem = await _posCatalog.GetAsync(itemDto.MenuItemId);
 
-        if (!inv.IsAvailable || inv.Quantity < itemDto.Quantity)
+        if (posItem is null)
+            throw new InvalidOperationException("Menu item not found in catalog.");
+
+        if (!posItem.MenuAvailable || !posItem.InventoryAvailable || posItem.Quantity < itemDto.Quantity)
             throw new InvalidOperationException("Item is unavailable or insufficient stock.");
-        
-        var menuItem = await _menuItemRepo.GetAsync(itemDto.MenuItemId);
         
         var existing = cart.Items.FirstOrDefault(i => i.MenuItemId == itemDto.MenuItemId);
         if (existing != null)
@@ -88,10 +85,10 @@ public class CartService : ICartService
         {
             cart.Items.Add(new CartItem
             {
-                MenuItemId = menuItem.Id,
-                MenuItemName = menuItem.Name,
+                MenuItemId = posItem.MenuItemId,
+                MenuItemName = posItem.Name,
                 Quantity = itemDto.Quantity,
-                UnitPrice = menuItem.Price, 
+                UnitPrice = posItem.BasePrice, 
                 Notes = itemDto.Notes 
             });
            

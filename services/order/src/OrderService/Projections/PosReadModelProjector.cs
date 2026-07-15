@@ -1,3 +1,4 @@
+using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
@@ -10,12 +11,18 @@ namespace OrderService.Projections
 {
     // Compact POS read model (unified on MenuItemId)
     [BsonIgnoreExtraElements]
-    public sealed class PosCatalogItem
+    public sealed class PosCatalogItem : IEntity, ITenantEntity
     {
+        [BsonIgnore]
+        public Guid Id
+        {
+            get => MenuItemId;
+            set => MenuItemId = value;
+        }
         [BsonId]
         public Guid   MenuItemId      { get; set; }
         public string RestaurantId    { get; set; } = default!;
-        public string? LocationId     { get; set; }
+        public string LocationId     { get; set; } = default!;
 
         public string  Name           { get; set; } = default!;
         public string  Category       { get; set; } = "Uncategorized";
@@ -57,13 +64,14 @@ namespace OrderService.Projections
         {
             var e = ctx.Message;
             if (!SameTenant(e.RestaurantId, e.LocationId)) return;
+            var location = NormalizeLocation(e.LocationId);
 
-            var filter = Key(e.Id, e.RestaurantId, e.LocationId);
+            var filter = Key(e.Id, e.RestaurantId, location);
 
             var update = Builders<PosCatalogItem>.Update
                 .SetOnInsert(x => x.MenuItemId,   e.Id)
                 .SetOnInsert(x => x.RestaurantId, e.RestaurantId)
-                .SetOnInsert(x => x.LocationId,   e.LocationId)
+                .SetOnInsert(x => x.LocationId,   location)
                 .Set(x => x.Name,          e.Name)
                 .Set(x => x.Category,      e.Category)
                 .Set(x => x.BasePrice,     e.Price)
@@ -71,15 +79,16 @@ namespace OrderService.Projections
                 .CurrentDate(x => x.UpdatedAt);
 
             await _col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-            await RecomputeIsAvailable(e.Id, e.RestaurantId, e.LocationId);
+            await RecomputeIsAvailable(e.Id, e.RestaurantId, location);
         }
 
         public async Task Consume(ConsumeContext<MenuItemUpdated> ctx)
         {
             var e = ctx.Message;
             if (!SameTenant(e.RestaurantId, e.LocationId)) return;
+            var location = NormalizeLocation(e.LocationId);
 
-            var filter = Key(e.Id, e.RestaurantId, e.LocationId);
+            var filter = Key(e.Id, e.RestaurantId, location);
 
             var update = Builders<PosCatalogItem>.Update
                 .Set(x => x.Name,          e.Name)
@@ -89,15 +98,16 @@ namespace OrderService.Projections
                 .CurrentDate(x => x.UpdatedAt);
 
             await _col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-            await RecomputeIsAvailable(e.Id, e.RestaurantId, e.LocationId);
+            await RecomputeIsAvailable(e.Id, e.RestaurantId, location);
         }
 
         public async Task Consume(ConsumeContext<MenuItemDeleted> ctx)
         {
             var e = ctx.Message;
             if (!SameTenant(e.RestaurantId, e.LocationId)) return;
+            var location = NormalizeLocation(e.LocationId);
 
-            await _col.DeleteOneAsync(Key(e.Id, e.RestaurantId, e.LocationId));
+            await _col.DeleteOneAsync(Key(e.Id, e.RestaurantId, location));
         }
 
         // ----------- INVENTORY -----------
@@ -106,8 +116,9 @@ namespace OrderService.Projections
         {
             var e = ctx.Message;
             if (!SameTenant(e.RestaurantId, e.LocationId)) return;
+            var location = NormalizeLocation(e.LocationId);
 
-            var filter = Key(e.MenuItemId, e.RestaurantId, e.LocationId);
+            var filter = Key(e.MenuItemId, e.RestaurantId, location);
 
             var update = Builders<PosCatalogItem>.Update
                 .Set(x => x.Quantity,           e.Quantity)
@@ -115,15 +126,16 @@ namespace OrderService.Projections
                 .CurrentDate(x => x.UpdatedAt);
 
             await _col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-            await RecomputeIsAvailable(e.MenuItemId, e.RestaurantId, e.LocationId);
+            await RecomputeIsAvailable(e.MenuItemId, e.RestaurantId, location);
         }
 
         public async Task Consume(ConsumeContext<InventoryItemDepleted> ctx)
         {
             var e = ctx.Message;
             if (!SameTenant(e.RestaurantId, e.LocationId)) return;
+            var location = NormalizeLocation(e.LocationId);
 
-            var filter = Key(e.MenuItemId, e.RestaurantId, e.LocationId);
+            var filter = Key(e.MenuItemId, e.RestaurantId, location);
 
             var update = Builders<PosCatalogItem>.Update
                 .Set(x => x.Quantity,           e.NewQuantity)     // typically 0
@@ -131,15 +143,16 @@ namespace OrderService.Projections
                 .CurrentDate(x => x.UpdatedAt);
 
             await _col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-            await RecomputeIsAvailable(e.MenuItemId, e.RestaurantId, e.LocationId);
+            await RecomputeIsAvailable(e.MenuItemId, e.RestaurantId, location);
         }
 
         public async Task Consume(ConsumeContext<InventoryItemRestocked> ctx)
         {
             var e = ctx.Message;
             if (!SameTenant(e.RestaurantId, e.LocationId)) return;
+            var location = NormalizeLocation(e.LocationId);
 
-            var filter = Key(e.MenuItemId, e.RestaurantId, e.LocationId);
+            var filter = Key(e.MenuItemId, e.RestaurantId, location);
 
             var update = Builders<PosCatalogItem>.Update
                 .Set(x => x.Quantity,           e.NewQuantity)
@@ -147,23 +160,23 @@ namespace OrderService.Projections
                 .CurrentDate(x => x.UpdatedAt);
 
             await _col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-            await RecomputeIsAvailable(e.MenuItemId, e.RestaurantId, e.LocationId);
+            await RecomputeIsAvailable(e.MenuItemId, e.RestaurantId, location);
         }
 
         // -------------- HELPERS --------------
 
         // combines menu id + restaurant + location for unique key 
-        private static FilterDefinition<PosCatalogItem> Key(Guid menuItemId, string r, string? l) =>
+        private static FilterDefinition<PosCatalogItem> Key(Guid menuItemId, string r, string l) =>
             Builders<PosCatalogItem>.Filter.Where(x =>
                 x.MenuItemId == menuItemId && x.RestaurantId == r && x.LocationId == l);
 
         //ensure same tenant 
         private bool SameTenant(string r, string? l) =>
-            r == _tenant.RestaurantId && l == _tenant.LocationId;
+            r == _tenant.RestaurantId && NormalizeLocation(l) == NormalizeLocation(_tenant.LocationId);
 
         // combines the availability flag from menu, inventory & quantity 
         // to create a single flag for query 
-        private async Task RecomputeIsAvailable(Guid menuItemId, string r, string? l)
+        private async Task RecomputeIsAvailable(Guid menuItemId, string r, string l)
         {
             var filter = Key(menuItemId, r, l);
             var item = await _col.Find(filter).FirstOrDefaultAsync();
@@ -174,5 +187,7 @@ namespace OrderService.Projections
             await _col.UpdateOneAsync(filter,
                 Builders<PosCatalogItem>.Update.Set(x => x.IsAvailable, isAvail));
         }
+
+        private static string NormalizeLocation(string? location) => location ?? string.Empty;
     }
 }
