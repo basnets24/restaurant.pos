@@ -1,4 +1,5 @@
 using Common.Library.PostgreSQL;
+using IdentityService.Data;
 using IdentityService.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ public class UserRepository : EfRepository<ApplicationUser>, IUserRepository
 {
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public UserRepository(DbContext context, UserManager<ApplicationUser> userManager)
+    public UserRepository(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         : base(context)
     {
         _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
