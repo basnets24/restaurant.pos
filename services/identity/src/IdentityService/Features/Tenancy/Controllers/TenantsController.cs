@@ -36,11 +36,7 @@ public class TenantsController : ControllerBase
         var tenant = await _tenantService.GetTenantAsync(restaurantId, ct);
         if (tenant is null) return NotFound();
 
-        return Ok(new
-        {
-            Restaurant = new TenantRestaurantDto(tenant.RestaurantId, tenant.RestaurantName, tenant.Slug, tenant.IsActive, tenant.CreatedUtc),
-            Locations = tenant.Locations
-        });
+        return Ok(tenant);
     }
 
     [HttpPost("{restaurantId}/locations")]

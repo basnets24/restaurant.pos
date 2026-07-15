@@ -1,5 +1,5 @@
 using IdentityService.Features.Identity.DTOs;
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
 
 namespace IdentityService.Features.Identity.Extensions;
 

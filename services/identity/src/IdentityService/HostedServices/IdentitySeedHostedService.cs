@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
 using IdentityService.Features.Shared.Constants;
 using IdentityService.Common.Settings;
 using IdentityService.Data;

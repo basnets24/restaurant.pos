@@ -1,6 +1,6 @@
+using System.Threading.Tasks;
 using IdentityService.Entities;
 using IdentityService.Features.Identity.DTOs;
-using IdentityService.Features.Identity.Models;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Identity.Services;
 using Microsoft.Extensions.Logging;

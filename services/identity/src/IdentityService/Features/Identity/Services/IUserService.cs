@@ -1,4 +1,5 @@
 using IdentityService.Features.Identity.DTOs;
+using IdentityService.Features.Shared.DTOs;
 
 namespace IdentityService.Features.Identity.Services;
 

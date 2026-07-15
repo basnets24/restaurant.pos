@@ -1,5 +1,5 @@
 using Common.Library.PostgreSQL;
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 

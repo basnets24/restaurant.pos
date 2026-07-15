@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using IdentityService.Features.Identity.DTOs;
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
+using IdentityService.Features.Identity.Extensions;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Shared.DTOs;
 using Microsoft.AspNetCore.Identity;
@@ -177,7 +178,7 @@ public class UserService : IUserService
             throw new KeyNotFoundException($"User {userId} not found");
         }
 
-        return await _userManager.GetRolesAsync(user);
+        return (await _userManager.GetRolesAsync(user)).ToList();
     }
 
     public async Task AddRolesAsync(Guid userId, AddRolesDto dto, CancellationToken ct = default)

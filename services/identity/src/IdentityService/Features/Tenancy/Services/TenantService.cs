@@ -1,3 +1,4 @@
+using IdentityService.Common.Extensions;
 using IdentityService.Features.Tenancy.DTOs;
 using IdentityService.Features.Tenancy.Repositories;
 using Microsoft.EntityFrameworkCore;

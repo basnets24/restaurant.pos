@@ -1,3 +1,4 @@
+using IdentityService.Features.Identity.DTOs;
 using IdentityService.Features.Shared.DTOs;
 using IdentityService.Features.Tenancy.DTOs;
 

@@ -2,6 +2,7 @@ using Duende.IdentityServer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using IdentityService.Extensions;
+using IdentityService.Features.Identity.DTOs;
 using IdentityService.Features.Tenancy.DTOs;
 using IdentityService.Features.Tenancy.Services;
 using IdentityService.Features.Shared.DTOs;

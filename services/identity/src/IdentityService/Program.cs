@@ -5,7 +5,8 @@ using Duende.IdentityServer.Configuration;
 using IdentityService.Common.Extensions;
 using IdentityService.Common.Settings;
 using IdentityService.Data;
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
+using IdentityService.Extensions;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Identity.Services;
 using IdentityService.Features.Tenancy.Repositories;
@@ -36,7 +37,7 @@ builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
 builder.Services.AddLocalApiAuthentication();
 builder.Services.AddControllers();
-builder.Services.Configure<Common.Settings.IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
+builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
 builder.Services.AddHostedService<IdentitySeedHostedService>();
 builder.Services.AddHostedService<TenantDatabaseMigrationHostedService>();
 

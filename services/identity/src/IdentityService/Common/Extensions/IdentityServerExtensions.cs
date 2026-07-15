@@ -1,4 +1,4 @@
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
 using IdentityService.Features.Tenancy.Services;
 using IdentityService.Common.Settings;
 using Microsoft.AspNetCore.Identity;

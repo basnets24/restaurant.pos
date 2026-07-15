@@ -1,5 +1,6 @@
+using IdentityService.Common.Extensions;
 using IdentityService.Features.Identity.DTOs;
-using IdentityService.Features.Identity.Models;
+using IdentityService.Entities;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Shared.DTOs;
 using IdentityService.Features.Tenancy.DTOs;
