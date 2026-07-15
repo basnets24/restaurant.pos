@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
-using IdentityService.Tenancy.Services.TenantDirectory;
+using IdentityService.Features.Tenancy.Services.TenantDirectory;
 
-namespace IdentityService.Tenancy.Services.TenantClaims;
+namespace IdentityService.Features.Tenancy.Services.Claims;
 
 public class DbTenantClaimsProvider : ITenantClaimsProvider
 {

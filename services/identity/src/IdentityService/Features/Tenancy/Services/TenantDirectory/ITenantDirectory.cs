@@ -1,4 +1,4 @@
-namespace IdentityService.Tenancy.Services.TenantDirectory;
+namespace IdentityService.Features.Tenancy.Services.TenantDirectory;
 
 /// <summary>
 /// Read-only interface for tenant membership and role directory operations.

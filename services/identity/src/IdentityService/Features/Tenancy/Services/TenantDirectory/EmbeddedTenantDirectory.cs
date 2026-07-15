@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Tenant.Domain.Data;
 
-namespace IdentityService.Tenancy.Services.TenantDirectory;
+namespace IdentityService.Features.Tenancy.Services.TenantDirectory;
 
 /// <summary>
 /// Embedded tenant directory implementation using direct EF Core access.

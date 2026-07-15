@@ -5,7 +5,7 @@ using Tenant.Domain.Entities;
 using Tenant.Domain;
 using IdentityService.Features.Tenancy.Validation;
 
-namespace IdentityService.Tenancy.Services;
+namespace IdentityService.Features.Tenancy.Services;
 
 public record OnboardRestaurantReq(
     [Required(ErrorMessage = "Restaurant name is required")]
