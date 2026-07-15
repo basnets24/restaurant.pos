@@ -1,4 +1,4 @@
-namespace IdentityService;
+namespace IdentityService.Tenancy;
 
 public record EmployeeListItemDto(
     Guid UserId,

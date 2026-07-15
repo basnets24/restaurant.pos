@@ -1,13 +1,13 @@
 using IdentityService.Entities;
-using IdentityService.Settings;
+using IdentityService.Identity.Settings;
+using IdentityService.Tenancy.Services;
 using Microsoft.AspNetCore.Identity;
-using Duende.IdentityServer.Models;
 using Common.Library.Settings;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Hosting;
 
-namespace IdentityService.Extensions;
+namespace IdentityService.Identity.Extensions;
 
 public static class IdentityServerExtensions
 {
@@ -22,19 +22,6 @@ public static class IdentityServerExtensions
             .GetRequiredSection("IdentityServerSettings")
             .Get<IdentityServerSettings>()
                  ?? throw new InvalidOperationException("IdentityServerSettings configuration is missing.");
-
-        // Override tenant client secret from configuration (user-secrets), if provided
-        var tenantClientId = configuration["TenantService:ClientId"];
-        var tenantClientSecret = configuration["TenantService:ClientSecret"];
-        if (!string.IsNullOrWhiteSpace(tenantClientId) && !string.IsNullOrWhiteSpace(tenantClientSecret))
-        {
-            var tenantClient = idp.Clients.FirstOrDefault(c => string.Equals(c.ClientId, tenantClientId, StringComparison.Ordinal));
-            if (tenantClient is not null)
-            {
-                // IdentityServer expects stored client secrets to be hashed (Sha256 base64).
-                tenantClient.ClientSecrets = new List<Secret> { new Secret(HashSharedSecret(tenantClientSecret)) };
-            }
-        }
 
         var identityServerBuilder = services.AddIdentityServer(options =>
            {
@@ -66,7 +53,7 @@ public static class IdentityServerExtensions
            .AddInMemoryApiScopes(idp.ApiScopes)
            .AddInMemoryApiResources(idp.ApiResources)
            .AddInMemoryClients(idp.Clients)
-           .AddProfileService<Services.TenantProfileService>();
+           .AddProfileService<TenantProfileService>();
 
         if (environment.IsDevelopment())
         {
@@ -100,13 +87,4 @@ public static class IdentityServerExtensions
 
         return services;
     }
-
-    private static string HashSharedSecret(string secret)
-    {
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        var bytes = System.Text.Encoding.UTF8.GetBytes(secret);
-        var hash = sha.ComputeHash(bytes);
-        return Convert.ToBase64String(hash);
-    }
-
 }

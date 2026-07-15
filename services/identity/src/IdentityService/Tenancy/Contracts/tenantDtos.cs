@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using TenantService.Validation;
+using IdentityService.Tenancy.Validation;
 
-namespace TenantService.Contracts;
+namespace IdentityService.Tenancy;
 
 public record CreateLocationDto(
     [Required(ErrorMessage = "Location name is required")]
@@ -28,4 +28,3 @@ public record UpdateLocationDto(
     [ValidTimeZone]
     string? TimeZoneId
 );
-

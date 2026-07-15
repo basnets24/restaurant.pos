@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         try {
             const token = u?.access_token;
             if (token) {
-                const r = await fetch(`${ENV.TENANT_URL}/api/onboarding/status`, {
+                const r = await fetch(`${ENV.IDENTITY_URL}/api/onboarding/status`, {
                     headers: { Authorization: `Bearer ${token}` },
                     credentials: "include",
                 });

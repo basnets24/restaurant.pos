@@ -5,8 +5,8 @@ A .NET 8 Identity and Authorization service for the Restaurant POS platform. It 
 ## Features
 - Duende IdentityServer: OIDC/OAuth2 with configurable clients, resources, and scopes
 - ASP.NET Core Identity: user and role management with EF Core
-- Multi‑tenant claims: issues `restaurant_id`, `location_id`, and `role` via a custom profile service
-- HTTP or DB tenant claims provider: configurable via `TenantService:Mode`
+- Multi‑tenant claims: issues `restaurant_id`, `location_id`, and `role` via a custom profile service, resolved directly against the `tenant` schema via EF Core (no separate tenant service)
+- Restaurant onboarding, join-by-code, and location management (formerly the standalone `TenantService`, merged in — see `docs/IDENTITY_TENANT_CONSOLIDATION.md`)
 - Swagger UI in Development, Serilog + Seq logging, CORS for the frontend
 
 ## Getting Started
@@ -25,11 +25,6 @@ Settings are primarily in `appsettings.json` and can be overridden with environm
   - AdminUserEmail, AdminUserPassword, RestaurantId, LocationId
 - IdentityServerSettings
   - ApiScopes, ApiResources, Clients (in‑memory)
-  - You may override a specific client secret at runtime via User Secrets using keys under `TenantService` (see below)
-- TenantService
-  - Mode: `Http` (default) or `Embedded`
-  - BaseUrl: base URL of the Tenant service when `Mode` = `Http`
-  - Authority, ClientId, ClientSecret, Scope: client‑credentials used to call the Tenant service (token retrieved from `Authority`)
 - Cors
   - AllowedOrigins: array of allowed frontend origins
 
@@ -38,8 +33,6 @@ Example: set secrets for local development
 # from this project directory
 dotnet user-secrets set "IdentitySettings:AdminUserEmail" "admin@pos.local"
 dotnet user-secrets set "IdentitySettings:AdminUserPassword" "YourSecurePassword123!"
-# if using Http tenant mode, set confidential client secret out of appsettings
-dotnet user-secrets set "TenantService:ClientSecret" "your-secure-client-secret"
 ```
 
 
@@ -59,9 +52,9 @@ dotnet run  # http://localhost:5265
 - Swagger UI: `/swagger` (Development only)
 - IdentityServer endpoints: `/connect/*`
 
-The `IdentitySeedHostedService` runs on startup to:
-- Ensure required roles exist (e.g., `Admin`)
-- Create an initial admin user from `IdentitySettings` if it does not exist
+On startup:
+- `IdentitySeedHostedService` applies identity-schema migrations, ensures required roles exist (e.g., `Admin`), and creates an initial admin user from `IdentitySettings` if it does not exist
+- `TenantDatabaseMigrationHostedService` applies `tenant`-schema migrations
 
 
 ### Docker
@@ -169,19 +162,34 @@ All endpoints are protected with IdentityServer’s Local API policy unless note
   - `PUT /tenants/{restaurantId}/employees/{userId}/default-location` — set default location
   - `GET /tenants/{restaurantId}/employees/roles` — available tenant role names
 
+- Tenants (merged from the former `TenantService`)
+  - `GET /tenants/mine` — restaurants the current user belongs to
+  - `GET /tenants/{restaurantId}` — restaurant + its locations
+  - `POST /tenants/{restaurantId}/locations` — create a location (Admin only)
+  - `PUT /tenants/{restaurantId}/locations/{locationId}` — update a location (Admin only)
+
+- Onboarding (merged from the former `TenantService`)
+  - `POST /api/onboarding/restaurant` — create a restaurant + default location, onboarding the caller as Admin/Owner
+  - `POST /api/onboarding/join` — join an existing restaurant by join code
+  - `GET /api/onboarding/status` — current user's membership/onboarding status
+  - `GET /api/onboarding/me/code` — current user's restaurant join code/URL
+
 ## Project Layout
 - `Program.cs` — service wiring (IdentityServer, Identity, EF Core, CORS, Serilog)
-- `Extensions/` — DI helpers for IdentityServer, EF/Identity, and tenant claims provider
+- `Extensions/` — DI helpers for IdentityServer, EF/Identity, tenant claims provider, and request validation/error handling
 - `Settings/` — strongly‑typed settings models
-- `Controllers/` — users and tenant employees endpoints
-- `Services/` — profile service and tenant claims providers (HTTP/DB)
+- `Controllers/` — users, tenant employees, tenants, and onboarding endpoints
+- `Services/` — profile service, embedded tenant claims/directory providers, and restaurant onboarding
 - `Entities/` — ASP.NET Identity entities
 - `Contracts/` — DTOs used by the API
-- `Migrations/` — EF Core migrations
+- `Validation/` — custom validation attributes for onboarding/location input
+- `Middleware/` — global exception handling
+- `HostedServices/` — startup migrations (identity + tenant schemas) and admin seeding
+- `Migrations/` — EF Core migrations (identity schema only; tenant-schema migrations live in the `Tenant.Domain` package)
 
 ## Notes
 - In `Development`, CORS is enabled using `Cors:AllowedOrigins` and Swagger UI is available.
-- The tenant claims provider defaults to `Http` mode; set `TenantService:Mode = "Db"` to use the local database provider.
+- Tenant/membership data is read directly via EF Core against the `tenant` schema (`EmbeddedTenantDirectory`) — there is no separate tenant service or HTTP mode anymore.
 
 ---
 

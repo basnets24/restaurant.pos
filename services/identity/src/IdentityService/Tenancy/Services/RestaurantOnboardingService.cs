@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Data;
 using Tenant.Domain.Entities;
 using Tenant.Domain;
-using TenantService.Validation;
+using IdentityService.Tenancy.Validation;
 
-namespace TenantService.Services;
+namespace IdentityService.Tenancy.Services;
 
 public record OnboardRestaurantReq(
     [Required(ErrorMessage = "Restaurant name is required")]
@@ -157,4 +157,3 @@ public class RestaurantOnboardingService
     private static string Slugify(string s) =>
         System.Text.RegularExpressions.Regex.Replace(s.ToLowerInvariant().Trim(), "[^a-z0-9]+", "-").Trim('-');
 }
-

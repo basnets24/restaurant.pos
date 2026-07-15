@@ -1,12 +1,12 @@
-using IdentityService.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using IdentityService.Entities;
-using IdentityService.Settings;
+using IdentityService.Identity.Auth;
+using IdentityService.Identity.Settings;
 using IdentityService.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace IdentityService.HostedServices;
+namespace IdentityService.Identity.HostedServices;
 
 public class IdentitySeedHostedService : IHostedService
 {
@@ -28,8 +28,8 @@ public class IdentitySeedHostedService : IHostedService
     {
         using var scope = _scopeFactory.CreateScope();
 
-        // Auto-apply database migrations on startup (Identity tables only)
-        // Note: Tenant schema is managed by TenantService, not IdentityService
+        // Auto-apply database migrations on startup (Identity tables only).
+        // Tenant-schema migrations are applied separately by TenantDatabaseMigrationHostedService.
         var appDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         _logger.LogInformation("Applying pending identity database migrations...");

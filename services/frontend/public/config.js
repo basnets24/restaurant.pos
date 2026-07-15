@@ -28,5 +28,3 @@ window.PAYMENT_SERVICE_URL = window.PAYMENT_SERVICE_URL || 'http://localhost:523
 // Payment session endpoint pattern: `${PAYMENT_SERVICE_URL}/orders/{orderId}/payment-session`
 
 window.RABBITMQ_URL = window.RABBITMQ_URL || 'http://localhost:15672';
-
-window.TENANT_SERVICE_URL = window.TENANT_SERVICE_URL || 'http://localhost:5200'; 

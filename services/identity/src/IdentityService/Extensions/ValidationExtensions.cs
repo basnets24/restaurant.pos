@@ -1,7 +1,7 @@
-using TenantService.Filters;
-using TenantService.Middleware;
+using IdentityService.Filters;
+using IdentityService.Middleware;
 
-namespace TenantService.Extensions;
+namespace IdentityService.Extensions;
 
 public static class ValidationExtensions
 {

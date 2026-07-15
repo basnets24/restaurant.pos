@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TenantService.Validation;
+namespace IdentityService.Tenancy.Validation;
 
 /// <summary>
 /// Validates that a time zone ID is valid (if provided)

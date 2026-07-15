@@ -1,20 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Data;
 
-namespace TenantService.HostedServices;
+namespace IdentityService.Tenancy.HostedServices;
 
 /// <summary>
-/// Hosted service that automatically applies pending database migrations on startup.
+/// Hosted service that automatically applies pending tenant-schema database migrations on startup.
 /// This ensures the tenant database schema is always up-to-date when the service starts.
 /// </summary>
-public class DatabaseMigrationHostedService : IHostedService
+public class TenantDatabaseMigrationHostedService : IHostedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<DatabaseMigrationHostedService> _logger;
+    private readonly ILogger<TenantDatabaseMigrationHostedService> _logger;
 
-    public DatabaseMigrationHostedService(
+    public TenantDatabaseMigrationHostedService(
         IServiceScopeFactory scopeFactory,
-        ILogger<DatabaseMigrationHostedService> logger)
+        ILogger<TenantDatabaseMigrationHostedService> logger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;

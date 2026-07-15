@@ -2,9 +2,12 @@ using Common.Library.Configuration;
 using Common.Library.Logging;
 using Duende.IdentityServer.Configuration;
 using IdentityService.Extensions;
-using IdentityService.HostedServices;
-using IdentityService.Settings;
-using IdentityService.Services;
+using IdentityService.Identity.Extensions;
+using IdentityService.Identity.HostedServices;
+using IdentityService.Identity.Settings;
+using IdentityService.Tenancy.Extensions;
+using IdentityService.Tenancy.HostedServices;
+using IdentityService.Tenancy.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
@@ -30,9 +33,11 @@ builder.Services.AddLocalApiAuthentication();
 builder.Services.AddControllers();
 builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
 builder.Services.AddHostedService<IdentitySeedHostedService>();
-builder.Services.AddScoped<TenantUserProfileService>();
-builder.Services.AddTenantClaimsProvider(builder.Configuration);
+builder.Services.AddHostedService<TenantDatabaseMigrationHostedService>();
+builder.Services.AddScoped<RestaurantOnboardingService>();
+builder.Services.AddTenantClaimsProvider();
 builder.Services.AddIdentityHealthChecks();
+builder.Services.AddValidationAndErrorHandling();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -56,6 +61,7 @@ var app = builder.Build();
 
 var identitySettings = builder.Configuration.GetSection(nameof(IdentitySettings)).Get<IdentitySettings>();
 
+app.UseGlobalExceptionHandling();
 app.UseForwardedHeaders();
 //the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

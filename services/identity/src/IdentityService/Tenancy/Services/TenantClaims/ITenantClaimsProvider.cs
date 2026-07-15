@@ -1,4 +1,4 @@
-namespace IdentityService.Services;
+namespace IdentityService.Tenancy.Services.TenantClaims;
 
 public record TenantClaimResult(string? RestaurantId, string? LocationId, IReadOnlyCollection<string> Roles);
 

@@ -1,6 +1,7 @@
 using Duende.IdentityServer.Models;
+using IdentityService.Tenancy.Services;
 
-namespace IdentityService.Settings;
+namespace IdentityService.Identity.Settings;
 
 public class IdentityServerSettings
 {
@@ -15,8 +16,8 @@ public class IdentityServerSettings
             new IdentityResource("roles", ["role"]),
             // Tenancy identity resource: include restaurant/location claims in ID token when requested
             new IdentityResource("tenancy", [
-                IdentityService.Services.TenantProfileService.RestaurantIdClaim,
-                IdentityService.Services.TenantProfileService.LocationIdClaim
+                TenantProfileService.RestaurantIdClaim,
+                TenantProfileService.LocationIdClaim
             ])
     ];
 

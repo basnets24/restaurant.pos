@@ -2,13 +2,16 @@ using Duende.IdentityServer;
 using Tenant.Domain.Data;
 using IdentityService.Entities;
 using Tenant.Domain.Entities;
-using IdentityService.Auth;
+using IdentityService.Extensions;
+using IdentityService.Identity;
+using IdentityService.Tenancy.Extensions;
+using Tenant.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace IdentityService.Controllers;
+namespace IdentityService.Tenancy.Controllers;
 
 [ApiController]
 [Route("tenants/{restaurantId}/employees")] // /tenants/{rid}/employees
@@ -38,8 +41,8 @@ public class EmployeesController : ControllerBase
         [FromQuery] int pageSize = 25,
         CancellationToken ct = default)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 200 ? 25 : pageSize;
 
@@ -109,8 +112,8 @@ public class EmployeesController : ControllerBase
     public async Task<ActionResult<EmployeeDetailDto>> GetById(string restaurantId, 
         Guid userId, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         var membership = await _tenantDb.RestaurantMemberships.AsNoTracking()
             .FirstOrDefaultAsync(m => m.RestaurantId == restaurantId && m.UserId == userId, ct);
@@ -137,8 +140,8 @@ public class EmployeesController : ControllerBase
     public async Task<IActionResult> Update(string restaurantId, Guid userId, 
         [FromBody] UserUpdateDto dto, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         var membership = await _tenantDb.RestaurantMemberships.AsNoTracking()
             .AnyAsync(m => m.RestaurantId == restaurantId && m.UserId == userId, ct);
@@ -175,8 +178,8 @@ public class EmployeesController : ControllerBase
     [HttpGet("{userId:guid}/roles")]
     public async Task<ActionResult<IReadOnlyCollection<string>>> GetTenantRoles(string restaurantId, Guid userId, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         var roles = await _tenantDb.RestaurantUserRoles.AsNoTracking()
             .Where(r => r.RestaurantId == restaurantId && r.UserId == userId)
@@ -190,8 +193,8 @@ public class EmployeesController : ControllerBase
     [HttpPost("{userId:guid}/roles")]
     public async Task<IActionResult> AddTenantRoles(string restaurantId, Guid userId, [FromBody] EmployeeRoleUpdateDto dto, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         var membership = await _tenantDb.RestaurantMemberships.FirstOrDefaultAsync(m => m.UserId == userId && m.RestaurantId == restaurantId, ct);
         if (membership is null) return NotFound("User is not a member of this restaurant.");
@@ -230,8 +233,8 @@ public class EmployeesController : ControllerBase
     [HttpDelete("{userId:guid}/roles/{role}")]
     public async Task<IActionResult> RemoveTenantRole(string restaurantId, Guid userId, string role, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         var row = await _tenantDb.RestaurantUserRoles
             .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId && r.UserId == userId && r.RoleName == role, ct);
@@ -247,8 +250,8 @@ public class EmployeesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddEmployee(string restaurantId, [FromBody] AddEmployeeDto dto, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         // validate user exists
         var user = await _users.FindByIdAsync(dto.UserId.ToString());
@@ -306,8 +309,8 @@ public class EmployeesController : ControllerBase
     [HttpPut("{userId:guid}/default-location")]
     public async Task<IActionResult> UpdateDefaultLocation(string restaurantId, Guid userId, [FromBody] DefaultLocationUpdateDto dto, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var callerId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var callerId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(callerId, restaurantId, ct)) return Forbid();
 
         var membership = await _tenantDb.RestaurantMemberships
             .FirstOrDefaultAsync(m => m.RestaurantId == restaurantId && m.UserId == userId, ct);
@@ -339,10 +342,4 @@ public class EmployeesController : ControllerBase
         });
     }
 
-    private async Task<bool> IsTenantAdminAsync(Guid userId, string restaurantId, CancellationToken ct)
-    {
-        return await _tenantDb.RestaurantUserRoles
-            .AsNoTracking()
-            .AnyAsync(r => r.UserId == userId && r.RestaurantId == restaurantId && r.RoleName == "Admin", ct);
-    }
 }

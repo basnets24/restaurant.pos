@@ -1,11 +1,12 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Data;
-using TenantService.Services;
+using IdentityService.Extensions;
+using IdentityService.Tenancy.Services;
+using Tenant.Domain;
 
-namespace TenantService.Controllers;
+namespace IdentityService.Tenancy.Controllers;
 
 [Authorize]
 [ApiController]
@@ -23,11 +24,10 @@ public class OnboardingController : ControllerBase
     [HttpPost("restaurant")]
     public async Task<ActionResult<OnboardRestaurantRes>> Create([FromBody] OnboardRestaurantReq req, CancellationToken ct)
     {
-        var user = User.FindFirstValue("sub");
-        _logger.LogInformation("Create restaurant requested by {UserId} with name {Name}", user, req.Name);
-        if (string.IsNullOrWhiteSpace(user) || !Guid.TryParse(user, out var userId))
+        if (!User.TryGetUserId(out var userId))
             return Unauthorized();
 
+        _logger.LogInformation("Create restaurant requested by {UserId} with name {Name}", userId, req.Name);
         var res = await _svc.OnboardAsync(userId, req, ct);
         _logger.LogInformation("Created restaurant by {UserId} with name {Name}", userId, req.Name);
         return Ok(res);
@@ -36,8 +36,7 @@ public class OnboardingController : ControllerBase
     [HttpPost("join")]
     public async Task<ActionResult<OnboardRestaurantRes>> Join([FromBody] JoinRestaurantReq req, CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue("sub");
-        if (string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        if (!User.TryGetUserId(out var userId))
             return Unauthorized();
 
         _logger.LogInformation("Join restaurant requested by {UserId} using code {Code}", userId, req.Code);
@@ -48,8 +47,7 @@ public class OnboardingController : ControllerBase
     [HttpGet("status")]
     public async Task<ActionResult<object>> GetStatus(CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue("sub");
-        if (string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        if (!User.TryGetUserId(out var userId))
             return Unauthorized();
 
         var membership = await _tenantDb.RestaurantMemberships
@@ -78,7 +76,7 @@ public class OnboardingController : ControllerBase
             .AsNoTracking()
             .AnyAsync(r => r.UserId == userId
                            && r.RestaurantId == membership.RestaurantId
-                           && r.RoleName == "Admin", ct);
+                           && r.RoleName == TenantRoles.TenantAdmin, ct);
 
         return Ok(new { hasMembership = true, isAdmin, restaurantId = membership.RestaurantId, locationId });
     }
@@ -86,8 +84,7 @@ public class OnboardingController : ControllerBase
     [HttpGet("me/code")]
     public async Task<ActionResult<object>> GetMyJoinCode(CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue("sub");
-        if (string.IsNullOrWhiteSpace(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        if (!User.TryGetUserId(out var userId))
             return Unauthorized();
 
         var code = await _svc.GetMyJoinCodeAsync(userId, ct);
@@ -102,4 +99,3 @@ public class OnboardingController : ControllerBase
         return Ok(new { restaurantId = code.RestaurantId, slug = code.Slug, joinUrl });
     }
 }
-

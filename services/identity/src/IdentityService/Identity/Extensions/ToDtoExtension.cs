@@ -1,6 +1,6 @@
 using IdentityService.Entities;
 
-namespace IdentityService.Extensions;
+namespace IdentityService.Identity.Extensions;
 
 public static class ToDtoExtension
 {

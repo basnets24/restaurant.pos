@@ -39,8 +39,7 @@ A cloud-native restaurant management platform built with microservices architect
 ## Microservices
 
 **Frontend**: React SPA with OIDC authentication, real-time updates, and tenant-aware UI  
-**Identity**: Authentication/authorization service with Duende IdentityServer  
-**Tenant**: Multi-tenant restaurant management and onboarding  
+**Identity**: Authentication/authorization service with Duende IdentityServer, including multi-tenant restaurant management and onboarding (merged from the former Tenant service)  
 **Menu**: Restaurant catalog with inventory integration  
 **Inventory**: Stock tracking with reservation workflows  
 **Order**: Cart, order processing, and real-time table management  
@@ -81,7 +80,7 @@ A cloud-native restaurant management platform built with microservices architect
 
 ## Project Structure
 
-- **services/**: All microservices (frontend, identity, tenant, menu, inventory, order, payment)
+- **services/**: All microservices (frontend, identity, menu, inventory, order, payment)
 - **shared/**: Common libraries and contracts
 - **infra/**: Infrastructure configuration (Docker, Kubernetes, Helm)
 - **docs/**: Documentation and architectural diagrams

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace IdentityService;
+namespace IdentityService.Identity;
 
 public record UserDto(
     Guid Id,

@@ -23,8 +23,6 @@ jobs:
         include:
           - name: IdentityService
             project: services/identity/src/IdentityService/IdentityService.csproj
-          - name: TenantService
-            project: services/tenant/src/TenantService/TenantService.csproj
           - name: MenuService
             project: services/menu/src/MenuService/MenuService.csproj
           - name: InventoryService

@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
+using IdentityService.Tenancy.Services.TenantClaims;
 
-namespace IdentityService.Services;
+namespace IdentityService.Tenancy.Services;
 
 public class TenantProfileService : IProfileService
 {

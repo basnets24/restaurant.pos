@@ -86,7 +86,6 @@ Service URLs are provided via `public/config.js`. This file is loaded before the
 
 ```js
 window.IDENTITY_SERVICE_URL = 'http://localhost:5200';
-window.TENANT_SERVICE_URL = 'http://localhost:5210';
 window.CATALOG_SERVICE_URL = 'http://localhost:5220';
 window.INVENTORY_SERVICE_URL = 'http://localhost:5230';
 window.ORDER_SERVICE_URL = 'http://localhost:5240';

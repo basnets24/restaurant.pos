@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using TenantService.Middleware;
+using IdentityService.Middleware;
 
-namespace TenantService.Filters;
+namespace IdentityService.Filters;
 
 public class ModelValidationFilter : ActionFilterAttribute
 {

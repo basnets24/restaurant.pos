@@ -1,4 +1,4 @@
-namespace IdentityService.Settings;
+namespace IdentityService.Identity.Settings;
 
 public class IdentitySettings
 {

@@ -1,6 +1,6 @@
 using IdentityService.Entities;
 using IdentityService.Data;
-using IdentityService.Settings;
+using IdentityService.Identity.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -8,7 +8,7 @@ using Tenant.Domain.Data;
 using Tenant.Domain.HealthChecks;
 using Tenant.Domain.Settings;
 
-namespace IdentityService.Extensions;
+namespace IdentityService.Identity.Extensions;
 
 public static class ServiceCollectionExtensions
 {

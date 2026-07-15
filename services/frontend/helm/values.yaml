@@ -47,9 +47,6 @@ configValues:
   - key: RABBITMQ_URL
     value: >-
       window.RABBITMQ_URL || 'http://localhost:15672'
-  - key: TENANT_SERVICE_URL
-    value: >-
-      window.TENANT_SERVICE_URL || `${window.location.origin}/tenant-svc`
 
 podAnnotations: {}
 

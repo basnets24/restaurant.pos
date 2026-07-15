@@ -4,9 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Tenant.Domain.Contracts;
 using Tenant.Domain.Data;
 using Tenant.Domain.Entities;
-using TenantService.Contracts;
+using IdentityService.Extensions;
+using IdentityService.Tenancy.Extensions;
 
-namespace TenantService.Controllers;
+namespace IdentityService.Tenancy.Controllers;
 
 [ApiController]
 [Route("tenants")] // /tenants
@@ -26,7 +27,7 @@ public class TenantsController : ControllerBase
     [HttpGet("mine")]
     public async Task<ActionResult<IReadOnlyList<TenantRestaurantDto>>> GetMyTenants(CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId))
+        if (!User.TryGetUserId(out var userId))
             return Unauthorized();
 
         var rids = await _tenantDb.RestaurantMemberships
@@ -70,8 +71,8 @@ public class TenantsController : ControllerBase
     [HttpPost("{restaurantId}/locations")]
     public async Task<ActionResult<TenantLocationDto>> CreateLocation(string restaurantId, [FromBody] CreateLocationDto dto, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(userId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var userId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(userId, restaurantId, ct)) return Forbid();
 
         // Validate restaurant exists
         var restaurantExists = await _tenantDb.Restaurants.AnyAsync(r => r.Id == restaurantId, ct);
@@ -104,8 +105,8 @@ public class TenantsController : ControllerBase
     [HttpPut("{restaurantId}/locations/{locationId}")]
     public async Task<IActionResult> UpdateLocation(string restaurantId, string locationId, [FromBody] UpdateLocationDto dto, CancellationToken ct)
     {
-        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
-        if (!await IsTenantAdminAsync(userId, restaurantId, ct)) return Forbid();
+        if (!User.TryGetUserId(out var userId)) return Unauthorized();
+        if (!await _tenantDb.IsTenantAdminAsync(userId, restaurantId, ct)) return Forbid();
 
         var loc = await _tenantDb.Locations.FirstOrDefaultAsync(l => l.Id == locationId && l.RestaurantId == restaurantId, ct);
         if (loc is null) return NotFound("Location not found.");
@@ -129,13 +130,6 @@ public class TenantsController : ControllerBase
         return NoContent();
     }
 
-    private async Task<bool> IsTenantAdminAsync(Guid userId, string restaurantId, CancellationToken ct)
-    {
-        return await _tenantDb.RestaurantUserRoles
-            .AsNoTracking()
-            .AnyAsync(r => r.UserId == userId && r.RestaurantId == restaurantId && r.RoleName == "Admin", ct);
-    }
-
     private static string SanitizeInput(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -156,4 +150,3 @@ public class TenantsController : ControllerBase
         return sanitized.Trim();
     }
 }
-

@@ -15,7 +15,7 @@ export const TenantDomainProvider: React.FC<React.PropsWithChildren> = ({ childr
   const hooks = useMemo(() => {
     const api = createTenantApi({
       getAccessToken: async () => (await getAccessToken()) ?? null,
-      baseURL: ENV.TENANT_URL,
+      baseURL: ENV.IDENTITY_URL,
     }) as TenantApi;
     return createTenantHooks(api);
   }, [getAccessToken]);

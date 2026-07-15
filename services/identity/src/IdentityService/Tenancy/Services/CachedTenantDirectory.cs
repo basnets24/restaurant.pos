@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using IdentityService.Tenancy.Services.TenantDirectory;
 
-namespace IdentityService.Services;
+namespace IdentityService.Tenancy.Services;
 
 public class CachedTenantDirectory : ITenantDirectory
 {

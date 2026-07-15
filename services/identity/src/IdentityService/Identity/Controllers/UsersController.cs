@@ -1,15 +1,15 @@
 // Controllers/UsersController.cs
 using System.Security.Claims;
 using Duende.IdentityServer;
-using IdentityService.Auth;
 using IdentityService.Entities;
-using IdentityService.Extensions;
+using IdentityService.Identity.Auth;
+using IdentityService.Identity.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace IdentityService.Controllers;
+namespace IdentityService.Identity.Controllers;
 
 [ApiController]
 [Route("users")] // base: /users

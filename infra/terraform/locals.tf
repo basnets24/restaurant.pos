@@ -3,7 +3,6 @@ locals {
   # The Helm chart sets service.port=80 (ClusterIP), container.port is the app's actual listen port.
   services = {
     identity-service = { namespace = "identity",  container_port = 5265 }
-    tenant-service   = { namespace = "tenant",    container_port = 5200 }
     menu-service     = { namespace = "menu",      container_port = 5062 }
     inventory-service = { namespace = "inventory", container_port = 5094 }
     order-service    = { namespace = "order",     container_port = 5236 }
