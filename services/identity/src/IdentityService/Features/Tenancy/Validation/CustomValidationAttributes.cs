@@ -43,7 +43,8 @@ public class SafeNameAttribute : ValidationAttribute
     private static readonly string[] ForbiddenPatterns = {
         "select", "insert", "update", "delete", "drop", "create", "alter",
         "exec", "execute", "sp_", "xp_", "union", "script", "javascript",
-        "<script", "</script", "onclick", "onerror", "onload"
+        "<script", "</script", "onclick", "onerror", "onload", "<!--",
+        "' or '", "' and '"
     };
 
     public override bool IsValid(object? value)
