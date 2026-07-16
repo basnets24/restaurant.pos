@@ -1,6 +1,6 @@
 import { ENV } from "@/config/env";
 
-const base = `${ENV.INVENTORY_URL}/inventory-items`;
+const base = `${ENV.CATALOG_URL}/inventory-items`;
 
 export const InventoryAPI = {
   items: {

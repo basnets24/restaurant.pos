@@ -41,7 +41,7 @@ export const can = {
   // Inventory
   inventoryRead: () => {
     const g = useAuth.getState().grants ?? undefined;
-    return hasScope(g?.scopes ?? [], "inventory.read");
+    return hasScope(g?.scopes ?? [], "catalog.inventory.read");
   },
   inventoryWrite: () => {
     const g = useAuth.getState().grants ?? undefined;

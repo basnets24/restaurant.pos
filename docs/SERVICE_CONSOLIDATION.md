@@ -29,9 +29,15 @@ connection-pool allocations against the Supabase free tier.
 
 `tenant` has been merged into `identity` and `services/tenant/` deleted.
 
-## Merge 2: inventory → menu (rename service to `catalog`)
+## Merge 2: inventory → menu (renamed to `catalog`) — Done
 
-### Current state
+`inventory` has been merged into `menu`, renamed `catalog`, and
+`services/inventory/`/`services/menu/` deleted in favor of
+`services/catalog/`. Reserve/release inventory queue names were kept
+unchanged so `order`'s saga needed no changes; identity's
+`inventory.read/write` scopes were renamed to `catalog.inventory.read/write`.
+
+### Original current-state notes (pre-merge, kept for history)
 
 - `menu` service: `menuitems` Mongo collection, publishes
   `MenuItemCreated/Updated/Deleted`.
