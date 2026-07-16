@@ -19,13 +19,6 @@ tests/
         └── ValidationAttributesTests.cs      (10 tests - Input validation & security)
 ```
 
-There is currently no integration test project. One existed (`IdentityService.Integration.Tests`,
-tenant-isolation/role-authorization tests against a real database) but was removed — it was built
-against a fictional API (a repository class that never existed, wrong constructor signatures
-throughout, and two different, both-nonexistent test database names). Properly rebuilding it needs
-real infrastructure — Testcontainers-based Postgres, Respawn for reset, DI-resolved services
-instead of hand-constructed ones — which is a deliberate future investment, not done yet.
-
 ---
 
 ## Tests by Category
@@ -93,7 +86,7 @@ dotnet test --filter "ClassName=UserServiceTests"
 
 ## Future Test Additions
 
-1. **Integration tests** (rebuilt properly — see note above)
+1. **Integration tests** (real database, e.g. Testcontainers-based Postgres)
    - Multi-tenant isolation (users can't see data from restaurants they don't belong to)
    - Role-based authorization boundaries (per-restaurant admin enforcement)
    - Role assignment isolation (roles in one restaurant don't leak into another)
