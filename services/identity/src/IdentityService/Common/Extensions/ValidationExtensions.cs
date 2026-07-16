@@ -1,7 +1,7 @@
 using IdentityService.Filters;
 using IdentityService.Middleware;
 
-namespace IdentityService.Extensions;
+namespace IdentityService.Common.Extensions;
 
 public static class ValidationExtensions
 {

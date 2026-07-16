@@ -1,14 +1,15 @@
+using Duende.IdentityServer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using IdentityService.Features.Tenancy.DTOs;
 using IdentityService.Features.Tenancy.Services;
-using IdentityService.Extensions;
+using IdentityService.Common.Extensions;
 
 namespace IdentityService.Features.Tenancy.Controllers;
 
 [ApiController]
 [Route("tenants")]
-[Authorize]
+[Authorize(Policy = IdentityServerConstants.LocalApi.PolicyName)]
 public class TenantsController : ControllerBase
 {
     private readonly ITenantService _tenantService;

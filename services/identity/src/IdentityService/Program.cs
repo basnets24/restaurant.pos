@@ -6,7 +6,6 @@ using IdentityService.Common.Extensions;
 using IdentityService.Common.Settings;
 using IdentityService.Data;
 using IdentityService.Entities;
-using IdentityService.Extensions;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Identity.Services;
 using IdentityService.Features.Tenancy.Repositories;

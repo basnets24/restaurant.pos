@@ -1,14 +1,15 @@
+using Duende.IdentityServer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using IdentityService.Extensions;
+using IdentityService.Common.Extensions;
 using IdentityService.Features.Tenancy.Services;
 using Tenant.Domain;
 using Tenant.Domain.Data;
 
 namespace IdentityService.Features.Tenancy.Controllers;
 
-[Authorize]
+[Authorize(Policy = IdentityServerConstants.LocalApi.PolicyName)]
 [ApiController]
 [Route("api/onboarding")]
 public class OnboardingController : ControllerBase
