@@ -42,6 +42,9 @@ Thumbs.db
 secrets/
 infra/secrets/
 
+# IdentityServer auto-generated signing keys (per-machine, Data Protection-wrapped)
+services/identity/src/IdentityService/keys/
+
 # Launch profiles
 **/launchSettings.json
 .idea/
