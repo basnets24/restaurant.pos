@@ -3,7 +3,6 @@ export const IDENTITY_SCOPES_MIN = [
   "profile",
   "roles",
   "tenancy",
-  "tenant.claims.read",
 ] as const;
 
 export const AUDIENCES = [

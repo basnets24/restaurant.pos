@@ -11,11 +11,12 @@ import { CircleUserRound, Building2, MapPin, Clock, KeySquare, PlusCircle, LogIn
 import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { createEmployeeApi } from "@/domain/employee";
+import { getApiToken } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
 import { useTenant } from "@/app/TenantContext";
 
 export default function JoinPage() {
-  const { profile, signOut, getAccessToken } = useAuth();
+  const { profile, signOut } = useAuth();
   const hooks = useRestaurantUserProfile();
   const { rid, lid, setRid, setLid } = useTenant();
   const [params] = useSearchParams();
@@ -59,7 +60,7 @@ export default function JoinPage() {
       // Optionally capture display name right after onboarding (user is Admin)
       if (displayNameInput.trim()) {
         try {
-          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
+          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
           const userId = (profile as any)?.sub as string | undefined;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
         } catch { }
@@ -82,7 +83,7 @@ export default function JoinPage() {
       // Best-effort: update display name (may fail if not admin)
       if (displayNameInput.trim()) {
         try {
-          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
+          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
           const userId = (profile as any)?.sub as string | undefined;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
         } catch { }

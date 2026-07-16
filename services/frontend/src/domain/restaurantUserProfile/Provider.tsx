@@ -3,7 +3,7 @@ import { createRestaurantUserProfileApi } from "./api";
 import { createRestaurantUserProfileHooks } from "./hooks";
 import type { RestaurantUserProfileApi } from "./api";
 import { ENV } from "@/config/env";
-import { useAuth } from "@/api-authorization/AuthProvider";
+import { getApiToken } from "@/auth/getApiToken";
 import { userManager } from "@/api-authorization/oidc";
 
 type HooksBundle = ReturnType<typeof createRestaurantUserProfileHooks>;
@@ -11,11 +11,9 @@ type HooksBundle = ReturnType<typeof createRestaurantUserProfileHooks>;
 const Ctx = createContext<HooksBundle | null>(null);
 
 export const RestaurantUserProfileProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const { getAccessToken } = useAuth();
-
   const hooks = useMemo(() => {
     const api = createRestaurantUserProfileApi({
-      getAccessToken: async () => (await getAccessToken()) ?? null,
+      getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null,
       identityBaseURL: ENV.IDENTITY_URL,
       tenantBaseURL: ENV.IDENTITY_URL,
     }) as RestaurantUserProfileApi;
@@ -24,7 +22,7 @@ export const RestaurantUserProfileProvider: React.FC<React.PropsWithChildren> = 
         try { await userManager.signinSilent(); } catch {}
       }
     });
-  }, [getAccessToken]);
+  }, []);
 
   return <Ctx.Provider value={hooks}>{children}</Ctx.Provider>;
 };

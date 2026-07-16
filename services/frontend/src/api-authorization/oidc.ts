@@ -6,7 +6,7 @@ import { ENV } from '@/config/env';
 const origin = window.location.origin;
 const authority = ENV.IDENTITY_URL;
 
-const scope = import.meta.env.VITE_OIDC_SCOPE ?? 'openid profile roles tenancy tenant.claims.read';
+const scope = import.meta.env.VITE_OIDC_SCOPE ?? 'openid profile roles tenancy';
 
 export const userManager = new UserManager({
     authority,

@@ -2,7 +2,7 @@ import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 import { ApplicationName, AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 import { ENV } from "@/config/env";
 
-export const BASE_ID_SCOPES = "openid profile roles tenancy tenant.claims.read";
+export const BASE_ID_SCOPES = "openid profile roles tenancy";
 
 const origin = window.location.origin;
 const authority = ENV.IDENTITY_URL;
