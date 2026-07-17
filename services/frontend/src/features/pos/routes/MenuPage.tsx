@@ -16,6 +16,7 @@ import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/dom
 import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
 import { OrderSidebar } from "@/features/pos/components/OrderSideBar";
+import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
 import {
   useCreateCart,
   useCart,
@@ -24,7 +25,7 @@ import {
 } from "@/domain/cart";
 import type { CartDto } from "@/domain/cart";
 import { useStore } from "@/stores";
-import { pollForSessionUrl, getPaymentSessionUrl } from "@/domain/payments/api";
+import { pollForClientSecret, getPaymentClientSecret } from "@/domain/payments/api";
 
 type POSMenuItem = {
   id: string;
@@ -79,6 +80,7 @@ export default function MenuPage() {
   // Sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<{ orderId: string; clientSecret: string } | null>(null);
 
   // Selected category
   const [category, setCategory] = useState<string>("All");
@@ -209,6 +211,14 @@ export default function MenuPage() {
     await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
   }
 
+  async function finishCheckout(orderId: string) {
+    try { await unlinkOrder.mutateAsync(cartId!); } catch { }
+    try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
+    store.clearTableSession(tableId);
+    await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId!) });
+    navigate(`/pos/table/${tableId}/checkout/success?order=${encodeURIComponent(orderId)}`);
+  }
+
   async function handleCheckout() {
     if (!cartId) return;
     setCheckingOut(true);
@@ -216,28 +226,24 @@ export default function MenuPage() {
     const orderId = res?.orderId as string | undefined;
     if (!orderId) {
       toast.error("Could not create order for checkout.");
+      setCheckingOut(false);
       return;
     }
     const ac = new AbortController();
     checkoutAbortRef.current = ac;
     try {
-      const url = await pollForSessionUrl(orderId, 12_000, 600, { signal: ac.signal });
-      if (url) {
-        window.location.href = url;
-        // Best-effort cleanup; may not run after navigation
-        try { await unlinkOrder.mutateAsync(cartId); } catch { }
-        try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
-        store.clearTableSession(tableId);
-        await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
+      const clientSecret = await pollForClientSecret(orderId, 12_000, 600, { signal: ac.signal });
+      if (clientSecret) {
+        setPaymentDialog({ orderId, clientSecret });
         return;
       }
-      // No URL — check terminal status and route accordingly
+      // No client secret yet — check terminal status and route accordingly
       try {
-        const last = await getPaymentSessionUrl(orderId, { signal: ac.signal });
+        const last = await getPaymentClientSecret(orderId, { signal: ac.signal });
         const s = last.status?.toLowerCase();
         if (s === "succeeded") {
           toast.success("Payment already completed.");
-          navigate(`/pos/table/${tableId}/checkout/success?order=${encodeURIComponent(orderId)}`);
+          await finishCheckout(orderId);
           return;
         }
         if (s === "failed") {
@@ -373,6 +379,27 @@ export default function MenuPage() {
             Try a different category or clear filters.
           </CardContent>
         </Card>
+      )}
+
+      {/* Embedded Stripe payment dialog - opens once a client secret is ready */}
+      {paymentDialog && (
+        <StripeCheckoutDialog
+          open
+          orderId={paymentDialog.orderId}
+          clientSecret={paymentDialog.clientSecret}
+          onOpenChange={(open) => { if (!open) setPaymentDialog(null); }}
+          onSuccess={() => {
+            const orderId = paymentDialog.orderId;
+            setPaymentDialog(null);
+            void finishCheckout(orderId);
+          }}
+          onFailure={(message) => {
+            const orderId = paymentDialog.orderId;
+            setPaymentDialog(null);
+            toast.error(message);
+            navigate(`/pos/table/${tableId}/checkout/cancel?order=${encodeURIComponent(orderId)}`);
+          }}
+        />
       )}
 
       {/* Fixed Sidebar (desktop) / Sheet (mobile) */}

@@ -12,6 +12,6 @@ public record PaymentFailed(Guid CorrelationId, Guid OrderId, string Reason,
     string RestaurantId,
     string LocationId);
 
-public record PaymentSessionCreated(Guid CorrelationId, Guid OrderId, string CheckoutUrl,
+public record PaymentSessionCreated(Guid CorrelationId, Guid OrderId, string ClientSecret,
     string RestaurantId,
     string LocationId);

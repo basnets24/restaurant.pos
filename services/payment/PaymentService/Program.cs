@@ -16,7 +16,6 @@ builder.Services.AddControllers();
 
 // Bind options
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(nameof(StripeSettings)));
-builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection(nameof(FrontendSettings)));
 
 builder.Services.AddScoped<IStripeClient>(sp =>
 {

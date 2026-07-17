@@ -7,6 +7,7 @@ declare global {
         ORDER_SERVICE_URL?: string;
         PAYMENT_SERVICE_URL?: string;
         RABBITMQ_URL?: string;
+        STRIPE_PUBLISHABLE_KEY?: string;
     }
 }
 
@@ -21,5 +22,6 @@ export const ENV = {
     ORDER_URL: must(window.ORDER_SERVICE_URL ?? import.meta.env.VITE_ORDER_URL, "VITE_ORDER_URL"),
     PAYMENT_URL: must(window.PAYMENT_SERVICE_URL ?? import.meta.env.VITE_PAYMENT_URL, "VITE_PAYMENT_URL"),
     RABBITMQ_URL: must(window.RABBITMQ_URL ?? import.meta.env.VITE_RABBITMQ_URL, "VITE_RABBITMQ_URL"),
+    STRIPE_PUBLISHABLE_KEY: must(window.STRIPE_PUBLISHABLE_KEY ?? import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY, "VITE_STRIPE_PUBLISHABLE_KEY"),
 } as const;
 
