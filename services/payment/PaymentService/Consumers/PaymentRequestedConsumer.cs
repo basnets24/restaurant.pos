@@ -5,6 +5,7 @@ using Messaging.Contracts.Events.Payment;
 using Microsoft.Extensions.Options;
 using PaymentService.Entities;
 using PaymentService.Settings;
+using Stripe;
 
 namespace PaymentService.Consumers;
 
@@ -14,16 +15,19 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
     private readonly ILogger<PaymentRequestedConsumer> _logger;
     private readonly FrontendSettings _frontend;
     private readonly ITenantContext _tenant;
+    private readonly IStripeClient _stripeClient;
 
     public PaymentRequestedConsumer(
         ILogger<PaymentRequestedConsumer> logger,
-        IRepository<Payment> repository, 
-        ITenantContext tenant, IOptions<FrontendSettings> frontend)
+        IRepository<Payment> repository,
+        ITenantContext tenant, IOptions<FrontendSettings> frontend,
+        IStripeClient stripeClient)
     {
         _logger = logger;
         _paymentsRepo = repository;
         _tenant = tenant;
         _frontend = frontend.Value;
+        _stripeClient = stripeClient;
     }
 
     public async Task Consume(ConsumeContext<PaymentRequested> context)
@@ -103,33 +107,15 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             ]
         };
         
-        var session = await new Stripe.Checkout.SessionService().CreateAsync(create);
-        payment.ProviderRef = session.Id; 
-        payment.SessionUrl  = session.Url; 
-        
+        var session = await new Stripe.Checkout.SessionService(_stripeClient).CreateAsync(create);
+        payment.ProviderRef = session.Id;
+        payment.SessionUrl  = session.Url;
+
         payment.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _paymentsRepo.UpdateAsync(payment);
-        
+
         await context.Publish(new PaymentSessionCreated(
             msg.CorrelationId, msg.OrderId, session.Url!, _tenant.RestaurantId, _tenant.LocationId));
-        
-        
-        
-        
-        // payment.UpdatedAt = DateTimeOffset.UtcNow;
-        // _logger.LogInformation("Received payment request for Order {OrderId} (Amount: {Amount})", msg.OrderId, msg.AmountCents);;
-        // // DEMO: auto-approve after a tiny delay
-        // await Task.Delay(300); // simulate gateway latency
-        // payment.Status = "Succeeded";
-        // payment.ProviderRef = $"demo_{payment.Id:N}";
-        // payment.UpdatedAt = DateTimeOffset.UtcNow;
-        //
-        // if (existing is null) await _paymentsRepo.CreateAsync(payment);
-        // else await _paymentsRepo.UpdateAsync(payment);
-        //
-        // _logger.LogInformation("Payment Succeeded for Order {OrderId}", msg.OrderId);
-        // await context.Publish(new PaymentSucceeded(msg.CorrelationId, msg.OrderId,  
-        //     _tenant.RestaurantId, _tenant.LocationId));
     }
 }
