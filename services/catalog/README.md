@@ -1,8 +1,7 @@
 # CatalogService (Restaurant POS)
 
 Menu and inventory API for the Restaurant POS platform — merged from the
-former standalone `menu` and `inventory` services (see
-`docs/SERVICE_CONSOLIDATION.md` / `docs/MENU_INVENTORY_CONSOLIDATION.md`).
+former standalone `menu` and `inventory` services.
 Provides tenant-aware CRUD for menu items and their linked inventory
 records, publishes domain events, and services the checkout saga's
 reserve/release inventory commands. Built with .NET 8, MongoDB,
