@@ -68,7 +68,7 @@ public class CartService : ICartService
     public async Task AddItemAsync(Guid cartId, AddCartItemDto itemDto)
     {
         var cart = await _cartRepo.GetAsync(cartId);
-        var posItem = await _posCatalog.GetAsync(itemDto.MenuItemId);
+        var posItem = await _posCatalog.GetAsync(x => x.MenuItemId == itemDto.MenuItemId);
 
         if (posItem is null)
             throw new InvalidOperationException("Menu item not found in catalog.");
