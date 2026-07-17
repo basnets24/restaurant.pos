@@ -9,14 +9,13 @@ export const AUDIENCES = [
   "Tenant",
   "Catalog",
   "Order",
-  "Inventory",
   "Payment",
 ] as const;
 
 export const API_SCOPES = {
   menu: ["menu.read", "menu.write"],
   order: ["order.read", "order.write"],
-  inventory: ["inventory.read", "inventory.write"],
+  inventory: ["catalog.inventory.read", "catalog.inventory.write"],
   payment: ["payment.read", "payment.charge", "payment.refund"],
 } as const;
 

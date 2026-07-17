@@ -12,8 +12,7 @@ ENV_FILE="$ROOT_DIR/.env"
 # name|project path (relative to ROOT_DIR)|--urls value
 DOTNET_SERVICES=(
   "identity|services/identity/src/IdentityService/IdentityService.csproj|https://localhost:7163;http://localhost:5265"
-  "menu|services/menu/src/MenuService/MenuService.csproj|https://localhost:7226;http://localhost:5062"
-  "inventory|services/inventory/src/InventoryService/InventoryService.csproj|https://localhost:7077;http://localhost:5094"
+  "catalog|services/catalog/src/CatalogService/CatalogService.csproj|https://localhost:7226;http://localhost:5062"
   "order|services/order/src/OrderService/OrderService.csproj|https://localhost:7288;http://localhost:5236"
   "payment|services/payment/PaymentService/PaymentService.csproj|https://localhost:7182;http://localhost:5238"
 )

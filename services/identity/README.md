@@ -176,16 +176,20 @@ All endpoints are protected with IdentityServer’s Local API policy unless note
 
 ## Project Layout
 - `Program.cs` — service wiring (IdentityServer, Identity, EF Core, CORS, Serilog)
-- `Extensions/` — DI helpers for IdentityServer, EF/Identity, tenant claims provider, and request validation/error handling
-- `Settings/` — strongly‑typed settings models
-- `Controllers/` — users, tenant employees, tenants, and onboarding endpoints
-- `Services/` — profile service, embedded tenant claims/directory providers, and restaurant onboarding
-- `Entities/` — ASP.NET Identity entities
-- `Contracts/` — DTOs used by the API
-- `Validation/` — custom validation attributes for onboarding/location input
+- `Areas/Identity/Pages/` — scaffolded ASP.NET Core Identity Razor pages (login, register, password reset, 2FA)
+- `Common/`
+  - `Extensions/` — cross‑cutting DI helpers: IdentityServer setup, EF/Identity registration, tenant claims provider, request validation/error handling
+  - `Settings/` — strongly‑typed settings models (`IdentityServerSettings`, `IdentitySettings`)
+- `Data/` — `ApplicationDbContext` (identity schema)
+- `Entities/` — ASP.NET Identity entities (`ApplicationUser`, `ApplicationRole`); shared by both Features below, which is why it lives at the root rather than inside either
+- `Features/`
+  - `Identity/` — user management: `Controllers`, `DTOs`, `Repositories`, `Services`, `Extensions` (DTO mapping)
+  - `Tenancy/` — onboarding, tenants, and employees (merged from the former `TenantService`): `Controllers`, `DTOs`, `Repositories`, `Services`, `Validation`
+  - `Shared/` — cross‑feature `DTOs`/`Constants` (e.g. `Paged<T>`, `Roles`)
+- `Filters/` — validation action filters used by `Common/Extensions/ValidationExtensions`
 - `Middleware/` — global exception handling
 - `HostedServices/` — startup migrations (identity + tenant schemas) and admin seeding
-- `Migrations/` — EF Core migrations (identity schema only; tenant-schema migrations live in the `Tenant.Domain` package)
+- `Migrations/` — EF Core migrations (identity schema only; tenant-schema migrations live in the `Tenant.Domain` package). Kept at the root rather than under `Features/` because EF migration snapshots embed CLR type names as strings — moving entity types would desync them from already-applied migration history
 
 ## Notes
 - In `Development`, CORS is enabled using `Cors:AllowedOrigins` and Swagger UI is available.

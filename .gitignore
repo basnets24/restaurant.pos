@@ -13,6 +13,9 @@ obj/
 .idea/
 *.sln.iml
 
+# Visual Studio
+.vs/
+
 # VS Code (in case)
 .vscode/
 

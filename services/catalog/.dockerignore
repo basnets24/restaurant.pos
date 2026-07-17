@@ -1,0 +1,55 @@
+# .dockerignore for Catalog Service
+
+# Ignore everything by default
+**
+
+# Include what we need
+!src/CatalogService/**
+!../../NuGet.config
+!../../Restaurant.Pos.sln
+!../../shared/messaging.contracts/**
+
+# Exclude build artifacts and temporary files
+src/CatalogService/bin/
+src/CatalogService/obj/
+src/CatalogService/.vs/
+src/CatalogService/*.user
+src/CatalogService/*.suo
+src/CatalogService/*.cache
+src/CatalogService/launchSettings.json
+
+# Exclude messaging.contracts build artifacts
+../../shared/messaging.contracts/bin/
+../../shared/messaging.contracts/obj/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Runtime and temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+*.md

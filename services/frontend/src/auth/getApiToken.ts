@@ -3,7 +3,7 @@ import { useAuth } from "./store";
 import { logToken } from "./debug";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
-type Audience = "Tenant" | "Catalog" | "Order" | "Inventory" | "Payment" | "IdentityServerApi";
+type Audience = "Tenant" | "Catalog" | "Order" | "Payment" | "IdentityServerApi";
 
 const cache = new Map<string, { token: string; exp: number }>();
 

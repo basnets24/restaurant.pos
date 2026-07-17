@@ -23,10 +23,8 @@ jobs:
         include:
           - name: IdentityService
             project: services/identity/src/IdentityService/IdentityService.csproj
-          - name: MenuService
-            project: services/menu/src/MenuService/MenuService.csproj
-          - name: InventoryService
-            project: services/inventory/src/InventoryService/InventoryService.csproj
+          - name: CatalogService
+            project: services/catalog/src/CatalogService/CatalogService.csproj
           - name: OrderService
             project: services/order/src/OrderService/OrderService.csproj
           - name: PaymentService
