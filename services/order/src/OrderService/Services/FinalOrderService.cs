@@ -106,6 +106,7 @@ public class FinalOrderService : IOrderService
         if (order.Status == "Paid") return;
 
         order.Status = "Paid";
+        order.PaidAt = DateTimeOffset.UtcNow;
         await _orders.UpdateAsync(order);
 
         if (order.TableId is Guid tableId)

@@ -49,7 +49,7 @@ export async function removeCartItem(id: string, menuItemId: string, tenant?: Te
 }
 
 export async function checkoutCart(id: string, tenant?: TenantHeaders) {
-    const token = await getApiToken('Order', ['order.write', 'payment.charge']);
+    const token = await getApiToken('Order', ['order.write']);
     const { data } = await http.post<CheckoutResponse>(`${BASE}/carts/${id}/checkout`, null, {
         headers: { ...withTenantHeaders(tenant), Authorization: `Bearer ${token}` },
     });

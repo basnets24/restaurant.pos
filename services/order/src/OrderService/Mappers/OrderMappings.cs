@@ -28,6 +28,8 @@ public static class OrderMappings
             GrandTotal = order.GrandTotal,
             ReceiptUrl = order.ReceiptUrl,
             PaidAt = order.PaidAt,
+            LastPaymentError = order.LastPaymentError,
+            LastPaymentFailedAt = order.LastPaymentFailedAt,
         };
     }
 

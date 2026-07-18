@@ -35,3 +35,13 @@ export function useFinalizeOrder(opts?: { tenant?: TenantHeaders }) {
         },
     });
 }
+
+export function useRequestPayment(opts?: { tenant?: TenantHeaders }) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (orderId: string) => api.requestPayment(orderId, opts?.tenant),
+        onSuccess: (_data, orderId) => {
+            qc.invalidateQueries({ queryKey: orderKeys.byId(orderId) });
+        },
+    });
+}

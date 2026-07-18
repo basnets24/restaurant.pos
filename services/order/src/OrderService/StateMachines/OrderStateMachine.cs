@@ -2,43 +2,32 @@ using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Order;
-using Messaging.Contracts.Events.Payment;
-using Messaging.Contracts.Events.Sagas;
 
 namespace OrderService.StateMachines;
 
 public class OrderStateMachine : MassTransitStateMachine<OrderState>
 {
     public State InventoryPending { get; } = null!;
-    public State PaymentPending { get; private set; } = null!;
-    public State Completed { get; private set; } = null!;
+    public State Confirmed { get; private set; } = null!;
     public State Rejected { get; private set; } = null!;
-    
+
     public Event<OrderSubmitted> OrderSubmitted { get; private set; } = null!;
     public Event<InventoryReserved> InventoryReserved { get; private set; } = null!;
     public Event<InventoryReserveFaulted> InventoryReserveFaulted { get; private set; } = null!;
-    public Event<PaymentSucceeded> PaymentSucceeded { get; private set; } = null!;
-    public Event<PaymentFailed> PaymentFailed { get; private set; } = null!;
-    
-    public Schedule<OrderState, PaymentTimeoutExpired> PaymentTimeout { get; private set; } = null!;
-    
-    private readonly ILogger<OrderStateMachine> _logger;
-    
 
-    public OrderStateMachine(ILogger<OrderStateMachine> logger
-        )
+    private readonly ILogger<OrderStateMachine> _logger;
+
+
+    public OrderStateMachine(ILogger<OrderStateMachine> logger)
     {
         _logger = logger;
-       
 
         InstanceState(x => x.CurrentState);
-        
-        Schedule(() => PaymentTimeout, x => x.PaymentTimeoutTokenId);
+
         ConfigureEvents();
         ConfigureInitial();
         ConfigureInventoryPending();
-        ConfigurePaymentPending();
-        ConfigureCompleted();
+        ConfigureConfirmed();
         ConfigureRejected();
     }
 
@@ -47,19 +36,17 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
         Event(() => OrderSubmitted);
         Event(() => InventoryReserved, x => x.CorrelateById(context => context.Message.CorrelationId));
         Event(() => InventoryReserveFaulted, x => x.CorrelateById(context => context.Message.CorrelationId));
-        Event(() => PaymentSucceeded, x => x.CorrelateById(context => context.Message.CorrelationId));
-        Event(() => PaymentFailed, x => x.CorrelateById(context => context.Message.CorrelationId));
     }
-    
+
     private void ConfigureInitial()
     {
         Initially(
-            // submit order 
+            // submit order
             When(OrderSubmitted)
                 .Then(context =>
                     {
                         context.Saga.OrderId = context.Message.OrderId;
-                        context.Saga.TableId = context.Message.TableId; 
+                        context.Saga.TableId = context.Message.TableId;
                         context.Saga.Items = context.Message.Items;
                         context.Saga.OrderTotal = context.Message.TotalAmount;
                         context.Saga.SubmittedAt = DateTimeOffset.Now;
@@ -67,7 +54,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         _logger.LogInformation("Order submitted with ID {OrderId}", context.Saga.OrderId);
                     })
                 .Send(context =>
-                    // send a message to inventory to reserve 
+                    // send a message to inventory to reserve
                     new ReserveInventory(
                         context.Saga.CorrelationId,
                         context.Saga.OrderId,
@@ -75,9 +62,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         context.Saga.RestaurantId,
                         context.Saga.LocationId))
                 .TransitionTo(InventoryPending)
-        ); 
+        );
     }
-    
+
     private void ConfigureInventoryPending()
     {
        During(InventoryPending,
@@ -87,21 +74,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                {
                    context.Saga.LastUpdated = DateTimeOffset.Now;
                    context.Saga.InventoryCheckedAt = context.Saga.LastUpdated;
-                   _logger.LogInformation("Inventory reserved for order {OrderId}", context.Saga.OrderId);
+                   _logger.LogInformation("Inventory reserved for order {OrderId} - fired", context.Saga.OrderId);
                })
-               // send a message to payment service 
-               .Send( context => new PaymentRequested(
-                   context.Saga.CorrelationId,
-                   context.Saga.OrderId,
-                   context.Saga.TableId,
-                   AmountCents: (long) (context.Saga.OrderTotal * 100m ),
-                   context.Saga.RestaurantId, context.Saga.LocationId)
-               )
-               .Schedule(
-                   PaymentTimeout,
-                   ctx => new PaymentTimeoutExpired { CorrelationId = ctx.Saga.CorrelationId },
-                   ctx => TimeSpan.FromMinutes(2)  // <= duration as a lambda
-               ).TransitionTo(PaymentPending),
+               .TransitionTo(Confirmed),
            When(InventoryReserveFaulted)
                .Then(context =>
                {
@@ -114,70 +89,18 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
            );
     }
 
-    private void ConfigurePaymentPending()
+    private void ConfigureConfirmed()
     {
-        During(PaymentPending,
+        During(Confirmed,
             Ignore(OrderSubmitted),
-            Ignore(InventoryReserved),
-            When(PaymentSucceeded)
-                .Unschedule(PaymentTimeout)
-                .Then(context =>
-                    {
-                        context.Saga.LastUpdated = DateTimeOffset.UtcNow;
-                        context.Saga.PaymentProcessedAt = context.Saga.LastUpdated;
-                        _logger.LogInformation("Payment succeeded for OrderId {OrderId}", context.Saga.OrderId);
-                    })
-                .TransitionTo(Completed),
-            When(PaymentFailed)
-                .Unschedule(PaymentTimeout)                 // cancel timeout timer
-                .Then(context =>
-                {
-                    context.Saga.LastUpdated = DateTimeOffset.UtcNow;
-                    context.Saga.ErrorMessage = context.Message.Reason;
-                    _logger.LogWarning("Payment failed for OrderId {OrderId}: {Reason}",
-                        context.Saga.OrderId, context.Message.Reason);
-                })
-                .Send(context =>
-                    // compensating messages send to inventory for subtracting items 
-                    new ReleaseInventory(
-                        context.Saga.CorrelationId,
-                        context.Saga.OrderId,
-                        context.Saga.Items,
-                        context.Saga.RestaurantId, 
-                        context.Saga.LocationId))
-            .TransitionTo(Rejected), 
-            
-            When(PaymentTimeout.Received)
-                .Then(ctx =>
-                {
-                    ctx.Saga.LastUpdated = DateTimeOffset.UtcNow;
-                    ctx.Saga.ErrorMessage = "Payment timed out";
-                    _logger.LogWarning("Payment timed out for OrderId {OrderId}", ctx.Saga.OrderId);
-                })
-                .Send(ctx => new ReleaseInventory(
-                    ctx.Saga.CorrelationId,
-                    ctx.Saga.OrderId,
-                    ctx.Saga.Items,
-                    ctx.Saga.RestaurantId,
-                    ctx.Saga.LocationId))
-                .TransitionTo(Rejected)
-            );
+            Ignore(InventoryReserved));
     }
-    
-    private void ConfigureCompleted()
-    {
-        During(Completed,
-            Ignore(OrderSubmitted),
-            Ignore(InventoryReserved),
-            Ignore(PaymentSucceeded));
-    }
-    
+
     private void ConfigureRejected()
     {
         During(Rejected,
             Ignore(OrderSubmitted),
-            Ignore(InventoryReserveFaulted),
-            Ignore(PaymentFailed));
+            Ignore(InventoryReserveFaulted));
     }
-    
+
 }

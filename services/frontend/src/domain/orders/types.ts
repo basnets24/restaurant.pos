@@ -48,6 +48,8 @@ export interface OrderDto {
 
     receiptUrl?: string | null;
     paidAt?: string | null;
+    lastPaymentError?: string | null;
+    lastPaymentFailedAt?: string | null;
 }
 
 export interface TenantHeaders {

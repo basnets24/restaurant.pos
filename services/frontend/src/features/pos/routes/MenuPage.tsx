@@ -16,7 +16,6 @@ import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/dom
 import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
 import { OrderSidebar } from "@/features/pos/components/OrderSideBar";
-import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
 import {
   useCreateCart,
   useCart,
@@ -25,7 +24,6 @@ import {
 } from "@/domain/cart";
 import type { CartDto } from "@/domain/cart";
 import { useStore } from "@/stores";
-import { pollForClientSecret, getPaymentClientSecret } from "@/domain/payments/api";
 
 type POSMenuItem = {
   id: string;
@@ -80,7 +78,6 @@ export default function MenuPage() {
   // Sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [paymentDialog, setPaymentDialog] = useState<{ orderId: string; clientSecret: string } | null>(null);
 
   // Selected category
   const [category, setCategory] = useState<string>("All");
@@ -96,7 +93,6 @@ export default function MenuPage() {
   const unlinkOrder = useUnlinkOrder(tableId);
 
   const linkedOnce = useRef(false);
-  const checkoutAbortRef = useRef<AbortController | null>(null);
   // Seed guest count to store if passed via navigation state
   useEffect(() => {
     if (location.state?.partySize != null) {
@@ -104,9 +100,6 @@ export default function MenuPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableId]);
-
-  // Abort any in-flight checkout polling when unmounting
-  useEffect(() => () => checkoutAbortRef.current?.abort(), []);
 
   // Ensure we have a cart; then link table->cart and set party size
   useEffect(() => {
@@ -185,8 +178,8 @@ export default function MenuPage() {
       await qc.invalidateQueries({ queryKey: cartKeys.byId(id!) });
       setSidebarOpen(true);
       toast.success(`Added ${quantity}× ${item.name}`);
-    } catch {
-      toast.error("Failed to add item");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Failed to add item");
     }
   }
 
@@ -194,15 +187,20 @@ export default function MenuPage() {
   async function handleUpdateItem(menuItemId: string, newQty: number) {
     if (!cartId) return;
     const curr = cart?.items.find((i) => i.menuItemId === menuItemId)?.quantity ?? 0;
-    if (newQty <= 0) {
-      await cartApi.removeCartItem(cartId, menuItemId);
-    } else if (curr === 0) {
-      await cartApi.addCartItem(cartId, { menuItemId, quantity: newQty });
-    } else {
-      await cartApi.removeCartItem(cartId, menuItemId);
-      await cartApi.addCartItem(cartId, { menuItemId, quantity: newQty });
+    try {
+      if (newQty <= 0) {
+        await cartApi.removeCartItem(cartId, menuItemId);
+      } else if (curr === 0) {
+        await cartApi.addCartItem(cartId, { menuItemId, quantity: newQty });
+      } else {
+        await cartApi.removeCartItem(cartId, menuItemId);
+        await cartApi.addCartItem(cartId, { menuItemId, quantity: newQty });
+      }
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || "Failed to update item");
+    } finally {
+      await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
     }
-    await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
   }
 
   async function handleRemoveItem(menuItemId: string) {
@@ -211,51 +209,22 @@ export default function MenuPage() {
     await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
   }
 
-  async function finishCheckout(orderId: string) {
-    try { await unlinkOrder.mutateAsync(cartId!); } catch { }
-    try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
-    store.clearTableSession(tableId);
-    await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId!) });
-    navigate(`/pos/table/${tableId}/checkout/success?order=${encodeURIComponent(orderId)}`);
-  }
-
+  // Firing an order just creates it and sends it to the kitchen - payment is
+  // a separate, later action the guest/staff triggers from OrderPage
+  // whenever they're ready to pay, not tied to this step or its timing.
   async function handleCheckout() {
     if (!cartId) return;
     setCheckingOut(true);
-    const res = await cartApi.checkoutCart(cartId);
-    const orderId = res?.orderId as string | undefined;
-    if (!orderId) {
-      toast.error("Could not create order for checkout.");
-      setCheckingOut(false);
-      return;
-    }
-    const ac = new AbortController();
-    checkoutAbortRef.current = ac;
     try {
-      const clientSecret = await pollForClientSecret(orderId, 12_000, 600, { signal: ac.signal });
-      if (clientSecret) {
-        setPaymentDialog({ orderId, clientSecret });
+      const res = await cartApi.checkoutCart(cartId);
+      const orderId = res?.orderId as string | undefined;
+      if (!orderId) {
+        toast.error("Could not create order for checkout.");
         return;
       }
-      // No client secret yet — check terminal status and route accordingly
-      try {
-        const last = await getPaymentClientSecret(orderId, { signal: ac.signal });
-        const s = last.status?.toLowerCase();
-        if (s === "succeeded") {
-          toast.success("Payment already completed.");
-          await finishCheckout(orderId);
-          return;
-        }
-        if (s === "failed") {
-          toast.error("Payment failed.");
-          navigate(`/pos/table/${tableId}/checkout/cancel?order=${encodeURIComponent(orderId)}`);
-          return;
-        }
-      } catch { }
-      toast.error("Payment session not ready yet. Please try again.")
+      navigate(`/pos/table/${tableId}/checkout/success?order=${encodeURIComponent(orderId)}`);
     } finally {
       setCheckingOut(false);
-      checkoutAbortRef.current = null;
     }
   }
 
@@ -379,27 +348,6 @@ export default function MenuPage() {
             Try a different category or clear filters.
           </CardContent>
         </Card>
-      )}
-
-      {/* Embedded Stripe payment dialog - opens once a client secret is ready */}
-      {paymentDialog && (
-        <StripeCheckoutDialog
-          open
-          orderId={paymentDialog.orderId}
-          clientSecret={paymentDialog.clientSecret}
-          onOpenChange={(open) => { if (!open) setPaymentDialog(null); }}
-          onSuccess={() => {
-            const orderId = paymentDialog.orderId;
-            setPaymentDialog(null);
-            void finishCheckout(orderId);
-          }}
-          onFailure={(message) => {
-            const orderId = paymentDialog.orderId;
-            setPaymentDialog(null);
-            toast.error(message);
-            navigate(`/pos/table/${tableId}/checkout/cancel?order=${encodeURIComponent(orderId)}`);
-          }}
-        />
       )}
 
       {/* Fixed Sidebar (desktop) / Sheet (mobile) */}

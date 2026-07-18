@@ -82,6 +82,17 @@ public class GlobalExceptionMiddleware
                     TraceId = traceId
                 }
             },
+            InvalidOperationException invalidOpEx when invalidOpEx.Message.Contains("stock") || invalidOpEx.Message.Contains("unavailable") => new ErrorResponse
+            {
+                StatusCode = (int)HttpStatusCode.BadRequest,
+                Body = new ErrorDetails
+                {
+                    Title = "Item Unavailable",
+                    Detail = invalidOpEx.Message,
+                    Type = "https://httpstatuses.com/400",
+                    TraceId = traceId
+                }
+            },
             InvalidOperationException invalidOpEx when invalidOpEx.Message.Contains("cart") && invalidOpEx.Message.Contains("empty") => new ErrorResponse
             {
                 StatusCode = (int)HttpStatusCode.BadRequest,
