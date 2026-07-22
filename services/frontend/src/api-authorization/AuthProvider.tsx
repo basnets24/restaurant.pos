@@ -89,6 +89,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         };
     }, []);
 
+    // The browser's back-forward cache can restore an entire frozen page
+    // snapshot (including in-memory React/JS state) from before a logout,
+    // without re-running any app code - so navigating "back" after signing
+    // out can show stale isAuthenticated=true state. Force a real reload
+    // whenever the page is served from bfcache so auth state gets re-checked.
+    useEffect(() => {
+        const handlePageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
+    }, []);
+
     const signIn = async (returnUrl?: string) => {
         try {
             // If we recently signed out, skip silent once to avoid auto SSO login via back button
@@ -99,10 +114,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 setFromUser(u);
                 if (returnUrl) window.location.replace(returnUrl);
                 return;
-            } else {
-                sessionStorage.removeItem("auth.skipSilentOnce");
             }
+            sessionStorage.removeItem("auth.skipSilentOnce");
             // Fall through to interactive login
+            await userManager.signinRedirect({
+                state: { returnUrl },
+                prompt: "login",
+                redirect_uri: `${window.location.origin}${AuthorizationPaths.LoginCallback}`,
+            });
         } catch {
             // Fall back to redirect; carry returnUrl in `state`
             await userManager.signinRedirect({
