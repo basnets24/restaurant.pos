@@ -1,10 +1,9 @@
--[0-
-p0\=\# PaymentService (Restaurant POS)
+# PaymentService (Restaurant POS)
 
-Payment orchestration for the Restaurant POS platform. Creates Stripe Checkout sessions on request, handles webhooks to mark payments succeeded/failed, and exposes a simple query to retrieve a pending session URL. Built with .NET 8, MongoDB, MassTransit/RabbitMQ, and Stripe.
+Payment orchestration for the Restaurant POS platform. Creates Stripe Checkout sessions on request, handles webhooks to mark payments succeeded/failed, and exposes a simple query to retrieve a pending session URL. Built with .NET 8, PostgreSQL/EF Core, MassTransit/RabbitMQ, and Stripe.
 
 ## Features
-- Tenant‑scoped payment records in MongoDB
+- Tenant‑scoped payment records in PostgreSQL
 - Stripe Checkout integration (server‑side session creation + webhook processing)
 - Messaging integration with the order workflow
   - Consumes: `PaymentRequested`
@@ -15,7 +14,7 @@ Payment orchestration for the Restaurant POS platform. Creates Stripe Checkout s
 
 ### Prerequisites
 - .NET SDK 8.0+
-- MongoDB (local or container)
+- PostgreSQL (local or container)
 - RabbitMQ (local or container)
 - Stripe account and API keys (secret + webhook signing secret)
 
@@ -24,8 +23,8 @@ Configured via `appsettings.json` and environment variables or User Secrets.
 
 - ServiceSettings
   - Authority: OIDC authority (if auth is added later); currently not required by controllers
-- MongoDbSettings
-  - Host, Port (and optional credentials depending on Common.Library)
+- PostgresSettings
+  - Host, Port, Database, Username, Password
 - RabbitMqSettings
   - Host (and optional username/password if required)
 - Cors
@@ -59,7 +58,8 @@ dotnet run  # http://localhost:5238
 cd services/payment
 docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/payment-service:1.0.2 .
 docker run -d -p 5238:5238 \
--e MongoDbSettings__ConnectionString="$cosmosDbString" \
+-e PostgresSettings__Host="$postgresHost" \
+-e PostgresSettings__Password="$postgresPassword" \
 -e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
 -e ServiceSettings__MessageBroker="SERVICEBUS" \
 -e Stripe__SecretKey="$STRIPE_SECRET_KEY" \
@@ -202,7 +202,7 @@ Notes
   - `PaymentFailed` when Stripe indicates failure
 
 ## Project Layout
-- `Program.cs` — DI for Mongo, Tenancy, MassTransit, Stripe configuration, CORS, Swagger
+- `Program.cs` — DI for Postgres/EF Core, Tenancy, MassTransit, Stripe configuration, CORS, Swagger
 - `Controllers/` — Stripe API, webhook, and session query by order
 - `Entities/` — `Payment` model (tenant‑scoped)
 - `Settings/` — `StripeSettings`, `FrontendSettings`

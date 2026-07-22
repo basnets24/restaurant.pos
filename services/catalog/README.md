@@ -4,12 +4,12 @@ Menu and inventory API for the Restaurant POS platform — merged from the
 former standalone `menu` and `inventory` services.
 Provides tenant-aware CRUD for menu items and their linked inventory
 records, publishes domain events, and services the checkout saga's
-reserve/release inventory commands. Built with .NET 8, MongoDB,
+reserve/release inventory commands. Built with .NET 8, PostgreSQL/EF Core,
 MassTransit/RabbitMQ, and JWT Bearer auth.
 
 ## Features
-- Tenant-scoped menu items and inventory items stored in MongoDB
-  (`menuitems`, `inventoryitems` collections)
+- Tenant-scoped menu items and inventory items stored in PostgreSQL
+  (`MenuItems`, `InventoryItems` tables)
 - REST API for menu items (list, detail, create, update, delete, set
   availability) and inventory items (list, detail, update, delete)
 - Every menu item has a linked inventory record, created/synced/deleted
@@ -34,7 +34,7 @@ MassTransit/RabbitMQ, and JWT Bearer auth.
 
 ### Prerequisites
 - .NET SDK 8.0+
-- MongoDB (local or container)
+- PostgreSQL (local or container)
 - RabbitMQ (local or container)
 - Optional: Seq for structured logs
 
@@ -43,8 +43,8 @@ Defined in `appsettings.json` and overridable via environment variables or User 
 
 - ServiceSettings
   - Authority: OIDC authority for JWT validation
-- MongoDbSettings
-  - Host, Port (and optional database/credentials if supported by Common.Library)
+- PostgresSettings
+  - Host, Port, Database, Username, Password
 - RabbitMqSettings
   - Host (and optional username/password if configured in your environment)
 - Cors
@@ -57,7 +57,7 @@ Defined in `appsettings.json` and overridable via environment variables or User 
 #### Setup & Run
 ```bash
 #!/bin/bash
-# Build and run Catalog Service (requires MongoDB, RabbitMQ, Identity Service)
+# Build and run Catalog Service (requires PostgreSQL, RabbitMQ, Identity Service)
 cd services/catalog/src/CatalogService
 dotnet restore
 dotnet run  # http://localhost:5062
@@ -70,7 +70,8 @@ cd services/catalog
 docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/catalog-service:1.0.0 .
 
 docker run -d -p 5062:5062 \
-  -e MongoDbSettings__ConnectionString="$cosmosDbString" \
+  -e PostgresSettings__Host="$postgresHost" \
+  -e PostgresSettings__Password="$postgresPassword" \
   -e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
   -e ServiceSettings__MessageBroker="SERVICEBUS" \
   --network pos_pos-net \
@@ -110,7 +111,7 @@ Notes
 - Menu-item ↔ inventory-item sync (availability on the menu side, name/availability on the inventory side) happens via direct in-process calls, not consumers — both entities live in this same service now.
 
 ## Project Layout
-- `Program.cs` — DI for Mongo, MassTransit (including the explicit `inventory-reserve-inventory`/`inventory-release-inventory` receive endpoints), Tenancy, auth, Swagger, CORS
+- `Program.cs` — DI for Postgres/EF Core, MassTransit (including the explicit `inventory-reserve-inventory`/`inventory-release-inventory` receive endpoints), Tenancy, auth, Swagger, CORS
 - `Controllers/` — menu items and inventory items APIs
 - `Services/InventoryManager.cs` — inventory quantity/availability updates, event publishing, and direct menu-item availability sync
 - `Entities/` — `MenuItem` and `InventoryItem`

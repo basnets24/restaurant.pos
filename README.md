@@ -6,8 +6,8 @@ A cloud-native restaurant management platform built with microservices architect
 
 **Frontend**: React, TypeScript, TanStack Query, Tailwind CSS, SignalR  
 **Backend**: .NET 8 Microservices, ASP.NET Core Web API  
-**Databases**: MongoDB, PostgreSQL  
-**Cloud**: Azure Kubernetes Service, Cosmos DB, Service Bus, Container Registry  
+**Databases**: PostgreSQL  
+**Cloud**: Azure Kubernetes Service, Service Bus, Container Registry  
 **DevOps**: Docker, Kubernetes, Helm, GitHub Actions, CI/CD  
 **Security**: OAuth 2.0/OpenID Connect, JWT Bearer tokens  
 **Patterns**: Event-driven architecture, CQRS, Multi-tenancy  
@@ -24,8 +24,7 @@ A cloud-native restaurant management platform built with microservices architect
 - **Containerized**: Docker-based deployment
 
 ### Infrastructure Components
-- **PostgreSQL**: Identity & tenant data
-- **MongoDB**: Business domain data storage
+- **PostgreSQL**: All service data (identity/tenant, catalog, order, payment), schema-per-service
 - **RabbitMQ**: Service-to-service messaging
 - **Seq**: Centralized structured logging
 - **Azure Kubernetes Service**: Orchestration platform
@@ -65,7 +64,7 @@ A cloud-native restaurant management platform built with microservices architect
 ## Infrastructure & DevOps
 
 ### Development Workflow
-- Docker Compose for local infrastructure (MongoDB, PostgreSQL, RabbitMQ, Seq)
+- Docker Compose for local infrastructure (PostgreSQL, RabbitMQ, Seq)
 - `scripts/dev.sh` runs services + frontend locally via `dotnet run` / `npm run dev`
 - Azure Kubernetes Service for production
 - GitHub Actions pipeline for CI/CD
@@ -98,7 +97,7 @@ cp .env.example .env
 
 **Run everything**
 ```bash
-# Start infra (mongo, postgres, rabbitmq, seq) + all services + frontend
+# Start infra (postgres, rabbitmq, seq) + all services + frontend
 ./scripts/dev.sh
 
 # Stop the services started by the script (infra keeps running)

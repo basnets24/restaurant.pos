@@ -361,16 +361,6 @@ resource "azurerm_postgresql_server" "main" {
   # ... configuration
 }
 
-# CosmosDB Account
-resource "azurerm_cosmosdb_account" "main" {
-  name                = var.cosmosdb_account_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  offer_type          = "Standard"
-  kind                = "MongoDB"
-  # ... configuration
-}
-
 # Service Bus Namespace
 resource "azurerm_servicebus_namespace" "main" {
   name                = var.servicebus_namespace_name
@@ -437,11 +427,6 @@ output "aks_resource_group" {
   description = "Resource group containing AKS"
 }
 
-output "cosmosdb_connection_string" {
-  value       = azurerm_cosmosdb_account.main.primary_mongodb_connection_string
-  sensitive   = true
-}
-
 output "servicebus_connection_string" {
   value       = azurerm_servicebus_namespace.main.default_primary_connection_string
   sensitive   = true
@@ -456,7 +441,6 @@ resource_group_name    = "restaurant-pos-rg"
 aks_cluster_name       = "restaurant-pos-aks"
 acr_name               = "restaurantposacr"
 postgres_server_name   = "restaurant-pos-postgres"
-cosmosdb_account_name  = "restaurant-pos-cosmos"
 servicebus_namespace_name = "restaurant-pos-sb"
 keyvault_name          = "restaurant-pos-kv"
 ```

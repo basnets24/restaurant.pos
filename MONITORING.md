@@ -217,7 +217,7 @@ groups:
           description: "P95 latency is {{ $value | humanizeDuration }}"
       
       - alert: DatabaseDown
-        expr: up{job="postgres-exporter"} == 0 or up{job="mongodb-exporter"} == 0
+        expr: up{job="postgres-exporter"} == 0
         for: 2m
         annotations:
           summary: "Database is down"

@@ -28,11 +28,6 @@ variable "supabase_connection_string" {
   sensitive   = true
 }
 
-variable "atlas_connection_string" {
-  description = "MongoDB Atlas connection string. Set via TF_VAR_atlas_connection_string — never commit this."
-  sensitive   = true
-}
-
 variable "app_name" {
   description = "DNS label used by the Emissary Ingress LoadBalancer service."
   default     = "spoontab"
