@@ -49,7 +49,9 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                         context.Saga.TableId = context.Message.TableId;
                         context.Saga.Items = context.Message.Items;
                         context.Saga.OrderTotal = context.Message.TotalAmount;
-                        context.Saga.SubmittedAt = DateTimeOffset.Now;
+                        context.Saga.RestaurantId = context.Message.RestaurantId;
+                        context.Saga.LocationId = context.Message.LocationId;
+                        context.Saga.SubmittedAt = DateTimeOffset.UtcNow;
                         context.Saga.LastUpdated = context.Saga.SubmittedAt;
                         _logger.LogInformation("Order submitted with ID {OrderId}", context.Saga.OrderId);
                     })
@@ -72,7 +74,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
            When(InventoryReserved)
                .Then(context =>
                {
-                   context.Saga.LastUpdated = DateTimeOffset.Now;
+                   context.Saga.LastUpdated = DateTimeOffset.UtcNow;
                    context.Saga.InventoryCheckedAt = context.Saga.LastUpdated;
                    _logger.LogInformation("Inventory reserved for order {OrderId} - fired", context.Saga.OrderId);
                })

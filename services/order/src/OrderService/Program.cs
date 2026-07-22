@@ -1,7 +1,10 @@
 using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MongoDB;
+using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
+using Microsoft.EntityFrameworkCore;
+using OrderService.Data;
 using OrderService.Entities;
 using Microsoft.OpenApi.Models;
 using OrderService;
@@ -25,16 +28,24 @@ builder.Host.UseSerilog();
 
 // OrderService/Program.cs
 builder.Services.AddMongo();
+
+var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
+    ?? throw new InvalidOperationException("PostgresSettings is not configured.");
+builder.Services.AddDbContext<OrderDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
+builder.Services.AddDbContext<OrderStateDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()));
+
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddMongoDb();
+    .AddMongoDb()
+    .AddPostgres<OrderDbContext>();
 builder.Services.AddTenancy();
 
-builder.Services.AddPosCatalogReadModel();
-builder.Services.AddTenantMongoRepository<Cart>("carts");
-builder.Services.AddTenantMongoRepository<DiningTable>("diningtables");
-builder.Services.AddTenantMongoRepository<PosCatalogItem>("pos-catalog-items");
-builder.Services.AddTenantMongoRepository<Order>("orders");
+builder.Services.AddTenantEfRepository<Cart, OrderDbContext>();
+builder.Services.AddTenantEfRepository<DiningTable, OrderDbContext>();
+builder.Services.AddTenantEfRepository<PosCatalogItem, OrderDbContext>();
+builder.Services.AddTenantEfRepository<Order, OrderDbContext>();
 builder.Services.AddTablesModule();
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(
