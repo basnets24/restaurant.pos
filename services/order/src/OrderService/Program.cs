@@ -46,8 +46,10 @@ builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(
     builder.Configuration.GetSection("Pricing"));
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
+builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 

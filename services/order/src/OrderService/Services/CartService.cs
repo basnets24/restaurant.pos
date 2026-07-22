@@ -1,6 +1,7 @@
 using Common.Library;
 using OrderService.Dtos;
 using OrderService.Entities;
+using OrderService.Exceptions;
 using OrderService.Interfaces;
 using OrderService.Projections;
 
@@ -56,7 +57,7 @@ public class CartService : ICartService
                 ?? throw new KeyNotFoundException("Table not found.");
             if (table.Status == DiningTableStatus.Occupied && table.ActiveCartId != null)
             {
-                throw new InvalidOperationException($" {table.Number} is already in use.");
+                throw new ConflictException($"Table {table.Number} is already in use.");
             }
 
             table.Status = DiningTableStatus.Occupied;
@@ -73,10 +74,10 @@ public class CartService : ICartService
         var posItem = await _posCatalog.GetAsync(itemDto.MenuItemId);
 
         if (posItem is null)
-            throw new InvalidOperationException("Menu item not found in catalog.");
+            throw new KeyNotFoundException("Menu item not found in catalog.");
 
         if (!posItem.MenuAvailable || !posItem.InventoryAvailable)
-            throw new InvalidOperationException("Item is unavailable.");
+            throw new BusinessRuleException("Item is unavailable.");
 
         var existing = cart.Items.FirstOrDefault(i => i.MenuItemId == itemDto.MenuItemId);
 
@@ -85,7 +86,7 @@ public class CartService : ICartService
         // exceeding stock.
         var requestedTotal = (existing?.Quantity ?? 0) + itemDto.Quantity;
         if (posItem.Quantity < requestedTotal)
-            throw new InvalidOperationException($"Insufficient stock: only {posItem.Quantity} available.");
+            throw new BusinessRuleException($"Insufficient stock: only {posItem.Quantity} available.");
 
         if (existing != null)
         {
@@ -118,7 +119,7 @@ public class CartService : ICartService
     {
         var cart = await _cartRepo.GetAsync(cartId)
             ?? throw new KeyNotFoundException("Cart not found.");
-        if (!cart.Items.Any()) throw new InvalidOperationException("Cannot checkout an empty cart.");
+        if (!cart.Items.Any()) throw new BusinessRuleException("Cannot checkout an empty cart.");
 
         // Always recompute subtotal from cart items
         var subtotal = cart.Items.Sum(i => i.Quantity * i.UnitPrice);

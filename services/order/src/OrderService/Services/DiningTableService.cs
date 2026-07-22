@@ -5,6 +5,7 @@ using Common.Library.Tenancy;        // ITenantContext
 using Microsoft.AspNetCore.SignalR;
 using OrderService.Dtos;
 using OrderService.Entities;         // DiningTable
+using OrderService.Exceptions;
 using OrderService.Interfaces;       // IDiningTableService
 using OrderService.Hubs;             // FloorHub  (adjust to your hub namespace)
 
@@ -168,7 +169,7 @@ public class DiningTableService : IDiningTableService
 
         // optimistic concurrency via Version
         if (t.Version != dto.Version)
-            throw new InvalidOperationException("Version conflict.");
+            throw new ConflictException("Version conflict.");
 
         t.X = dto.X;
         t.Y = dto.Y;
@@ -199,7 +200,7 @@ public class DiningTableService : IDiningTableService
         {
             var t = await _repo.GetAsync(i.Id) ?? throw new KeyNotFoundException($"Table {i.Id} not found.");
             if (t.Version != i.Version)
-                throw new InvalidOperationException($"Version conflict for table {i.Id}.");
+                throw new ConflictException($"Version conflict for table {i.Id}.");
 
             t.X = i.X; t.Y = i.Y;
             if (i.Width.HasValue)  t.Width  = i.Width.Value;
