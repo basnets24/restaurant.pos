@@ -6,20 +6,42 @@ Complete observability for the Restaurant POS system - centralized logging, dist
 
 ## Current State vs Target
 
+Verified directly against the code (not just this doc) as of 2026-07-22, against
+the current 4-service architecture (identity, catalog, order, payment — menu,
+inventory, and tenant no longer exist as separate services; see
+`docs/MONGO_TO_POSTGRES_MIGRATION.md` and the service-merge history).
+
 ### What's Working ✅
-- Serilog + Seq logging (5/6 backend services)
-- Health checks implemented and working
-- Kubernetes probes configured correctly
-- Jaeger infrastructure deployed
+- Serilog + Seq logging (3/4 backend services: identity, catalog, order)
+- Health checks implemented and working (`/health/ready`, `/health/live`)
+- Kubernetes probes configured correctly (readiness/liveness/startup in the Helm chart)
+- Request logging (`UseSerilogRequestLogging()`) only in identity
 
 ### What's Broken ❌
-- OpenTelemetry tracing not wired (Jaeger receiving no traces)
-- Prometheus metrics endpoints not exposed
-- Request logging only in Identity service (5 services missing)
-- Frontend monitoring completely absent
-- No metrics visualization (Grafana missing)
-- No alerting configured
-- Payment service missing Serilog entirely
+- **Payment service has no Serilog at all** - confirmed by its own runtime logs,
+  which are in the default .NET console-logger format (`info: MassTransit[0]`),
+  not Serilog's compact format (`[HH:mm:ss INF] ...`) the other three services show.
+- **OpenTelemetry tracing/metrics are fully implemented but never called anywhere.**
+  `Common.Library`'s `AddTracing()`/`AddMetrics()` (`shared/Common.Library/OpenTelemetry/Extensions.cs`)
+  are complete, working implementations - not stubs - but:
+  - They live in namespace `Play.Common.OpenTelemetry`, not `Common.Library.OpenTelemetry`
+    like everything else in this library - a leftover from before the package was
+    renamed from `Play.Common`. That inconsistency alone makes them easy to miss.
+  - No service calls `AddTracing()`/`AddMetrics()` in `Program.cs` today.
+  - Even if called, `AddTracing()` requires a `JaegerSettings` config section
+    (`JaegerSettings:Host`/`:Port`) that doesn't exist in any current
+    `appsettings.json` or in the current Terraform's Helm values - it would throw
+    `InvalidOperationException("Jaeger settings are missing.")` at startup.
+- **Two orphaned files from an earlier infra iteration, unused by anything today:**
+  - `infra/jaegar/values.yaml` (note the typo - "jaegar" not "jaeger") - Jaeger
+    Helm values not referenced by any `.tf` file.
+  - `services/payment/helm/values.yaml` - a standalone per-service values file
+    from before the Terraform's current inline `yamlencode()` pattern existed;
+    different image-tag convention, different namespace convention
+    (`seq.observability`/`jaeger-query.observability` vs today's plain `seq`).
+- No Prometheus/Grafana - metrics have nowhere to go even once exposed.
+- Frontend monitoring completely absent.
+- No alerting configured.
 
 ### Impact
 - Can't trace requests across services
@@ -37,7 +59,7 @@ Complete observability for the Restaurant POS system - centralized logging, dist
 **Priority:** Quick wins - complete partially implemented features
 
 #### 1.1 Add Serilog to Payment Service
-**File:** `services/payment/src/PaymentService/Program.cs`
+**File:** `services/payment/PaymentService/Program.cs`
 
 Add to service configuration:
 ```csharp
@@ -48,14 +70,14 @@ builder.Host.UseSerilog();
 **Why:** Payment service currently not sending logs to Seq; they go nowhere.
 
 #### 1.2 Add Request Logging to All Services
-**Files:** All backend `Program.cs` files (menu, inventory, order, payment, tenant)
+**Files:** All backend `Program.cs` files except identity (catalog, order, payment)
 
 Add after Serilog setup:
 ```csharp
 app.UseSerilogRequestLogging();
 ```
 
-**Pattern to copy from:** `services/identity/src/IdentityService/Program.cs:90`
+**Pattern to copy from:** `services/identity/src/IdentityService/Program.cs:115`
 
 **Why:** HTTP request/response visibility in Seq - critical for debugging.
 
@@ -70,16 +92,19 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 
 **Service Ports:**
 - Identity: 7163
-- Menu: 5062
-- Inventory: 5094
+- Catalog: 5062
 - Order: 5236
 - Payment: 5238
-- Tenant: 5200
 
 **Why:** Docker health checks for local development (not just Kubernetes probes).
 
 #### 1.4 Register OpenTelemetry Tracing
 **Files:** All backend `Program.cs` files
+
+**Prerequisite:** Fix the namespace on `AddTracing()`/`AddMetrics()` first -
+they currently live in `Play.Common.OpenTelemetry` (a leftover from before this
+package was renamed from `Play.Common`), inconsistent with every other
+`Common.Library.*` namespace. Rename to `Common.Library.OpenTelemetry`.
 
 Add to service configuration:
 ```csharp
@@ -87,6 +112,10 @@ builder.Services.AddTracing(builder.Configuration);
 ```
 
 **Pattern:** Already defined in `shared/Common.Library/OpenTelemetry/Extensions.cs`
+
+**Also required:** a `JaegerSettings` config section (`Host`/`Port`) in each
+service's `appsettings.json` and in the Helm `common_env` - `AddTracing()`
+throws at startup without it. Nothing currently provides this section anywhere.
 
 **Update Helm Values:** `infra/helm/microservice/values.yaml`
 ```yaml
@@ -117,7 +146,29 @@ builder.Services.AddMetrics(builder.Configuration);
 
 ### Phase 2: Metrics Collection & Visualization (Week 2)
 
-**Goal:** Collect and visualize system metrics
+**Goal:** Collect and visualize system metrics, and stand up distributed tracing
+
+#### 2.0 Deploy Jaeger in Kubernetes
+
+No prior version of this plan actually included this step - "Jaeger
+infrastructure deployed" was listed under "What's Working" without one, but
+verification found no Jaeger `helm_release` in any current Terraform file.
+
+**Fix the typo'd directory first:** `infra/jaegar/` -> `infra/jaeger/`
+(the values file inside is otherwise usable as-is - all-in-one, in-memory
+storage, no Cassandra - a reasonable, cost-free choice for a personal project's
+traffic level).
+
+**Add a `helm_release` resource** (in the rebuilt Terraform) for the official
+`jaegertracing/jaeger` chart using `infra/jaeger/values.yaml`, and add
+`JaegerSettings__Host`/`JaegerSettings__Port` to `locals.tf`'s `common_env` so
+every service's `AddTracing()` call (once wired up in Phase 1) can actually
+find it.
+
+**Delete** `services/payment/helm/values.yaml` - orphaned, superseded by the
+Terraform's inline per-service Helm values, and describes a namespace/image
+convention (`seq.observability`, `jaeger-query.observability`,
+`acrpos.azurecr.io/pos.payment:1.0.1`) nothing else in the repo uses anymore.
 
 #### 2.1 Deploy Prometheus in Kubernetes
 
@@ -405,6 +456,10 @@ Procedures for:
 
 ### New Files (Phase 2 - Kubernetes)
 
+**Jaeger:**
+- `infra/jaeger/values.yaml` (renamed from the typo'd `infra/jaegar/`)
+- A `helm_release "jaeger"` resource in the rebuilt Terraform's `helm.tf`
+
 **Prometheus Helm Chart:**
 - `infra/helm/prometheus/Chart.yaml`
 - `infra/helm/prometheus/values.yaml`
@@ -437,7 +492,7 @@ Procedures for:
 
 #### All Backend Services - Program.cs
 
-Pattern for all 6 services (identity, menu, inventory, order, payment, tenant):
+Pattern for all 4 services (identity, catalog, order, payment):
 ```csharp
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Services.AddTracing(builder.Configuration);
@@ -469,7 +524,9 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 
 #### CI/CD
 
-- `.github/workflows/azure-deploy-aks.yml` - Add Prometheus + Grafana deployment
+- No AKS deployment workflow exists yet (`.github/workflows/` currently only has
+  CI + NuGet-publish workflows) - this would need to be created, not just
+  updated, whenever actual CD to AKS is built
 
 ---
 
