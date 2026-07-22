@@ -5,7 +5,7 @@ using PaymentService.Entities;
 
 namespace PaymentService.Data;
 
-public class PaymentDbContext : DbContext
+public class PaymentDbContext : DbContext, ITenantScopedDbContext
 {
     private readonly ITenantContext _tenant;
 
@@ -14,6 +14,8 @@ public class PaymentDbContext : DbContext
     {
         _tenant = tenant;
     }
+
+    ITenantContext ITenantScopedDbContext.Tenant => _tenant;
 
     public DbSet<Payment> Payments => Set<Payment>();
 

@@ -29,7 +29,7 @@ builder.Host.ConfigureAzureKeyVault();
 var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
     ?? throw new InvalidOperationException("PostgresSettings is not configured.");
 builder.Services.AddDbContext<CatalogDbContext>(options =>
-    options.UseNpgsql(postgresSettings.GetConnectionString()));
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
     .AddPostgres<CatalogDbContext>();

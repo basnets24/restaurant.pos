@@ -1,5 +1,6 @@
 using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Common.Library.PostgreSQL;
@@ -72,4 +73,14 @@ public static class Extensions
 
         return services;
     }
+
+    /// <summary>
+    /// Required alongside ApplyTenantQueryFilters for any DbContext implementing
+    /// ITenantScopedDbContext: without it, EF Core's default per-DbContext-type
+    /// model cache freezes the tenant query filter's closure to whichever tenant
+    /// built the model first, silently reusing it for every later tenant. Chain
+    /// this onto the same options builder passed to AddDbContext/UseNpgsql.
+    /// </summary>
+    public static DbContextOptionsBuilder UseTenantModelCache(this DbContextOptionsBuilder optionsBuilder)
+        => optionsBuilder.ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
 }

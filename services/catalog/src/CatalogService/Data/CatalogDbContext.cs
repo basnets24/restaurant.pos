@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CatalogService.Data;
 
-public class CatalogDbContext : DbContext
+public class CatalogDbContext : DbContext, ITenantScopedDbContext
 {
     private readonly ITenantContext _tenant;
 
@@ -13,6 +13,8 @@ public class CatalogDbContext : DbContext
     {
         _tenant = tenant;
     }
+
+    ITenantContext ITenantScopedDbContext.Tenant => _tenant;
 
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();

@@ -1,3 +1,4 @@
+using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -16,7 +17,8 @@ public class CatalogDbContextFactory : IDesignTimeDbContextFactory<CatalogDbCont
     public CatalogDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=identity_db;Username=postgres;Password=postgres");
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=identity_db;Username=postgres;Password=postgres")
+            .UseTenantModelCache();
 
         var designTimeTenant = new TenantContext { RestaurantId = string.Empty, LocationId = string.Empty };
         return new CatalogDbContext(optionsBuilder.Options, designTimeTenant);
