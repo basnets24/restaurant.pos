@@ -8,7 +8,7 @@ using OpenTelemetry.Trace;
 using Common.Library.MassTransit;
 using Common.Library.Settings;
 
-namespace Play.Common.OpenTelemetry
+namespace Common.Library.OpenTelemetry
 {
     public static class Extensions
     {
