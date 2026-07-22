@@ -38,5 +38,7 @@ public record OrderDto
     public decimal GrandTotal { get; set; }
     public string? ReceiptUrl { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
+    public string? LastPaymentError { get; set; }
+    public DateTimeOffset? LastPaymentFailedAt { get; set; }
 
 }

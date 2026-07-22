@@ -6,11 +6,10 @@ Move all MongoDB-backed persistence (menu, inventory, order, payment) onto
 PostgreSQL, hosted on a single free-tier Supabase project, consolidating
 with the existing Postgres usage in identity/tenant.
 
-**Prerequisite:** `docs/SERVICE_CONSOLIDATION.md` should land first —
-merging tenant into identity and inventory into menu (`catalog`) drops
-the service count from 6 to 4 before this plan's phases begin, which
-directly reduces how many independent connection pools have to fit inside
-the Supabase free-tier connection cap.
+**Prerequisite (done):** tenant was merged into identity and inventory
+into menu (renamed `catalog`), dropping the service count from 6 to 4
+before this plan's phases begin — directly reducing how many independent
+connection pools have to fit inside the Supabase free-tier connection cap.
 
 ## Why
 
@@ -94,9 +93,8 @@ database.
    Supavisor pooling, prove connectivity from one throwaway/test service.
 2. **payment** — simplest schema (flat entity, no embedded arrays, no
    saga). Proves the pattern end-to-end with the lowest blast radius.
-3. **catalog** (merged menu+inventory, per `docs/SERVICE_CONSOLIDATION.md`)
-   — flat entities, low traffic dependency-wise (other services consume
-   its events, not its DB).
+3. **catalog** (merged menu+inventory) — flat entities, low traffic
+   dependency-wise (other services consume its events, not its DB).
 4. **order** — highest risk: embedded arrays (→ jsonb), the
    `pos-catalog-items` cross-service projection, and the MassTransit saga
    swap. Do this last, once the pattern is proven three times over.

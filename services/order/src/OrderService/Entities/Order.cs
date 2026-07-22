@@ -44,6 +44,11 @@ public class Order : IEntity, ITenantEntity
     // Payment linkage (Stripe)
     public string? ReceiptUrl { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
+
+    // Set when a payment attempt fails; cleared implicitly once PaidAt is set.
+    // Order stays Pending/retryable - a declined card is not an order rejection.
+    public string? LastPaymentError { get; set; }
+    public DateTimeOffset? LastPaymentFailedAt { get; set; }
 }
 
 public class OrderItem

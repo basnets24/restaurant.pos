@@ -26,10 +26,7 @@ public class OrderState : SagaStateMachineInstance, ISagaVersion
 
     public string? ErrorMessage { get; set; }
 
-    public Guid? PaymentTimeoutTokenId { get; set; }
-
     // Timestamps for tracking
     public DateTimeOffset? InventoryCheckedAt { get; set; }
-    public DateTimeOffset? PaymentProcessedAt { get; set; }
 
 }

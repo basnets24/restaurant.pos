@@ -2,6 +2,7 @@
 import { ENV } from "@/config/env";
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
+import { tenantAccessor } from "@/auth/runtime";
 import type { FinalizeOrderDto, OrderDto, TenantHeaders, PageResult } from "./types";
 
 const BASE = ENV.ORDER_URL; // e.g. https://localhost:7288
@@ -11,6 +12,14 @@ function withTenantHeaders(tenant?: TenantHeaders) {
     if (tenant?.restaurantId) headers["x-restaurant-id"] = tenant.restaurantId;
     if (tenant?.locationId) headers["x-location-id"] = tenant.locationId;
     return headers;
+}
+
+// Falls back to tenantAccessor() (the auth profile) instead of requiring the
+// caller to thread a tenant through - avoids silently missing headers when
+// a call site forgets to pass one (see domain/payments/api.ts for the same fix).
+function withTenantHeadersAuto(tenant?: TenantHeaders) {
+    const t = tenant ?? tenantAccessor() ?? {};
+    return withTenantHeaders(t);
 }
 
 export async function listOrders(tenant?: TenantHeaders): Promise<PageResult<OrderDto>> {
@@ -45,4 +54,11 @@ export async function finalizeOrder(
         headers: { ...withTenantHeaders(opts?.tenant), Authorization: `Bearer ${token}` },
     });
     return data;
+}
+
+export async function requestPayment(orderId: string, tenant?: TenantHeaders) {
+    const token = await getApiToken('Order', ['order.write']);
+    await http.post(`${BASE}/orders/${orderId}/request-payment`, null, {
+        headers: { ...withTenantHeadersAuto(tenant), Authorization: `Bearer ${token}` },
+    });
 }

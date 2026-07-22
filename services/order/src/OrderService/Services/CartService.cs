@@ -73,10 +73,18 @@ public class CartService : ICartService
         if (posItem is null)
             throw new InvalidOperationException("Menu item not found in catalog.");
 
-        if (!posItem.MenuAvailable || !posItem.InventoryAvailable || posItem.Quantity < itemDto.Quantity)
-            throw new InvalidOperationException("Item is unavailable or insufficient stock.");
-        
+        if (!posItem.MenuAvailable || !posItem.InventoryAvailable)
+            throw new InvalidOperationException("Item is unavailable.");
+
         var existing = cart.Items.FirstOrDefault(i => i.MenuItemId == itemDto.MenuItemId);
+
+        // Check against what's already in the cart too, not just this request -
+        // otherwise two additions can each pass individually while together
+        // exceeding stock.
+        var requestedTotal = (existing?.Quantity ?? 0) + itemDto.Quantity;
+        if (posItem.Quantity < requestedTotal)
+            throw new InvalidOperationException($"Insufficient stock: only {posItem.Quantity} available.");
+
         if (existing != null)
         {
             existing.Quantity += itemDto.Quantity;

@@ -34,7 +34,7 @@ export default function SuccessView() {
         if (!mounted) return;
         setOrder(data);
         setLoading(false);
-        toast.success("Payment confirmed! 🎉");
+        toast.success("Order placed!");
       } catch (e: any) {
         if (!mounted) return;
         setError(e?.message || "Could not load order");
@@ -53,7 +53,7 @@ export default function SuccessView() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-600" />
-            Payment Successful
+            Order Placed
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -91,7 +91,10 @@ export default function SuccessView() {
                   </a>
                 ) : null}
                 <Button
-                  onClick={() => navigate(`/pos/table/${tableId}/order`, { state: { orderId: order?.id } })}
+                  onClick={() => navigate(
+                    `/pos/table/${tableId}/order?order=${encodeURIComponent(order?.id ?? "")}`,
+                    { state: { orderId: order?.id } }
+                  )}
                   variant={receiptUrl ? "outline" : "default"}
                 >
                   Go to Order
