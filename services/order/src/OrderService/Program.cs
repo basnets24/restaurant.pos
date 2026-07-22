@@ -100,6 +100,7 @@ app.UseRouting();
 
 // Enable CORS for all environments (frontend needs to call order service)
 app.UseCors(corsPolicy);
+app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();

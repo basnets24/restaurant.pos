@@ -1,6 +1,7 @@
 using Common.Library.Configuration;
 using Common.Library.HealthChecks;
 using Common.Library.Identity;
+using Common.Library.Logging;
 using Common.Library.MassTransit;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
@@ -10,10 +11,13 @@ using PaymentService.Auth;
 using PaymentService.Data;
 using PaymentService.Entities;
 using PaymentService.Settings;
+using Serilog;
 using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureAzureKeyVault();
+builder.Services.AddSeqLogging(builder.Configuration);
+builder.Host.UseSerilog();
 builder.Services.AddControllers();
 
 // Bind options
@@ -58,7 +62,6 @@ builder.Services.AddMassTransitWithMessageBroker(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddLogging();
 
 var app = builder.Build();
 
@@ -77,6 +80,7 @@ app.UseRouting();
 
 // Enable CORS for all environments (frontend needs to call payment service)
 app.UseCors(CorsPolicy);
+app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();
