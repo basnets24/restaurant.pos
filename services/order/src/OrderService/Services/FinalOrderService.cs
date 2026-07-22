@@ -5,6 +5,7 @@ using Messaging.Contracts.Events.Order;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Interfaces;
+using OrderService.Mappers;
 
 namespace OrderService.Services;
 
@@ -39,64 +40,33 @@ public class FinalOrderService : IOrderService
         CancellationToken cancellationToken = default)
     {
         var orderId = idempotencyKey ?? Guid.NewGuid();
-        var correlationId = Guid.NewGuid();
         var existingOrder = await _orders.GetAsync(orderId);
-        if ( existingOrder is not null ) return existingOrder;
-        
-        
-        var subtotal = dto.Subtotal;
-        var tip = dto.TipAmount ?? 0m;
-        
+        if (existingOrder is not null) return existingOrder;
+
         // NEW: config-driven pricing
         // (non-stacking discounts,
         // taxable service charges,
         // multiple taxes)
-        var p = _pricingService.Calculate(subtotal, tip, 
+        var pricing = _pricingService.Calculate(dto.Subtotal, dto.TipAmount ?? 0m,
             new PricingContext(dto.GuestCount, DineIn: dto.TableId != null));
-        
-        var order = new Order
-        {
-            CreatedAt = DateTimeOffset.UtcNow,
-            Id = orderId,
-            Items = dto.Items,
-            Status = "Pending",
-            
-            // Context
-            TableId = dto.TableId,
-            ServerId = dto.ServerId,
-            ServerName = dto.ServerName,
-            GuestCount = dto.GuestCount,
-            
-            // order-level itemized lines (all are Scope="Order")
-            AppliedDiscounts = p.AppliedDiscounts.ToList(),
-            ServiceCharges   = p.ServiceCharges.ToList(),
-            AppliedTaxes     = p.AppliedTaxes.ToList(),
-            
-            // Totals
-            Subtotal = subtotal,
-            DiscountTotal = p.DiscountTotal,
-            ServiceChargeTotal = p.ServiceChargeTotal,
-            TaxTotal = p.TaxTotal,
-            TipAmount = p.Tip,
-            GrandTotal = p.GrandTotal,
-            
-        };
-        
+
+        var order = dto.ToOrder(orderId, pricing);
+
         await _orders.CreateAsync(order);
         _logger.LogInformation("Order {OrderId} created", orderId);
-        _logger.LogInformation( "Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
-                                "grand total is {grandTotal}", subtotal, p.TaxTotal, p.ServiceChargeTotal, p.Tip, p.GrandTotal);;
+        _logger.LogInformation("Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
+                                "grand total is {grandTotal}", dto.Subtotal, pricing.TaxTotal, pricing.ServiceChargeTotal, pricing.Tip, pricing.GrandTotal);
 
         // when pos only, table id is present
         await _publishEndpoint.Publish(new OrderSubmitted(
-            correlationId,
+            Guid.NewGuid(),
             orderId,
             TableId: dto.TableId ?? Guid.Empty,
             dto.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            p.GrandTotal, 
+            pricing.GrandTotal,
             _tenant.RestaurantId, _tenant.LocationId
-        ), cancellationToken); 
-        
+        ), cancellationToken);
+
         return order;
     }
     
@@ -114,7 +84,7 @@ public class FinalOrderService : IOrderService
             var table = await _tables.GetAsync(tableId);
             if (table != null)
             {
-                table.Status = "Available";
+                table.Status = DiningTableStatus.Available;
                 table.ActiveCartId = null;
                 await _tables.UpdateAsync(table);
             }
