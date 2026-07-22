@@ -20,8 +20,8 @@ public class Order : IEntity, ITenantEntity
     public int? GuestCount { get; set; }
     
     public List<OrderItem> Items { get; set; } = new();
-    
-    public string Status { get; set; } = "Pending";
+
+    public string Status { get; set; } = OrderStatus.Pending;
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     
     // Adjustments (order-level)
@@ -49,6 +49,15 @@ public class Order : IEntity, ITenantEntity
     // Order stays Pending/retryable - a declined card is not an order rejection.
     public string? LastPaymentError { get; set; }
     public DateTimeOffset? LastPaymentFailedAt { get; set; }
+}
+
+/// <summary>Single source of truth for Order.Status values - previously hardcoded
+/// independently across FinalOrderService, OrderController, and two consumers.</summary>
+public static class OrderStatus
+{
+    public const string Pending = "Pending";
+    public const string Paid = "Paid";
+    public const string Rejected = "Rejected";
 }
 
 public class OrderItem

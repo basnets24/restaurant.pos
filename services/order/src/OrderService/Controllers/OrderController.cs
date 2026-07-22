@@ -63,8 +63,8 @@ public class OrderController : ControllerBase
     {
         var order = await _orderRepo.GetAsync(orderId);
         if (order is null) return NotFound();
-        if (order.Status == "Paid") return Conflict(new { message = "Order is already paid." });
-        if (order.Status == "Rejected") return Conflict(new { message = "Order was never fulfilled and cannot be paid." });
+        if (order.Status == OrderStatus.Paid) return Conflict(new { message = "Order is already paid." });
+        if (order.Status == OrderStatus.Rejected) return Conflict(new { message = "Order was never fulfilled and cannot be paid." });
 
         await _publish.Publish(new PaymentRequested(
             CorrelationId: order.Id,

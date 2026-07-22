@@ -25,7 +25,7 @@ public record OrderDto
     public string? ServerName { get; set; }
     public int? GuestCount { get; set; }
     public List<OrderItem> Items { get; set; } = new();
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = OrderStatus.Pending;
     public DateTimeOffset CreatedAt { get; set; }
     public List<AppliedDiscount> AppliedDiscounts { get; set; } = new();
     public List<AppliedTax> AppliedTaxes { get; set; } = new();

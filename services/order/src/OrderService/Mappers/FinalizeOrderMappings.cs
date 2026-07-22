@@ -13,7 +13,7 @@ public static class FinalizeOrderMappings
         CreatedAt = DateTimeOffset.UtcNow,
         Id = orderId,
         Items = dto.Items,
-        Status = "Pending",
+        Status = OrderStatus.Pending,
 
         // Context
         TableId = dto.TableId,

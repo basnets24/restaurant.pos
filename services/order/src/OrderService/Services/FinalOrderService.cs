@@ -73,9 +73,9 @@ public class FinalOrderService : IOrderService
     public async Task MarkPaidAsync(Guid orderId, CancellationToken ct = default)
     {
         var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
-        if (order.Status == "Paid") return;
+        if (order.Status == OrderStatus.Paid) return;
 
-        order.Status = "Paid";
+        order.Status = OrderStatus.Paid;
         order.PaidAt = DateTimeOffset.UtcNow;
         await _orders.UpdateAsync(order);
 

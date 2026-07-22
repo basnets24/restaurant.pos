@@ -30,9 +30,9 @@ public class InventoryReserveFaultedConsumer : IConsumer<InventoryReserveFaulted
             return;
         }
 
-        if (order.Status == "Paid") return;
+        if (order.Status == OrderStatus.Paid) return;
 
-        order.Status = "Rejected";
+        order.Status = OrderStatus.Rejected;
         order.LastPaymentError = msg.Reason;
         await _orders.UpdateAsync(order);
         _logger.LogWarning("Order {OrderId} rejected: {Reason}", msg.OrderId, msg.Reason);

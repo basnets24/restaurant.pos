@@ -28,7 +28,7 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailed>
             return;
         }
 
-        if (order.Status == "Paid") return; // stale failure racing a later successful attempt
+        if (order.Status == OrderStatus.Paid) return; // stale failure racing a later successful attempt
 
         order.LastPaymentError = msg.Reason;
         order.LastPaymentFailedAt = DateTimeOffset.UtcNow;
