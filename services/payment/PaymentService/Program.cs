@@ -2,10 +2,12 @@ using Common.Library.Configuration;
 using Common.Library.HealthChecks;
 using Common.Library.Identity;
 using Common.Library.MassTransit;
-using Common.Library.MongoDB;
+using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using PaymentService.Auth;
+using PaymentService.Data;
 using PaymentService.Entities;
 using PaymentService.Settings;
 using Stripe;
@@ -42,12 +44,15 @@ builder.Services.AddCors(options =>
 });
 
 // Persistence / bus
-builder.Services.AddMongo();
+var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
+    ?? throw new InvalidOperationException("PostgresSettings is not configured.");
+builder.Services.AddDbContext<PaymentDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddMongoDb();
+    .AddPostgres<PaymentDbContext>();
 builder.Services.AddTenancy();
-builder.Services.AddTenantMongoRepository<Payment>("payments");
+builder.Services.AddTenantEfRepository<Payment, PaymentDbContext>();
 builder.Services.AddPaymentPolicies().AddPosJwtBearer();
 builder.Services.AddMassTransitWithMessageBroker(builder.Configuration);
 

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Common.Library</PackageId>
-    <Version>1.0.20</Version>
+    <Version>1.0.21</Version>
     <IsPackable>true</IsPackable>
     <Authors>basnets24</Authors>
     <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
@@ -37,7 +37,6 @@
       <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0-rc9.2" />
       <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.2.0" />
       <PackageReference Include="OpenTelemetry.Exporter.Prometheus" Version="1.2.0-rc5" />
-      <PackageReference Include="MongoDB.Driver" Version="3.4.1" />
       <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
       <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
     </ItemGroup>

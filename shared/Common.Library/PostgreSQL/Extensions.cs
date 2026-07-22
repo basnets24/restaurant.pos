@@ -1,4 +1,6 @@
+using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Common.Library.PostgreSQL;
@@ -50,4 +52,35 @@ public static class Extensions
 
         return services;
     }
+
+    /// <summary>
+    /// Register a tenant-scoped EF repository for the specified entity type, as
+    /// IRepository{T} - the Postgres equivalent of AddTenantMongoRepository{T}.
+    /// Registered scoped, since it depends on the request-scoped ITenantContext.
+    /// </summary>
+    /// <typeparam name="T">Entity type - must implement IEntity and ITenantEntity</typeparam>
+    /// <typeparam name="TContext">The service's own DbContext type</typeparam>
+    public static IServiceCollection AddTenantEfRepository<T, TContext>(this IServiceCollection services)
+        where T : class, IEntity, ITenantEntity
+        where TContext : DbContext
+    {
+        services.AddScoped<IRepository<T>>(serviceProvider =>
+        {
+            var context = serviceProvider.GetRequiredService<TContext>();
+            var tenant = serviceProvider.GetRequiredService<ITenantContext>();
+            return new TenantEfRepository<T>(context, tenant);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Required alongside ApplyTenantQueryFilters for any DbContext implementing
+    /// ITenantScopedDbContext: without it, EF Core's default per-DbContext-type
+    /// model cache freezes the tenant query filter's closure to whichever tenant
+    /// built the model first, silently reusing it for every later tenant. Chain
+    /// this onto the same options builder passed to AddDbContext/UseNpgsql.
+    /// </summary>
+    public static DbContextOptionsBuilder UseTenantModelCache(this DbContextOptionsBuilder optionsBuilder)
+        => optionsBuilder.ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();
 }

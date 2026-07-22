@@ -17,7 +17,7 @@ public interface ICartService
 /*
  * Why are the return types in ICartService methods wrapped in Task<>?
    Because all the operations involve asynchronous I/O, like:
-   Reading/writing to MongoDB
+   Reading/writing to Postgres
    Publishing messages to RabbitMQ via MassTransit
    so it returns a cart object wrapped in a task
  */

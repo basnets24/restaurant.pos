@@ -14,7 +14,6 @@ Reduce monthly Azure costs by **22-25% ($30-50/month)** with quick wins, plus ad
 | Service Bus (Standard) | $15-20 | $10-15 | -$5 (optional) |
 | ACR (Container Registry) | $5-10 | $5-10 | - |
 | PostgreSQL | $30-50 | $30-40 | -$0-10 |
-| CosmosDB (Free-tier) | $0 | $0 | - |
 | Storage | $5-10 | $5-10 | - |
 | Load Balancer/NAT | $15-20 | $15-20 | - |
 | Monitoring (pods) | $5-10 | $5-10 | - |
@@ -338,7 +337,6 @@ az costmanagement query create \
 
 These indicate costs are increasing:
 
-- ⚠️ CosmosDB RU throttling (means exceeding free tier 400 RU/s)
 - ⚠️ ACR storage warning (approaching 10GB limit)
 - ⚠️ Multiple pod evictions (indicates memory pressure)
 - ⚠️ Service Bus operations >1M/month (at Basic limit)
@@ -394,7 +392,7 @@ These indicate costs are increasing:
 - `infra/helm/microservice/values.yaml` - Update CPU/memory limits
 
 ### Terraform (When Implemented from CI_CD_PIPELINE.md)
-- `infra/terraform/main.tf` - PostgreSQL SKU, CosmosDB tier, ACR settings
+- `infra/terraform/main.tf` - PostgreSQL SKU, ACR settings
 - `infra/terraform/variables.tf` - Environment-specific sizing
 
 ### Future Monitoring

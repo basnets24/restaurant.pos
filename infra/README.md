@@ -4,7 +4,6 @@ Restaurant Pos Infrastructure components
 export owner=[GIHHUB-PERSONAL-OR-ORG-NAME]
 export gh_pat=[YOUR_PERSONAL_ACCESS_TOKEN]
 export RG=[RESOURCE-GROUP-NAME-HERE]
-export COSMOS=[DB-NAME-HERE]
 export SB=[SERVICE-BUS-HERE]
 export ACR=[CONTAINER-REGISTRY-HERE]
 export AKS=[AKS-NAME-HERE]
@@ -26,11 +25,6 @@ dotnet nuget add source \
 ```bash
 az group create --name $RG --location westus
 ```
-## Creating CosmosDB Account 
-```bash
-az cosmosdb create --name $COSMOS --resource-group $RG --kind MongoDB --enable-free-tier
-```
-
 ## Creating the Service Bus Namespace 
 ```bash 
 az servicebus namespace create --name $SB --resource-group $RG --sku Standard

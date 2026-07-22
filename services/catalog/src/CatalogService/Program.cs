@@ -4,11 +4,13 @@ using Common.Library.Logging;
 using Common.Library.MassTransit;
 using CatalogService.Auth;
 using CatalogService.Consumers;
+using CatalogService.Data;
 using CatalogService.Entities;
-using Common.Library.MongoDB;
+using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Common.Library.Configuration;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using CatalogService.Services;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -23,10 +25,14 @@ builder.Services.AddScoped<InventoryManager>();
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 builder.Host.ConfigureAzureKeyVault();
-builder.Services.AddMongo();
+
+var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
+    ?? throw new InvalidOperationException("PostgresSettings is not configured.");
+builder.Services.AddDbContext<CatalogDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddMongoDb();
+    .AddPostgres<CatalogDbContext>();
 
 builder.Services.AddMassTransit(cfg =>
 {
@@ -53,8 +59,8 @@ builder.Services.AddMassTransit(cfg =>
 });
 
 builder.Services.AddTenancy();
-builder.Services.AddTenantMongoRepository<MenuItem>("menuitems")
-    .AddTenantMongoRepository<InventoryItem>("inventoryitems");
+builder.Services.AddTenantEfRepository<MenuItem, CatalogDbContext>();
+builder.Services.AddTenantEfRepository<InventoryItem, CatalogDbContext>();
 
 builder.Services.AddCatalogPolicies().AddPosJwtBearer();
 builder.Services.AddControllers(options =>

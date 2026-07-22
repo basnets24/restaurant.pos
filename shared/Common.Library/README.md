@@ -3,7 +3,7 @@
 Reusable .NET 8 building blocks for Restaurant POS microservices. This library provides focused extensions for:
 
 - Logging (Serilog + Seq)
-- MongoDB repositories (optionally tenant‑aware)
+- PostgreSQL/EF Core repositories (tenant‑aware)
 - MassTransit + RabbitMQ wiring with tenant context propagation
 - JWT Bearer + scope authorization helpers
 - Tenancy middleware and abstractions
@@ -27,17 +27,16 @@ From GitHub Packages (example):
 
 ## Creating a package
 
-Tag-driven publish (CI):
-
-```bash
-git tag common.library-v1.0.14
-git push origin common.library-v1.0.14
-```
+Publish (CI, `.github/workflows/publish-common-library.yml`): triggers
+automatically on any push to `dev` or `main` that touches
+`shared/Common.Library/**`, bumping `<Version>` in `Common.Library.csproj`
+first. Can also be triggered manually via `workflow_dispatch`
+(`gh workflow run publish-common-library.yml`) from any branch.
 
 Local dry run (no publish):
 
 ```bash
-dotnet pack shared/common.library/Common.Library.csproj -c Release -p:PackageVersion=1.0.14 -o ./packages
+dotnet pack shared/Common.Library/Common.Library.csproj -c Release -p:PackageVersion=1.0.21 -o ./packages
 ```
 
 Namespaces live under `Common.Library.*`.
@@ -48,19 +47,23 @@ Program.cs minimal setup using all modules:
 
 ```csharp
 using Common.Library.Logging;
-using Common.Library.MongoDB;
+using Common.Library.PostgreSQL;
 using Common.Library.MassTransit;
 using Common.Library.Identity;
 using Common.Library.Tenancy;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Logging (Serilog + Seq)
 builder.Services.AddSeqLogging(builder.Configuration);
 
-// MongoDB + repositories
-builder.Services.AddMongo();
-builder.Services.AddTenantMongoRepository<MyEntity>("my-collection");
+// PostgreSQL + repositories
+var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
+    ?? throw new InvalidOperationException("PostgresSettings is not configured.");
+builder.Services.AddDbContext<MyDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
+builder.Services.AddTenantEfRepository<MyEntity, MyDbContext>();
 
 // MassTransit + RabbitMQ (with simple retry)
 builder.Services.AddMassTransitWithRabbitMq(retry => retry.Interval(3, TimeSpan.FromSeconds(5)));
@@ -82,7 +85,7 @@ App settings (illustrative):
 ```json
 {
   "ServiceSettings": { "ServiceName": "MyService", "Authority": "https://localhost:7163" },
-  "MongoDbSettings": { "Host": "localhost", "Port": "27017" },
+  "PostgresSettings": { "Host": "localhost", "Port": 5432, "Database": "identity_db", "Username": "postgres", "Password": "" },
   "RabbitMqSettings": { "Host": "localhost" },
   "SeqSettings": { "Host": "localhost", "Port": "5341" },
   "Cors": { "AllowedOrigins": ["http://localhost:5173", "https://localhost:5173"] }
@@ -94,9 +97,10 @@ App settings (illustrative):
 - Logging (`Common.Library.Logging`)
   - `AddSeqLogging(IConfiguration)`: Registers Serilog with console + Seq sinks. Reads `SeqSettings`.
 
-- MongoDB (`Common.Library.MongoDB`)
-  - `AddMongo()`: Registers `IMongoClient` and BSON serializers.
-  - `AddTenantMongoRepository<T>(collection)`: Adds a tenant‑aware repository for `T : IEntity, ITenantEntity`.
+- PostgreSQL (`Common.Library.PostgreSQL`)
+  - `AddTenantEfRepository<T, TContext>()`: Adds a tenant‑aware EF Core repository for `T : IEntity, ITenantEntity`, backed by `TContext`.
+  - `UseTenantModelCache()`: `DbContextOptionsBuilder` extension — required on every tenant-scoped `DbContext` so EF's compiled-model cache varies per tenant instead of freezing to whichever tenant built the model first.
+  - `ITenantScopedDbContext`: marker interface a `DbContext` implements so the model cache key factory can read the current tenant.
   - `IRepository<T>`: Minimal CRUD abstraction used across services.
 
 - MassTransit (`Common.Library.MassTransit`)
@@ -111,7 +115,7 @@ App settings (illustrative):
   - Interfaces: `ITenantEntity` for storing `RestaurantId`/`LocationId` on documents.
 
 - Settings (`Common.Library.Settings`)
-  - `ServiceSettings`, `MongoDbSettings`, `RabbitMqSettings`, `SeqSettings` bound from configuration.
+  - `ServiceSettings`, `PostgresSettings`, `RabbitMqSettings`, `SeqSettings` bound from configuration.
 
 ## Usage Tips
 

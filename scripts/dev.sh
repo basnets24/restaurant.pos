@@ -18,7 +18,7 @@ DOTNET_SERVICES=(
 )
 
 # Containers infra/docker-compose.yml defines — waited on before launching services
-INFRA_CONTAINERS=(identity-postgres restaurant-mongo restaurant-rabbitmq restaurant-seq)
+INFRA_CONTAINERS=(identity-postgres restaurant-rabbitmq restaurant-seq)
 
 usage() {
   echo "Usage: $0 [start|stop]"
@@ -89,7 +89,7 @@ start_all() {
   mkdir -p "$LOG_DIR"
   : > "$PID_FILE"
 
-  echo "Starting infra (mongo, postgres, rabbitmq, seq)..."
+  echo "Starting infra (postgres, rabbitmq, seq)..."
   (cd "$ROOT_DIR/infra" && docker compose up -d)
   wait_for_infra
 

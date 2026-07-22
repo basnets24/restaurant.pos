@@ -1,9 +1,9 @@
 # OrderService (Restaurant POS)
 
-Order and dining room service for the Restaurant POS platform. Manages carts, finalizes orders, tracks dining tables and emits real‑time updates. Integrates with inventory and payment via messaging. Built with .NET 8, MongoDB, MassTransit, SignalR, and JWT Bearer auth.
+Order and dining room service for the Restaurant POS platform. Manages carts, finalizes orders, tracks dining tables and emits real‑time updates. Integrates with inventory and payment via messaging. Built with .NET 8, PostgreSQL/EF Core, MassTransit, SignalR, and JWT Bearer auth.
 
 ## Features
-- Tenant‑scoped carts, orders, and dining tables in MongoDB
+- Tenant‑scoped carts, orders, and dining tables in PostgreSQL
 - REST APIs for carts (add/remove items, checkout), orders, and tables (layout and runtime status)
 - Authorization via scopes and roles:
   - Read: `order.read`
@@ -18,7 +18,7 @@ Order and dining room service for the Restaurant POS platform. Manages carts, fi
 
 ### Prerequisites
 - .NET SDK 8.0+
-- MongoDB (local or container)
+- PostgreSQL (local or container)
 - RabbitMQ (local or container)
 - Optional: Seq for structured logs
 
@@ -27,8 +27,8 @@ Configured in `appsettings.json` and overridable via environment variables or Us
 
 - ServiceSettings
   - Authority: OIDC authority for JWT validation
-- MongoDbSettings
-  - Host, Port (and optional credentials if supported by your Common.Library setup)
+- PostgresSettings
+  - Host, Port, Database, Username, Password
 - RabbitMqSettings
   - Host (and optional username/password when required)
 - Cors
@@ -51,7 +51,7 @@ dotnet user-secrets set "ServiceSettings:Authority" "https://localhost:7163"
 #### Setup & Run
 ```bash
 #!/bin/bash
-# Build and run Order Service (requires MongoDB, RabbitMQ, Identity Service)
+# Build and run Order Service (requires PostgreSQL, RabbitMQ, Identity Service)
 cd services/order/src/OrderService
 dotnet restore
 dotnet run  # http://localhost:5236
@@ -64,7 +64,8 @@ dotnet run  # http://localhost:5236
 cd services/order
 docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/order-service:1.0.2 .
 docker run -d -p 5236:5236 \
--e MongoDbSettings__ConnectionString="$cosmosDbString" \
+-e PostgresSettings__Host="$postgresHost" \
+-e PostgresSettings__Password="$postgresPassword" \
 -e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
 -e ServiceSettings__MessageBroker="SERVICEBUS" \
 --network pos_pos-net \
@@ -170,11 +171,12 @@ Notes
 - Publishes domain events and consumes workflow events; inventory is reserved on checkout and released on failure/cancel.
 
 ## Project Layout
-- `Program.cs` — DI for Mongo, Tenancy, MassTransit saga, auth, Swagger, CORS, SignalR
+- `Program.cs` — DI for Postgres/EF Core, Tenancy, MassTransit saga, auth, Swagger, CORS, SignalR
 - `Controllers/` — carts, orders, tables
 - `Services/` — cart management, pricing, tables service
 - `Dtos/` — request/response DTOs
-- `Entities/` — MongoDB entities (Order, Cart, DiningTable, etc.)
+- `Data/` — `OrderDbContext`, `OrderStateDbContext` and their design-time factories
+- `Entities/` — tenant-scoped entities (Order, Cart, DiningTable, etc.)
 - `Auth/` — authorization policies (`order.read`, `order.write`, etc.)
 - `Consumers/`, `StateMachines/`, `Projections/` — messaging workflows and projections
 - `Extensions/`, `Hubs/`, `Settings/` — helpers, SignalR hubs, typed settings

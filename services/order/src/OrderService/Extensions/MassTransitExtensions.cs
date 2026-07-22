@@ -1,10 +1,10 @@
 using System.Reflection;
 using Common.Library.MassTransit;
-using Common.Library.Settings;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Menu;
 using Messaging.Contracts.Events.Payment;
+using OrderService.Data;
 using OrderService.Projections;   // PosReadModelProjector
 using OrderService.Settings;
 using OrderService.StateMachines;
@@ -15,7 +15,7 @@ namespace OrderService.Extensions;
 /// MassTransit registration extensions for the Order Service.
 /// - Configures RabbitMQ bus (host, retries, tenant propagation, delayed scheduler)
 /// - Registers all consumers in this assembly
-/// - Adds the Order saga with Mongo persistence
+/// - Adds the Order saga with Postgres (EF Core) persistence
 /// - Maps endpoint conventions for request/response
 /// - Adds an explicit receive endpoint for the POS read-model projector with a shared partitioner
 /// </summary>
@@ -38,12 +38,13 @@ public static class MassTransitExtensions
             // Saga + persistence
             cfg.AddSagaStateMachine<OrderStateMachine, OrderState>((context, sagaCfg) =>
                 sagaCfg.UseInMemoryOutbox(context))
-            .MongoDbRepository(r =>
+            .EntityFrameworkRepository(r =>
             {
-                var service   = config.GetRequiredSection(nameof(ServiceSettings)).Get<ServiceSettings>()!;
-                var mongo     = config.GetRequiredSection(nameof(MongoDbSettings)).Get<MongoDbSettings>()!;
-                r.Connection   = mongo.GetConnectionString();
-                r.DatabaseName = service.ServiceName;
+                r.ExistingDbContext<OrderStateDbContext>();
+                // REQUIRED: default lock-statement SQL is SQL-Server-style (WITH
+                // UPDLOCK/ROWLOCK/SERIALIZABLE) - invalid Postgres syntax, hard
+                // runtime error on the saga's first query without this.
+                r.UsePostgres();
             });
 
             // Bus + endpoints (uses broker-agnostic helper with RabbitMQ customization hook)

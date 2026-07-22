@@ -25,14 +25,6 @@ resource "azurerm_role_assignment" "svc_kv_secrets_user" {
   scope                = azurerm_key_vault.pos.id
 }
 
-resource "azurerm_key_vault_secret" "mongo_connection_string" {
-  name         = "MongoDbSettings--ConnectionString"
-  key_vault_id = azurerm_key_vault.pos.id
-  value        = var.atlas_connection_string
-
-  depends_on = [azurerm_role_assignment.current_user_kv_admin]
-}
-
 resource "azurerm_key_vault_secret" "postgres_connection_string" {
   name         = "PostgresSettings--ConnectionString"
   key_vault_id = azurerm_key_vault.pos.id

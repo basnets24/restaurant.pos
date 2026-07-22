@@ -1,14 +1,4 @@
 services:
-  mongodb:
-    image: mongo:7
-    container_name: restaurant-mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - pos-net
-
   postgres:
     image: postgres:15
     container_name: identity-postgres
@@ -59,7 +49,6 @@ services:
       - pos-net
 
 volumes:
-  mongo_data:
   rabbitmq_data:
   seq_data:
   postgres-data:
