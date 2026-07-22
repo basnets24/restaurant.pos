@@ -25,10 +25,6 @@ public class FloorHub : Hub
            ?? GetQueryString(ctx.GetHttpContext(), "locationId");
 
 
-    private static string GroupKey(string restaurantId, string locationId)
-        => $"tenant:{restaurantId}:loc:{locationId}";
-
-
     public override async Task OnConnectedAsync()
     {
         var rid = GetRestaurantId(Context);
@@ -37,7 +33,7 @@ public class FloorHub : Hub
 
         if (!string.IsNullOrWhiteSpace(rid) && !string.IsNullOrWhiteSpace(lid))
         {
-            var group = GroupKey(rid!, lid!);
+            var group = FloorGroups.TenantGroup(rid!, lid!);
             await Groups.AddToGroupAsync(Context.ConnectionId, group);
             await Clients.Caller.SendAsync("ConnectedToGroup", new { group });
         }
@@ -53,7 +49,7 @@ public class FloorHub : Hub
         var lid = GetLocationId(Context);
         if (!string.IsNullOrWhiteSpace(rid) && !string.IsNullOrWhiteSpace(lid))
         {
-            var group = GroupKey(rid!, lid!);
+            var group = FloorGroups.TenantGroup(rid!, lid!);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
         }
         await base.OnDisconnectedAsync(exception);

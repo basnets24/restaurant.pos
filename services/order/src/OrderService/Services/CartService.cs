@@ -52,13 +52,14 @@ public class CartService : ICartService
 
         if (tableId.HasValue)
         {
-            var table = await _tableRepo.GetAsync(tableId.Value);
-            if (table.Status == "Occupied" && table.ActiveCartId != null)
+            var table = await _tableRepo.GetAsync(tableId.Value)
+                ?? throw new KeyNotFoundException("Table not found.");
+            if (table.Status == DiningTableStatus.Occupied && table.ActiveCartId != null)
             {
                 throw new InvalidOperationException($" {table.Number} is already in use.");
             }
 
-            table.Status = "Occupied";
+            table.Status = DiningTableStatus.Occupied;
             table.ActiveCartId = cart.Id;
             await _tableRepo.UpdateAsync(table);
         }
@@ -67,7 +68,8 @@ public class CartService : ICartService
 
     public async Task AddItemAsync(Guid cartId, AddCartItemDto itemDto)
     {
-        var cart = await _cartRepo.GetAsync(cartId);
+        var cart = await _cartRepo.GetAsync(cartId)
+            ?? throw new KeyNotFoundException("Cart not found.");
         var posItem = await _posCatalog.GetAsync(itemDto.MenuItemId);
 
         if (posItem is null)
@@ -106,15 +108,16 @@ public class CartService : ICartService
 
     public async Task RemoveItemAsync(Guid cartId, Guid menuItemId)
     {
-        var cart = await _cartRepo.GetAsync(cartId);
+        var cart = await _cartRepo.GetAsync(cartId)
+            ?? throw new KeyNotFoundException("Cart not found.");
         cart.Items.RemoveAll(i => i.MenuItemId == menuItemId);
         await _cartRepo.UpdateAsync(cart);
     }
 
     public async Task<Guid> CheckoutAsync(Guid cartId, CancellationToken ct)
     {
-        var cart = await _cartRepo.GetAsync(cartId);
-        if (cart == null) throw new InvalidOperationException("Cart not found.");
+        var cart = await _cartRepo.GetAsync(cartId)
+            ?? throw new KeyNotFoundException("Cart not found.");
         if (!cart.Items.Any()) throw new InvalidOperationException("Cannot checkout an empty cart.");
 
         // Always recompute subtotal from cart items

@@ -23,20 +23,7 @@ public class DiningTableService : IDiningTableService
         _hub    = hub;
     }
 
-    private string GroupKey() => $"tenant:{_tenant.RestaurantId}:loc:{_tenant.LocationId}";
-
-    private static string NormalizeStatusOrThrow(string status)
-    {
-        var s = (status ?? string.Empty).Trim().ToLowerInvariant();
-        return s switch
-        {
-            "available" => "Available",
-            "reserved"  => "Reserved",
-            "occupied"  => "Occupied",
-            "dirty"     => "Dirty",
-            _           => throw new ArgumentException("Invalid status. Use: available|reserved|occupied|dirty.")
-        };
-    }
+    private string GroupKey() => FloorGroups.TenantGroup(_tenant.RestaurantId, _tenant.LocationId);
 
     private static TableViewDto ToView(DiningTable t) => new(
         Id:           t.Id,
@@ -44,7 +31,7 @@ public class DiningTableService : IDiningTableService
         Section:      t.Section ?? string.Empty,
         Seats:        t.Seats,
         Shape:        t.Shape ?? "square",
-        Status:       (t.Status ?? "Available").ToLowerInvariant(), // UI likes lower-case
+        Status:       (t.Status ?? DiningTableStatus.Available).ToLowerInvariant(), // UI likes lower-case
         Position:     new PositionDto(t.X, t.Y),
         Size:         new SizeDto(t.Width, t.Height),
         PartySize:    t.PartySize,
@@ -75,14 +62,14 @@ public class DiningTableService : IDiningTableService
     {
         var t = await _repo.GetAsync(id) ?? throw new KeyNotFoundException("Table not found.");
 
-        var normalized = NormalizeStatusOrThrow(dto.Status);
-        if (normalized == "Occupied" && dto.PartySize is null)
+        var normalized = DiningTableStatus.Normalize(dto.Status);
+        if (normalized == DiningTableStatus.Occupied && dto.PartySize is null)
             throw new ArgumentException("partySize is required when status = occupied.");
 
         t.Status    = normalized;
-        t.PartySize = normalized == "Available" ? null : dto.PartySize;
+        t.PartySize = normalized == DiningTableStatus.Available ? null : dto.PartySize;
 
-        if (normalized == "Available")
+        if (normalized == DiningTableStatus.Available)
             t.ActiveCartId = null; // clearing order/cart link on available
 
         await _repo.UpdateAsync(t);
@@ -118,7 +105,7 @@ public class DiningTableService : IDiningTableService
     public async Task ClearAsync(Guid id, CancellationToken ct)
     {
         var t = await _repo.GetAsync(id) ?? throw new KeyNotFoundException("Table not found.");
-        t.Status      = "Available";
+        t.Status      = DiningTableStatus.Available;
         t.PartySize   = null;
         t.ActiveCartId = null;
 
@@ -154,7 +141,7 @@ public class DiningTableService : IDiningTableService
             Width        = dto.Size?.Width ?? 100,
             Height       = dto.Size?.Height ?? 100,
             Rotation     = 0,
-            Status       = "Available",
+            Status       = DiningTableStatus.Available,
             Version      = 0
         };
 

@@ -71,6 +71,17 @@ public class GlobalExceptionMiddleware
                     TraceId = traceId
                 }
             },
+            KeyNotFoundException => new ErrorResponse
+            {
+                StatusCode = (int)HttpStatusCode.NotFound,
+                Body = new ErrorDetails
+                {
+                    Title = "Resource Not Found",
+                    Detail = exception.Message,
+                    Type = "https://httpstatuses.com/404",
+                    TraceId = traceId
+                }
+            },
             InvalidOperationException invalidOpEx when invalidOpEx.Message.Contains("not found") => new ErrorResponse
             {
                 StatusCode = (int)HttpStatusCode.NotFound,

@@ -48,7 +48,6 @@ builder.Services.Configure<PricingSettings>(
 
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
-builder.Services.AddScoped<IDiningTableService, DiningTableService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 
@@ -68,7 +67,6 @@ builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
 });
-builder.Services.AddSignalR();
 
 // Add error handling
 builder.Services.AddErrorHandling();
