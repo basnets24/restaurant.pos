@@ -8,10 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- TEMP for local Postgres migration testing: project reference instead of the
-             published Common.Library package, so new PostgreSQL/ code is visible without
-             a version bump + republish. Revert to a PackageReference once verified. -->
-        <ProjectReference Include="..\..\..\..\shared\Common.Library\Common.Library.csproj" />
+        <PackageReference Include="Common.Library" Version="1.0.21" />
         <PackageReference Include="Messaging.Contracts" Version="1.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.19">

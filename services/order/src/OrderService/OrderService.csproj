@@ -7,10 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- TEMP for local Postgres migration testing: project reference instead of the
-             published Common.Library package, so new PostgreSQL/ code is visible without
-             a version bump + republish. Revert to a PackageReference once verified. -->
-        <ProjectReference Include="..\..\..\..\shared\Common.Library\Common.Library.csproj" />
+        <PackageReference Include="Common.Library" Version="1.0.21" />
         <!-- Pinned below the rest of the MassTransit 8.5.1 family deliberately:
              8.5.0+ requires Microsoft.EntityFrameworkCore.Relational 9.0.1, which
              conflicts with this codebase's EF Core 8.0.19/Npgsql 8.0.11 stack
