@@ -15,7 +15,7 @@ namespace OrderService.Extensions;
 /// MassTransit registration extensions for the Order Service.
 /// - Configures RabbitMQ bus (host, retries, tenant propagation, delayed scheduler)
 /// - Registers all consumers in this assembly
-/// - Adds the Order saga with Mongo persistence
+/// - Adds the Order saga with Postgres (EF Core) persistence
 /// - Maps endpoint conventions for request/response
 /// - Adds an explicit receive endpoint for the POS read-model projector with a shared partitioner
 /// </summary>

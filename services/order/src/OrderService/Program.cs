@@ -1,6 +1,5 @@
 using Common.Library.Identity;
 using Common.Library.Logging;
-using Common.Library.MongoDB;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -26,9 +25,6 @@ builder.Host.ConfigureAzureKeyVault();
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
 
-// OrderService/Program.cs
-builder.Services.AddMongo();
-
 var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
     ?? throw new InvalidOperationException("PostgresSettings is not configured.");
 builder.Services.AddDbContext<OrderDbContext>(options =>
@@ -38,7 +34,6 @@ builder.Services.AddDbContext<OrderStateDbContext>(options =>
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddMongoDb()
     .AddPostgres<OrderDbContext>();
 builder.Services.AddTenancy();
 
