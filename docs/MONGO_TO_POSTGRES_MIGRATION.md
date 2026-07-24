@@ -112,7 +112,7 @@ into another service's database.
   equivalent Npgsql settings — confirm exact flags against Supavisor docs
   when implementing).
 - **Local dev stays on the existing docker-compose Postgres container**
-  (`identity-postgres`), not Supabase — avoids burning free-tier connection
+  (`restaurant-postgres`), not Supabase — avoids burning free-tier connection
   budget and network dependency during local dev/CI. Only shared/deployed
   environments point at Supabase.
 
@@ -219,7 +219,7 @@ it until every service is off Mongo.
 0.6. Prove connectivity end-to-end against a throwaway table/entity
      before touching any real service's data.
 0.7. Confirm local dev stays on the existing docker-compose Postgres
-     container (`identity-postgres`) — only deployed environments point
+     container (`restaurant-postgres`) — only deployed environments point
      at Supabase.
 
 **Verification:** a small test/scratch harness against

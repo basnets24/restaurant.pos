@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15
-    container_name: identity-postgres
+    container_name: restaurant-postgres
     ports:
       - "5432:5432"
     environment:

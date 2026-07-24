@@ -18,7 +18,7 @@ DOTNET_SERVICES=(
 )
 
 # Containers infra/docker-compose.yml defines — waited on before launching services
-INFRA_CONTAINERS=(identity-postgres restaurant-rabbitmq restaurant-seq)
+INFRA_CONTAINERS=(restaurant-postgres restaurant-rabbitmq restaurant-seq)
 
 usage() {
   echo "Usage: $0 [start|stop]"
