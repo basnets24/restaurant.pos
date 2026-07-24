@@ -1,11 +1,13 @@
 using Common.Library.Identity;
 using Common.Library.Logging;
+using Common.Library.OpenTelemetry;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 using OrderService.Entities;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
 using OrderService;
 using OrderService.Auth;
 using OrderService.Extensions;
@@ -24,6 +26,8 @@ builder.Host.ConfigureAzureKeyVault();
 // Add services to the container.
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Services.AddTracing(builder.Configuration);
+builder.Services.AddMetrics(builder.Configuration);
 
 var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
     ?? throw new InvalidOperationException("PostgresSettings is not configured.");
@@ -95,6 +99,8 @@ if (app.Environment.IsDevelopment())
 // API Gateway handles TLS termination, services communicate via HTTP internally
 // Uncomment the following line if running service directly (without API Gateway):
 // app.UseHttpsRedirection();
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>());
 
 app.UseRouting();
 

@@ -3,10 +3,12 @@ using Common.Library.HealthChecks;
 using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MassTransit;
+using Common.Library.OpenTelemetry;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OpenTelemetry.Metrics;
 using PaymentService.Auth;
 using PaymentService.Data;
 using PaymentService.Entities;
@@ -18,6 +20,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureAzureKeyVault();
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Services.AddTracing(builder.Configuration);
+builder.Services.AddMetrics(builder.Configuration);
 builder.Services.AddControllers();
 
 // Bind options
@@ -75,6 +79,8 @@ if (app.Environment.IsDevelopment())
 // API Gateway handles TLS termination, services communicate via HTTP internally
 // Uncomment the following line if running service directly (without API Gateway):
 // app.UseHttpsRedirection();
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>());
 
 app.UseRouting();
 

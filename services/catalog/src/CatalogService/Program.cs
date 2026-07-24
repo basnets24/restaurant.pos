@@ -2,6 +2,7 @@ using System.Reflection;
 using Common.Library.Identity;
 using Common.Library.Logging;
 using Common.Library.MassTransit;
+using Common.Library.OpenTelemetry;
 using CatalogService.Auth;
 using CatalogService.Consumers;
 using CatalogService.Data;
@@ -13,6 +14,7 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using CatalogService.Services;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
 using Serilog;
 using Common.Library.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -24,6 +26,8 @@ builder.Services.AddScoped<InventoryManager>();
 
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Services.AddTracing(builder.Configuration);
+builder.Services.AddMetrics(builder.Configuration);
 builder.Host.ConfigureAzureKeyVault();
 
 var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
@@ -96,6 +100,8 @@ if (app.Environment.IsDevelopment())
 // API Gateway handles TLS termination, services communicate via HTTP internally
 // Uncomment the following line if running service directly (without API Gateway):
 // app.UseHttpsRedirection();
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>());
 
 app.UseRouting();
 

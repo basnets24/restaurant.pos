@@ -48,10 +48,50 @@ services:
     networks:
       - pos-net
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: restaurant-jaeger
+    ports:
+      - "6831:6831/udp" # agent - AddJaegerExporter's AgentHost/AgentPort target
+      - "16686:16686"   # UI
+    networks:
+      - pos-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: restaurant-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    # host.docker.internal resolves to the host machine on Docker Desktop, where
+    # each service actually runs (dotnet run, not containerized) - see prometheus.yml.
+    networks:
+      - pos-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: restaurant-grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - pos-net
+
 volumes:
   rabbitmq_data:
   seq_data:
   postgres-data:
+  prometheus_data:
+  grafana_data:
 
 
 networks:

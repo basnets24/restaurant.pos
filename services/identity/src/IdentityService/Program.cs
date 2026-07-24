@@ -1,5 +1,6 @@
 using Common.Library.Configuration;
 using Common.Library.Logging;
+using Common.Library.OpenTelemetry;
 using Common.Library.PostgreSQL;
 using Duende.IdentityServer.Configuration;
 using IdentityService.Common.Extensions;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 using Microsoft.AspNetCore.HttpOverrides;
+using OpenTelemetry.Metrics;
 using Tenant.Domain.Data;
 using Tenant.Domain.Entities;
 
@@ -25,6 +27,8 @@ builder.Host.ConfigureAzureKeyVault();
 //services
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Services.AddTracing(builder.Configuration);
+builder.Services.AddMetrics(builder.Configuration);
 builder.Services.AddPostgresWithIdentity(builder.Configuration);
 builder.Services.AddRestaurantPosIdentityServer(builder.Configuration, builder.Environment);
 
@@ -106,6 +110,7 @@ if (!string.IsNullOrWhiteSpace(identitySettings?.PathBase))
 
 app.UseStaticFiles();
 
+app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>());
 
 app.UseRouting();
 
