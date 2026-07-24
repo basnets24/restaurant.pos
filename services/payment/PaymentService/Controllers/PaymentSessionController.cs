@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PaymentService.Auth;
 using PaymentService.Entities;
+using PaymentService.Metrics;
 using Stripe;
 
 namespace PaymentService.Controllers;
@@ -85,6 +86,7 @@ public class PaymentSessionController : ControllerBase
                 await _publish.Publish(new PaymentSucceeded(
                     payment.CorrelationId, payment.OrderId, payment.RestaurantId, payment.LocationId));
 
+                PaymentMetrics.PaymentsSucceeded.Add(1);
                 _logger.LogInformation("Payment confirmed succeeded for order {OrderId}", orderId);
                 return Ok(new { status = "succeeded", receiptUrl = payment.ReceiptUrl });
 
@@ -98,6 +100,7 @@ public class PaymentSessionController : ControllerBase
                 await _publish.Publish(new PaymentFailed(
                     payment.CorrelationId, payment.OrderId, payment.ErrorMessage, payment.RestaurantId, payment.LocationId));
 
+                PaymentMetrics.PaymentsFailed.Add(1);
                 _logger.LogInformation("Payment confirmed failed for order {OrderId}: {Status}", orderId, intent.Status);
                 return Ok(new { status = "failed", error = payment.ErrorMessage });
 

@@ -2,6 +2,7 @@ using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Order;
+using OrderService.Metrics;
 
 namespace OrderService.StateMachines;
 
@@ -77,6 +78,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                    context.Saga.LastUpdated = DateTimeOffset.UtcNow;
                    context.Saga.InventoryCheckedAt = context.Saga.LastUpdated;
                    _logger.LogInformation("Inventory reserved for order {OrderId} - fired", context.Saga.OrderId);
+                   OrderMetrics.OrdersConfirmed.Add(1);
                })
                .TransitionTo(Confirmed),
            When(InventoryReserveFaulted)
@@ -86,6 +88,7 @@ public class OrderStateMachine : MassTransitStateMachine<OrderState>
                    context.Saga.ErrorMessage = context.Message.Reason;
                    _logger.LogWarning("Inventory reservation failed for OrderId {OrderId}: {Reason}",
                        context.Saga.OrderId, context.Message.Reason);
+                   OrderMetrics.OrdersRejected.Add(1);
                })
                .TransitionTo(Rejected)
            );

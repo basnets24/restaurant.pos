@@ -80,7 +80,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "3001:3000" # 3000 is taken by an unrelated project's container on this machine
     depends_on:
       - prometheus
     networks:
