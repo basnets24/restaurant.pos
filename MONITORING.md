@@ -570,6 +570,19 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
   - Simple SMTP-based notifications
   - Can add Slack later if needed
 
+✓ **Metrics scope for now:** what's already free (HTTP request rate/latency/status
+  per endpoint via `AddAspNetCoreInstrumentation`, MassTransit consume/receive/
+  send/saga counts and durations per message type via `AddMeter("MassTransit")`)
+  is enough for local dev. Known gaps deliberately deferred, not forgotten:
+  - No success/failure dimension on any MassTransit metric today - a fault is
+    invisible to Prometheus/Grafana, only visible in Jaeger traces or Seq logs.
+  - No business-outcome counters (orders Confirmed vs Rejected, payments
+    Succeeded vs Failed) - would need custom `Meter`/`Counter` code, not free.
+  - No Postgres-level metrics (connection pool, query latency).
+  **Revisit once the Kubernetes deployment work starts** - pod-level metrics
+  (memory/CPU via cAdvisor/kube-state-metrics) become relevant then too, and
+  are a natural point to also close the gaps above.
+
 ---
 
 ## Success Criteria
