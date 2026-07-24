@@ -12,36 +12,45 @@ inventory, and tenant no longer exist as separate services; see
 `docs/MONGO_TO_POSTGRES_MIGRATION.md` and the service-merge history).
 
 ### What's Working ✅
-- Serilog + Seq logging (3/4 backend services: identity, catalog, order)
+- **Full local observability stack is live and verified end-to-end**, all via
+  `infra/docker-compose.yml`:
+  - Serilog + Seq logging on all 4 backend services (payment was missing this
+    entirely - fixed, verified its logs switched to Serilog's `[HH:mm:ss INF]`
+    format and are arriving in Seq)
+  - Request logging (`UseSerilogRequestLogging()`) on all 4 services (previously
+    identity only)
+  - Distributed tracing: `AddTracing()` wired into all 4 services'
+    `Program.cs`, `JaegerSettings` added to each `appsettings.json`
+    (`localhost:6831`) - confirmed all 4 services (`Identity`, `Catalog`,
+    `Order`, `Payment`) show up with real traces via Jaeger's
+    `/api/services` endpoint
+  - Metrics: `AddMetrics()` wired into all 4 services, each exposing
+    `/metrics` via `UseOpenTelemetryPrometheusScrapingEndpoint(...)` (note:
+    this pinned OpenTelemetry version's API needs an explicit `MeterProvider`
+    argument - `app.Services.GetRequiredService<MeterProvider>()` - unlike
+    later stable versions' parameterless overload) - confirmed all 4 targets
+    show `up` via Prometheus's `/api/v1/targets`
+  - Grafana up with Prometheus auto-provisioned as its datasource
+    (`infra/grafana/provisioning/datasources/prometheus.yml`) - confirmed via
+    Grafana's own `/api/datasources`
+  - `AddTracing()`/`AddMetrics()` now live in `Common.Library.OpenTelemetry`
+    (was `Play.Common.OpenTelemetry`, a leftover from before the package was
+    renamed from `Play.Common`) - published as Common.Library 1.0.22
 - Health checks implemented and working (`/health/ready`, `/health/live`)
 - Kubernetes probes configured correctly (readiness/liveness/startup in the Helm chart)
-- Request logging (`UseSerilogRequestLogging()`) only in identity
+- The two orphaned infra files are cleaned up: `infra/jaegar/` renamed to
+  `infra/jaeger/` (typo fix), `services/payment/helm/values.yaml` deleted
+  (superseded, unused)
 
 ### What's Broken ❌
-- **Payment service has no Serilog at all** - confirmed by its own runtime logs,
-  which are in the default .NET console-logger format (`info: MassTransit[0]`),
-  not Serilog's compact format (`[HH:mm:ss INF] ...`) the other three services show.
-- **OpenTelemetry tracing/metrics are fully implemented but never called anywhere.**
-  `Common.Library`'s `AddTracing()`/`AddMetrics()` (`shared/Common.Library/OpenTelemetry/Extensions.cs`)
-  are complete, working implementations - not stubs - but:
-  - They live in namespace `Play.Common.OpenTelemetry`, not `Common.Library.OpenTelemetry`
-    like everything else in this library - a leftover from before the package was
-    renamed from `Play.Common`. That inconsistency alone makes them easy to miss.
-  - No service calls `AddTracing()`/`AddMetrics()` in `Program.cs` today.
-  - Even if called, `AddTracing()` requires a `JaegerSettings` config section
-    (`JaegerSettings:Host`/`:Port`) that doesn't exist in any current
-    `appsettings.json` or in the current Terraform's Helm values - it would throw
-    `InvalidOperationException("Jaeger settings are missing.")` at startup.
-- **Two orphaned files from an earlier infra iteration, unused by anything today:**
-  - `infra/jaegar/values.yaml` (note the typo - "jaegar" not "jaeger") - Jaeger
-    Helm values not referenced by any `.tf` file.
-  - `services/payment/helm/values.yaml` - a standalone per-service values file
-    from before the Terraform's current inline `yamlencode()` pattern existed;
-    different image-tag convention, different namespace convention
-    (`seq.observability`/`jaeger-query.observability` vs today's plain `seq`).
-- No Prometheus/Grafana - metrics have nowhere to go even once exposed.
+- **None of the above runs in Kubernetes yet** - Terraform was deleted pending
+  redesign, so there's no AKS-deployed Jaeger/Prometheus/Grafana, only the
+  local docker-compose versions. `infra/jaeger/values.yaml` (Helm values) is
+  ready to use once a `helm_release` references it in the rebuilt Terraform;
+  Prometheus/Grafana would need equivalent Helm charts or values for AKS too.
 - Frontend monitoring completely absent.
-- No alerting configured.
+- No alerting configured (email alerting from the original plan, or otherwise).
+- No Grafana dashboards built yet (datasource is wired, but no dashboards exist).
 
 ### Impact
 - Can't trace requests across services
@@ -98,49 +107,31 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 
 **Why:** Docker health checks for local development (not just Kubernetes probes).
 
-#### 1.4 Register OpenTelemetry Tracing
-**Files:** All backend `Program.cs` files
+#### 1.4 Register OpenTelemetry Tracing ✅ done (local)
 
-**Prerequisite:** Fix the namespace on `AddTracing()`/`AddMetrics()` first -
-they currently live in `Play.Common.OpenTelemetry` (a leftover from before this
-package was renamed from `Play.Common`), inconsistent with every other
-`Common.Library.*` namespace. Rename to `Common.Library.OpenTelemetry`.
+`builder.Services.AddTracing(builder.Configuration)` added to all 4 services'
+`Program.cs`, `JaegerSettings` (`localhost`/`6831`) added to each
+`appsettings.json`. Verified: all 4 services show up with real traces via
+Jaeger's `/api/services` endpoint.
 
-Add to service configuration:
-```csharp
-builder.Services.AddTracing(builder.Configuration);
-```
+**Still pending - Kubernetes/Helm side:** `infra/helm/microservice/values.yaml`
+and the rebuilt Terraform's `locals.tf` `common_env` still need
+`JaegerSettings__Host`/`JaegerSettings__Port` pointing at wherever Jaeger runs
+in-cluster (see Phase 2.0) - the local `appsettings.json` values only cover
+local dev.
 
-**Pattern:** Already defined in `shared/Common.Library/OpenTelemetry/Extensions.cs`
+#### 1.5 Expose Prometheus Metrics ✅ done (local)
 
-**Also required:** a `JaegerSettings` config section (`Host`/`Port`) in each
-service's `appsettings.json` and in the Helm `common_env` - `AddTracing()`
-throws at startup without it. Nothing currently provides this section anywhere.
-
-**Update Helm Values:** `infra/helm/microservice/values.yaml`
-```yaml
-env:
-  - name: JAEGER_AGENT_HOST
-    value: jaeger-service
-  - name: JAEGER_AGENT_PORT
-    value: "6831"
-```
-
-**Why:** Enable distributed tracing across all services to Jaeger.
-
-#### 1.5 Expose Prometheus Metrics
-**Files:** All backend `Program.cs` files
-
-Add to service configuration:
-```csharp
-builder.Services.AddMetrics(builder.Configuration);
-```
-
-**Pattern:** Already defined in `shared/Common.Library/OpenTelemetry/Extensions.cs`
-
-**Endpoint:** `/metrics` automatically exposed by OpenTelemetry
-
-**Why:** Prometheus can scrape metrics from all services.
+`builder.Services.AddMetrics(builder.Configuration)` added to all 4 services.
+**Correction to this plan's original assumption:** `/metrics` is not
+automatically exposed just by calling `AddMetrics()` - the pinned
+`OpenTelemetry.Exporter.Prometheus` version (1.2.0-rc5, an old pre-1.0 API
+shape) also requires explicitly calling
+`app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>())`
+in the request pipeline - confirmed via reflection against the installed
+package, since later stable OpenTelemetry versions have a parameterless
+overload that doesn't exist here. Verified: all 4 targets show `up` via
+Prometheus's `/api/v1/targets`.
 
 ---
 
@@ -148,29 +139,27 @@ builder.Services.AddMetrics(builder.Configuration);
 
 **Goal:** Collect and visualize system metrics, and stand up distributed tracing
 
-#### 2.0 Deploy Jaeger in Kubernetes
+#### 2.0 Deploy Jaeger - done locally, still pending in Kubernetes
 
-No prior version of this plan actually included this step - "Jaeger
-infrastructure deployed" was listed under "What's Working" without one, but
-verification found no Jaeger `helm_release` in any current Terraform file.
+Locally: Jaeger runs via `infra/docker-compose.yml` (`jaegertracing/all-in-one`,
+port 6831/udp for the agent, 16686 for the UI) - confirmed receiving real traces
+from all 4 services. The typo'd `infra/jaegar/` directory is renamed to
+`infra/jaeger/`, and the orphaned `services/payment/helm/values.yaml` is deleted.
 
-**Fix the typo'd directory first:** `infra/jaegar/` -> `infra/jaeger/`
-(the values file inside is otherwise usable as-is - all-in-one, in-memory
-storage, no Cassandra - a reasonable, cost-free choice for a personal project's
-traffic level).
+**Still pending for Kubernetes:** add a `helm_release` resource (in the
+rebuilt Terraform) for the official `jaegertracing/jaeger` chart using
+`infra/jaeger/values.yaml`, and add `JaegerSettings__Host`/`JaegerSettings__Port`
+to `locals.tf`'s `common_env` so every service's `AddTracing()` call (already
+wired up, see Phase 1.4) can find it once deployed.
 
-**Add a `helm_release` resource** (in the rebuilt Terraform) for the official
-`jaegertracing/jaeger` chart using `infra/jaeger/values.yaml`, and add
-`JaegerSettings__Host`/`JaegerSettings__Port` to `locals.tf`'s `common_env` so
-every service's `AddTracing()` call (once wired up in Phase 1) can actually
-find it.
+#### 2.1 Deploy Prometheus - done locally, still pending in Kubernetes
 
-**Delete** `services/payment/helm/values.yaml` - orphaned, superseded by the
-Terraform's inline per-service Helm values, and describes a namespace/image
-convention (`seq.observability`, `jaeger-query.observability`,
-`acrpos.azurecr.io/pos.payment:1.0.1`) nothing else in the repo uses anymore.
+Locally: Prometheus runs via `infra/docker-compose.yml`, scrape config at
+`infra/prometheus/prometheus.yml` targeting each service's `/metrics` at
+`host.docker.internal:<port>` (services run via `dotnet run` on the host, not
+containerized). Confirmed all 4 targets show `up` via `/api/v1/targets`.
 
-#### 2.1 Deploy Prometheus in Kubernetes
+**Still pending for Kubernetes:**
 
 **Create Helm Chart:** `infra/helm/prometheus/`
 
@@ -202,7 +191,15 @@ scrape_configs:
         target_label: __address__
 ```
 
-#### 2.2 Deploy Grafana in Kubernetes
+#### 2.2 Deploy Grafana - done locally, still pending in Kubernetes
+
+Locally: Grafana runs via `infra/docker-compose.yml`, with Prometheus
+auto-provisioned as its datasource via
+`infra/grafana/provisioning/datasources/prometheus.yml` - confirmed via
+Grafana's own `/api/datasources`. No dashboards built yet (see Grafana Panels
+below - still to do, locally or in Kubernetes).
+
+**Still pending for Kubernetes:**
 
 **Create Helm Chart:** `infra/helm/grafana/`
 
