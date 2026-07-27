@@ -4,9 +4,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { ShoppingCart, UtensilsCrossed } from "lucide-react";
+import {
+  ShoppingCart, UtensilsCrossed, Search, LayoutGrid, Soup, Utensils, Salad,
+  IceCreamBowl, CupSoda, PanelLeftOpen, PanelLeftClose, type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBlocker } from "react-router-dom";
@@ -32,6 +33,19 @@ type POSMenuItem = {
   description?: string | null;
   category?: string | null;
 };
+
+// Category → icon (design's MenuScreen rail); falls back to a generic glyph.
+const CAT_ICON: Record<string, LucideIcon> = {
+  all: LayoutGrid,
+  appetizers: Soup, appetizer: Soup, starters: Soup, starter: Soup,
+  mains: Utensils, main: Utensils, entrees: Utensils, entree: Utensils, "main course": Utensils,
+  sides: Salad, side: Salad,
+  desserts: IceCreamBowl, dessert: IceCreamBowl, sweets: IceCreamBowl,
+  drinks: CupSoda, drink: CupSoda, beverages: CupSoda, beverage: CupSoda,
+};
+const iconFor = (c: string): LucideIcon => CAT_ICON[c.trim().toLowerCase()] ?? UtensilsCrossed;
+
+const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
 // Map domain MenuItemDto → POS card type
 const toPOS = (m: MenuItemDto): POSMenuItem => ({
@@ -79,8 +93,10 @@ export default function MenuPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
 
-  // Selected category
+  // Selected category + category rail / search state
   const [category, setCategory] = useState<string>("All");
+  const [railOpen, setRailOpen] = useState(true);
+  const [query, setQuery] = useState("");
 
   // Create or reuse a cart for this table
   const initialSession = store.getTableSession(tableId);
@@ -91,6 +107,10 @@ export default function MenuPage() {
   const linkOrder = useLinkOrder(tableId);
   const setTableStatus = useSetTableStatus(tableId);
   const unlinkOrder = useUnlinkOrder(tableId);
+
+  // Table details (also tells us whether the table already has an active cart)
+  const tableQuery = useTable(tableId);
+  const table = tableQuery.data;
 
   const linkedOnce = useRef(false);
   // Seed guest count to store if passed via navigation state
@@ -104,8 +124,18 @@ export default function MenuPage() {
   // Ensure we have a cart; then link table->cart and set party size
   useEffect(() => {
     (async () => {
-      // Create cart if none
       if (!cartId) {
+        // Resume the table's existing active cart if it already has a real one —
+        // creating a second cart for an occupied table 409s server-side. Ignore
+        // the empty-GUID placeholder (a stale/phantom link, not a usable cart).
+        if (table?.activeCartId && table.activeCartId !== EMPTY_GUID) {
+          setCartId(table.activeCartId);
+          store.setTableSession(tableId, { cartId: table.activeCartId });
+          return;
+        }
+        // Wait until the table has loaded before deciding to create, so we
+        // don't race ahead and create a duplicate for an already-linked table.
+        if (tableQuery.isLoading || table === undefined) return;
         try {
           const res = await createCart.mutateAsync({
             tableId,
@@ -118,8 +148,12 @@ export default function MenuPage() {
           });
           // Proceed to link and set status below on next pass when cartId is set
           return;
-        } catch (e) {
-          // surface error silently for now
+        } catch (e: any) {
+          // 409 = table already marked in-use with a cart we can't resolve
+          // (e.g. a stale phantom link). Don't silently dead-end — tell the user.
+          if (e?.response?.status === 409) {
+            toast.error("This table already has an open order that couldn't be loaded. Clear the table to start a new one.");
+          }
           return;
         }
       }
@@ -141,7 +175,7 @@ export default function MenuPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId, cartId]);
+  }, [tableId, cartId, table?.activeCartId, tableQuery.isLoading]);
 
   const cartQuery = useCart(cartId ?? undefined); // enabled only when id exists
   const cart = cartQuery.data;
@@ -152,6 +186,14 @@ export default function MenuPage() {
   const categories = useDomainMenuCategories();
   const menuList = useMenuList({ category: category && category !== "All" ? category : undefined });
   const items = (menuList.data?.items ?? []) as MenuItemDto[];
+  const cats = useMemo(
+    () => ["All", ...(((categories.data ?? []).filter(Boolean)) as string[])],
+    [categories.data],
+  );
+  const shown = useMemo(
+    () => items.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase())),
+    [items, query],
+  );
 
   // Add to cart from a card
   async function handleAddToOrder(item: POSMenuItem, quantity = 1, notes?: string) {
@@ -228,8 +270,7 @@ export default function MenuPage() {
     }
   }
 
-  // Fetch table details for header/sidebar context
-  const table = useTable(tableId).data;
+  // (table fetched above, near cart init)
   const sidebarTable = useMemo(
     () => ({
       id: tableId,
@@ -265,90 +306,98 @@ export default function MenuPage() {
   }, [blocker.state, blocker.location?.pathname, tableId]);
 
   return (
-    <div className="mx-auto max-w-screen-2xl px-4 py-4 xl:pr-[25rem]"> {/* reserve space for fixed sidebar on xl+ */}
-      {/* Header */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <UtensilsCrossed className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">Restaurant Menu</h1>
+    <div className="xl:pr-[25rem]"> {/* reserve space for fixed sidebar on xl+ */}
+      <div className="flex min-h-[calc(100dvh-3.5rem)]">
+        {/* Category icon rail (sm+) */}
+        <aside
+          className="hidden sm:flex flex-col gap-1 shrink-0 border-r border-border px-2 py-4 sticky top-14 self-start h-[calc(100dvh-3.5rem)] transition-[width] duration-150"
+          style={{ width: railOpen ? 176 : 64 }}
+        >
+          {cats.map((c) => {
+            const Ico = iconFor(c);
+            const active = c === category;
+            return (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                title={c}
+                className={`flex items-center gap-3 rounded-[10px] px-2.5 py-2.5 text-sm font-semibold transition-colors ${
+                  railOpen ? "justify-start" : "justify-center"
+                } ${active ? "bg-brand-soft text-brand-strong" : "text-muted-foreground hover:bg-secondary"}`}
+              >
+                <Ico className="h-5 w-5 shrink-0" />
+                {railOpen && <span className="truncate">{c}</span>}
+              </button>
+            );
+          })}
+          <div className="flex-1" />
+          <button
+            onClick={() => setRailOpen((o) => !o)}
+            title={railOpen ? "Collapse" : "Expand"}
+            className="flex items-center justify-center rounded-[10px] px-2.5 py-2.5 text-muted-foreground hover:bg-secondary"
+          >
+            {railOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+          </button>
+        </aside>
+
+        {/* Center: context + search + grid */}
+        <div className="flex-1 min-w-0 px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold text-foreground">{category === "All" ? "Menu" : category}</h1>
               <p className="text-sm text-muted-foreground">
-                Table {table?.number ?? tableId}
-                {table?.section ? ` • ${table.section}` : ""} • Select items to add to your order
+                {shown.length} item{shown.length === 1 ? "" : "s"}
               </p>
+            </div>
+            <div className="relative w-full sm:w-96">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search menu items…"
+                className="w-full rounded-md border border-border bg-input-background pl-10 pr-3 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
             </div>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarOpen((s) => !s)}
-            className="hidden xl:inline-flex"
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            {sidebarOpen ? "Hide" : "Show"} Order
-          </Button>
-        </div>
-      </div>
+          {/* Mobile category chips */}
+          <div className="sm:hidden -mx-4 px-4 mb-4 flex gap-2 overflow-x-auto no-scrollbar">
+            {cats.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold border transition-colors ${
+                  c === category
+                    ? "bg-brand-soft text-brand-strong border-brand"
+                    : "bg-card text-muted-foreground border-border"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
 
-      {/* Category Tabs */}
-      <Card className="mb-4 border-border overflow-hidden">
-        <CardContent className="p-0">
-          <Tabs value={category} onValueChange={(v) => setCategory(v)}>
-            <div
-              className="px-2 sm:px-3 py-2 overflow-x-auto no-scrollbar"
-              style={{
-                WebkitMaskImage:
-                  "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
-                maskImage:
-                  "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)",
-              }}
-            >
-              <TabsList className="flex flex-nowrap sm:flex-wrap items-center gap-2 sm:gap-3 bg-transparent p-0 min-w-0">
-                {["All", ...((categories.data ?? []).filter(Boolean))].map((c) => (
-                  <TabsTrigger
-                    key={c}
-                    value={c}
-                    className="whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 text-sm rounded-full border border-border bg-muted/30 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                  >
-                    {c}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+          {/* Items grid */}
+          {menuList.isLoading ? (
+            <div className="text-sm text-muted-foreground py-10">Loading menu…</div>
+          ) : shown.length > 0 ? (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5 lg:gap-6">
+              {shown.map((m) => (
+                <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
+              ))}
             </div>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Section title + count */}
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-base font-medium">{category === "All" ? "All Items" : category}</h2>
-        <Badge variant="outline" className="text-xs">{items.length} items</Badge>
-      </div>
-      <Separator className="mb-4" />
-
-      {/* Items Grid */}
-      {menuList.isLoading ? (
-        <div className="text-sm text-muted-foreground">Loading menu…</div>
-      ) : items.length > 0 ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 sm:gap-6 lg:gap-8">
-          {items.map((m) => (
-            <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
-          ))}
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">No items found</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                {query ? "Try a different search term." : "Try a different category."}
+              </CardContent>
+            </Card>
+          )}
         </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">No items in this category</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Try a different category or clear filters.
-          </CardContent>
-        </Card>
-      )}
+      </div>
 
       {/* Fixed Sidebar (desktop) / Sheet (mobile) */}
       <OrderSidebar
