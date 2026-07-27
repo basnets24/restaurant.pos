@@ -52,7 +52,7 @@ export default function SuccessView() {
       <Card className="border-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <CheckCircle2 className="h-5 w-5 text-status-available" />
             Order Placed
           </CardTitle>
         </CardHeader>
@@ -77,7 +77,7 @@ export default function SuccessView() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm">Amount</span>
-                <span className="font-medium">{amount != null ? `$${amount.toFixed(2)}` : "—"}</span>
+                <span className="font-medium font-numeric">{amount != null ? `$${amount.toFixed(2)}` : "—"}</span>
               </div>
               <div className="flex gap-2 pt-2">
                 {receiptUrl ? (
@@ -85,7 +85,7 @@ export default function SuccessView() {
                     href={receiptUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-brand-strong"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" /> View Receipt
                   </a>

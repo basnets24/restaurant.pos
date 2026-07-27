@@ -68,15 +68,15 @@ export default function ManagementView({
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "active": return "bg-green-100 text-green-800";
-            case "break": return "bg-yellow-100 text-yellow-800";
-            case "off": return "bg-gray-100 text-gray-800";
-            case "critical": return "bg-red-100 text-red-800";
-            case "low": return "bg-yellow-100 text-yellow-800";
-            case "good": return "bg-green-100 text-green-800";
-            case "confirmed": return "bg-green-100 text-green-800";
-            case "pending": return "bg-yellow-100 text-yellow-800";
-            default: return "bg-gray-100 text-gray-800";
+            case "active": return "bg-status-available-soft text-status-available";
+            case "break": return "bg-status-reserved-soft text-status-reserved";
+            case "off": return "bg-muted text-muted-foreground";
+            case "critical": return "bg-status-occupied-soft text-status-occupied";
+            case "low": return "bg-status-reserved-soft text-status-reserved";
+            case "good": return "bg-status-available-soft text-status-available";
+            case "confirmed": return "bg-status-available-soft text-status-available";
+            case "pending": return "bg-status-reserved-soft text-status-reserved";
+            default: return "bg-muted text-muted-foreground";
         }
     };
 

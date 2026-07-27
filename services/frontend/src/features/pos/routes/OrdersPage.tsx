@@ -70,7 +70,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
                 {o.paidAt && (
-                  <div className="text-xs text-emerald-600 flex items-center gap-1">
+                  <div className="text-xs text-status-available flex items-center gap-1">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Paid {formatDate(o.paidAt)}
                   </div>
                 )}

@@ -208,7 +208,7 @@ function AddEmployeeForm({ rid, roles, locations, onClose }: { rid: string; role
           </div>
         </div>
       </div>
-      {error && <div className="text-sm text-red-600 mt-2">{error}</div>}
+      {error && <div className="text-sm text-destructive mt-2">{error}</div>}
       <DialogFooter className="mt-3">
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={submit} disabled={!canSubmit || add.isPending}>Add Employee</Button>

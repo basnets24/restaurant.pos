@@ -55,7 +55,7 @@ export default function LandingView({ onGetStarted }: LandingPageProps) {
         <div className="min-h-screen bg-background">
             {/* Hero */}
             <section className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
+                <div className="absolute inset-0 bg-brand-soft/30" />
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
                         <div className="space-y-8">
@@ -96,8 +96,7 @@ export default function LandingView({ onGetStarted }: LandingPageProps) {
                         </div>
 
                         <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-3xl blur-3xl" />
-                            <Card className="relative overflow-hidden shadow-2xl border-0 bg-card/80 backdrop-blur-sm">
+                            <Card className="relative overflow-hidden shadow-md border border-border bg-card">
                                 <CardContent className="p-0">
                                     <ImageWithFallback
                                         src="https://images.unsplash.com/photo-1669131196140-49591336b13e?auto=format&fit=crop&w=1200&q=80"
@@ -194,15 +193,13 @@ export default function LandingView({ onGetStarted }: LandingPageProps) {
                         </div>
 
                         <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-accent/20 to-primary/20 rounded-3xl blur-3xl" />
-                            <Card className="relative overflow-hidden shadow-2xl border-0 bg-card/80 backdrop-blur-sm">
+                            <Card className="relative overflow-hidden shadow-md border border-border bg-card">
                                 <CardContent className="p-0">
                                     <ImageWithFallback
                                         src="https://images.unsplash.com/photo-1609951734391-b79a50460c6c?auto=format&fit=crop&w=1200&q=80"
                                         alt="Tablet restaurant ordering system"
                                         className="w-full h-96 object-cover"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-transparent to-transparent" />
                                     <div className="absolute bottom-6 left-6 right-6">
                                         <div className="bg-card/90 backdrop-blur-sm rounded-lg p-4">
                                             <h3 className="font-medium text-foreground mb-2">Real-time Analytics</h3>
@@ -220,8 +217,7 @@ export default function LandingView({ onGetStarted }: LandingPageProps) {
             </section>
 
             {/* CTA */}
-            <section className="py-20 lg:py-28 bg-primary/5 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
+            <section className="py-20 lg:py-28 bg-brand-soft/30 relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
                         <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-2">

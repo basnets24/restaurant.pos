@@ -182,7 +182,7 @@ export function Dashboard({
                       value={s.value}
                       change={s.change}
                       trend={s.trend}
-                      icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-green-600" /> : undefined}
+                      icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-status-available" /> : undefined}
                     />
                   ))}
                 </CardGrid>

@@ -382,7 +382,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                 setZoom(z => Math.max(0.25, Math.min(2, +(z + dz).toFixed(2))));
               }
             }}
-            className="relative aspect-[16/10] max-h-[70vh] rounded-lg border overflow-hidden bg-[linear-gradient(90deg,rgba(0,0,0,.05)_1px,transparent_1px),linear-gradient(180deg,rgba(0,0,0,.05)_1px,transparent_1px)]"
+            className="relative aspect-[16/10] max-h-[70vh] rounded-lg border overflow-hidden bg-[linear-gradient(90deg,rgba(53,25,3,.06)_1px,transparent_1px),linear-gradient(180deg,rgba(53,25,3,.06)_1px,transparent_1px)]"
             style={{ backgroundSize: `${GRID}px ${GRID}px` }}
           >
             <div className="absolute inset-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
@@ -394,10 +394,10 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                   onMouseDown={(e) => onMouseDown(e, t.id)}
                 >
                   <div className="text-[10px] px-1 py-0.5 opacity-70">{t.section || "Section"}</div>
-                  <div className="px-1 text-sm font-medium">#{t.number}</div>
+                  <div className="px-1 text-sm font-medium font-numeric">#{t.number}</div>
                   <div className="px-1 text-[10px]">{t.seats} seats</div>
-                  {t.isNew && <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] px-1 rounded">new</div>}
-                  {t._deleted && <div className="absolute inset-0 bg-red-500/10" />}
+                  {t.isNew && <div className="absolute -top-2 -right-2 bg-status-reserved text-white text-[10px] px-1 rounded">new</div>}
+                  {t._deleted && <div className="absolute inset-0 bg-destructive/10" />}
 
                   {/* Resize handles on selection */}
                   {t.selected && (

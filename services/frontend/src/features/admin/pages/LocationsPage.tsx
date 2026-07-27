@@ -67,7 +67,7 @@ export default function LocationsPage() {
             <CardDescription>Creates a location for this restaurant</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {error && <div className="text-sm text-red-600">{error}</div>}
+            {error && <div className="text-sm text-destructive">{error}</div>}
             <div className="grid gap-1.5">
               <Label>Location name</Label>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Main" />
@@ -129,7 +129,7 @@ export default function LocationsPage() {
               <CardContent className="space-y-3">
                 {isEditing ? (
                   <>
-                    {editError && <div className="text-sm text-red-600">{editError}</div>}
+                    {editError && <div className="text-sm text-destructive">{editError}</div>}
                     {canManage ? (
                       <>
                         <div className="grid gap-1.5">

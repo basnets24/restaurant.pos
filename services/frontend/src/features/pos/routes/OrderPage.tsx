@@ -108,7 +108,7 @@ export default function OrderPage() {
               </div>
 
               {isPaid && (
-                <div className="text-sm text-emerald-600 flex items-center gap-1">
+                <div className="text-sm text-status-available flex items-center gap-1">
                   <CheckCircle2 className="h-4 w-4" /> Paid
                 </div>
               )}

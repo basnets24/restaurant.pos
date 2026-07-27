@@ -62,7 +62,7 @@ function OrderItemRow({
                     <h4 className="font-medium text-sm truncate">
                         {item.menuItem.name}
                     </h4>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs font-numeric">
                         ${item.menuItem.price.toFixed(2)}
                     </Badge>
                 </div>
@@ -111,7 +111,7 @@ function OrderItemRow({
             </div>
 
             <div className="text-right ml-3">
-                <div className="font-medium text-sm">
+                <div className="font-medium text-sm font-numeric">
                     ${(item.menuItem.price * item.quantity).toFixed(2)}
                 </div>
             </div>
@@ -176,7 +176,7 @@ function OrderSidebarContent({
                         <Receipt className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div>
-                        <h3 className="font-medium">Table {table.number}</h3>
+                        <h3 className="font-medium">Table <span className="font-numeric">{table.number}</span></h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{table.section}</span>
                             {table.partySize && (
@@ -286,16 +286,16 @@ function OrderSidebarContent({
                     <div className="space-y-2 mb-4">
                         <div className="flex justify-between text-sm">
                             <span>Subtotal</span>
-                            <span>${subtotal.toFixed(2)}</span>
+                            <span className="font-numeric">${subtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
-                            <span>${tax.toFixed(2)}</span>
+                            <span className="font-numeric">${tax.toFixed(2)}</span>
                         </div>
                         <Separator />
                         <div className="flex justify-between font-medium">
                             <span>Total</span>
-                            <span>${total.toFixed(2)}</span>
+                            <span className="font-numeric">${total.toFixed(2)}</span>
                         </div>
                     </div>
 

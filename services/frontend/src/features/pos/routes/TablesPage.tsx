@@ -16,11 +16,12 @@ import { CheckCircle, Users, Clock, AlertTriangle, ZoomIn, ZoomOut } from "lucid
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 
 const GRID = 14;
+// Solid, flat status fills (no opacity tricks) per Spoontab brand direction
 const statusClass: Record<string, string> = {
-  available: "bg-emerald-500/80 border-emerald-600 text-white",
-  occupied: "bg-rose-500/80 border-rose-600 text-white",
-  reserved: "bg-amber-500/80 border-amber-600 text-white",
-  dirty: "bg-zinc-400/70 border-zinc-500 text-white",
+  available: "bg-table-available border-table-available-border text-white",
+  occupied: "bg-table-occupied border-table-occupied-border text-white",
+  reserved: "bg-table-reserved border-table-reserved-border text-white",
+  dirty: "bg-table-dirty border-table-dirty-border text-white",
 };
 
 export default function TablesPage() {
@@ -72,10 +73,10 @@ export default function TablesPage() {
       </header>
 
       <CardGrid cols={{ base: 2, md: 4 }} gap="gap-3" className="mb-0">
-        <StatCard label="Available" value={counts.available} icon={<CheckCircle className="h-5 w-5 text-emerald-600" />} trend="neutral" />
-        <StatCard label="Occupied" value={counts.occupied} icon={<Users className="h-5 w-5 text-rose-600" />} trend="neutral" />
-        <StatCard label="Reserved" value={counts.reserved} icon={<Clock className="h-5 w-5 text-amber-600" />} trend="neutral" />
-        <StatCard label="Need Cleaning" value={counts.dirty} icon={<AlertTriangle className="h-5 w-5 text-zinc-600" />} trend="neutral" />
+        <StatCard label="Available" value={counts.available} icon={<CheckCircle className="h-5 w-5 text-status-available" />} trend="neutral" />
+        <StatCard label="Occupied" value={counts.occupied} icon={<Users className="h-5 w-5 text-status-occupied" />} trend="neutral" />
+        <StatCard label="Reserved" value={counts.reserved} icon={<Clock className="h-5 w-5 text-status-reserved" />} trend="neutral" />
+        <StatCard label="Need Cleaning" value={counts.dirty} icon={<AlertTriangle className="h-5 w-5 text-status-dirty" />} trend="neutral" />
       </CardGrid>
 
       <Card>
@@ -131,12 +132,12 @@ function TableNode({ t, onOpen }: { t: TableViewDto; onOpen: (id: string) => voi
     <ContextMenu>
       <ContextMenuTrigger>
         <button
-          className={`absolute rounded-md border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary transition-transform px-2.5 py-3 ${statusClass[t.status] ?? "bg-muted/60"}`}
+          className={`absolute rounded-md border shadow-sm focus:outline-none focus:ring-2 focus:ring-ring transition-transform duration-[120ms] ease-out hover:scale-[1.03] px-2.5 py-3 ${statusClass[t.status] ?? "bg-muted text-muted-foreground"}`}
           style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${(t as any).rotation ?? 0}deg)` }}
           onClick={() => onOpen(t.id)}
         >
           <div className="text-[10px] px-1 py-0.5 opacity-90">{t.section || ""}</div>
-          <div className="px-1 text-sm font-medium">#{t.number}</div>
+          <div className="px-1 text-sm font-medium font-numeric">#{t.number}</div>
           <div className="px-1 text-[10px]">{t.seats} seats</div>
         </button>
       </ContextMenuTrigger>
@@ -154,7 +155,7 @@ function TableNode({ t, onOpen }: { t: TableViewDto; onOpen: (id: string) => voi
       <Dialog open={seatOpen} onOpenChange={setSeatOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Seat Party — Table {t.number}</DialogTitle>
+            <DialogTitle>Seat Party — Table <span className="font-numeric">{t.number}</span></DialogTitle>
           </DialogHeader>
           <div className="grid gap-2">
             <label className="text-xs">Party size</label>

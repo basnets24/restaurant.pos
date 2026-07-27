@@ -62,7 +62,7 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                     <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground leading-snug">
                         {item.name}
                     </h3>
-                    <Badge className="bg-primary text-primary-foreground px-2.5 py-1 text-sm font-medium shadow-sm shrink-0">
+                    <Badge className="bg-primary text-primary-foreground px-2.5 py-1 text-sm font-medium font-numeric shadow-sm shrink-0">
                         ${item.price.toFixed(2)}
                     </Badge>
                 </div>

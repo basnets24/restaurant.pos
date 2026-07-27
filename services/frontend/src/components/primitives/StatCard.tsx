@@ -13,7 +13,7 @@ export interface StatCardProps {
 
 export function StatCard({ label, value, change, trend = "neutral", icon, className = "", size = "md" }: StatCardProps) {
   const sizeCls = size === "sm" ? "p-4" : size === "lg" ? "p-8" : "p-6";
-  const changeCls = trend === "up" ? "text-green-600" : trend === "down" ? "text-red-600" : "text-muted-foreground";
+  const changeCls = trend === "up" ? "text-status-available" : trend === "down" ? "text-destructive" : "text-muted-foreground";
   return (
     <Card className={className + " h-full"}>
       <CardContent className={sizeCls}>

@@ -139,7 +139,7 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                                                 <Button
                                                     size="icon"
                                                     variant="outline"
-                                                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                                    className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                                     onClick={() =>
                                                         mDelete.mutate(m.id, {
                                                             onSuccess: () => toast.success("Menu item deleted"),
@@ -239,7 +239,7 @@ function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
                         <Label>Description</Label>
                         <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add a short description" />
                         {description.trim().length === 0 && (
-                            <span className="text-xs text-red-500">Description is required</span>
+                            <span className="text-xs text-destructive">Description is required</span>
                         )}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
