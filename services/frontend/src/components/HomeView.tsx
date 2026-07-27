@@ -1,23 +1,25 @@
 // src/pages/Home.tsx
-import  { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../api-authorization/AuthProvider";
 import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstants";
 
-// UI (shadcn)
-import { Button } from "./ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card";
+// UI
 import { CardGrid } from "@/components/primitives/CardGrid";
 import { StatCard } from "@/components/primitives/StatCard";
+import {
+    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+    DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 // Icons (lucide-react)
 import {
-    ShoppingCart, CreditCard, Clock, BarChart3, Users, Package,
-    Calendar, Settings, TrendingUp, User, ArrowRight, LogOut, Shield
+    ShoppingCart, BarChart3, ChevronRight, Shield, LogOut, TrendingUp,
+    AlertTriangle, CalendarClock, UserPlus, CreditCard, Package, CheckCircle2, X,
+    type LucideIcon,
 } from "lucide-react";
 
-// Your data hook (adjust the import path to match your project)
-// Prefer domain tables API via React Query
+// Data hooks
 import { useTables as useDomainTables } from "@/domain/tables/hooks";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { useTenant } from "@/app/TenantContext";
@@ -26,32 +28,14 @@ import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 
-function getDisplayName(p?: Record<string, unknown>) {
-    if (!p) return "User";
-    return (
-        (p["name"] as string) ??
-        ([p["given_name"], p["family_name"]].filter(Boolean).join(" ") || undefined) ??
-        (p["preferred_username"] as string) ??
-        (p["email"] as string) ??
-        "User"
-    );
-}
-
 export default function Home() {
-    const { isAuthenticated, profile, signOut } = useAuth();
+    const { isAuthenticated, signOut } = useAuth();
     const navigate = useNavigate();
 
     if (!isAuthenticated) return <div>Please log in first.</div>;
 
-    const displayName = getDisplayName(profile);
-    const firstName = (profile?.["given_name"] as string) ?? displayName.split(" ")[0] ?? displayName;
-    const lastName = (profile?.["family_name"] as string) ?? "";
-    const { restaurantName: nameFromTenant } = useTenantInfo();
-    const restaurantName = nameFromTenant || (profile?.["restaurant_name"] as string) || "Your Restaurant";
-
     const onSelectPOS = () => navigate("/pos/tables");
     const onSelectManagement = () => navigate("/management");
-
     const onLogout = () => {
         // Proper IdentityServer logout: redirects to IdP,
         // then returns to /authentication/logout-callback
@@ -60,7 +44,6 @@ export default function Home() {
 
     return (
         <Dashboard
-            userData={{ restaurantName, firstName, lastName }}
             onSelectPOS={onSelectPOS}
             onSelectManagement={onSelectManagement}
             onLogout={onLogout}
@@ -69,34 +52,55 @@ export default function Home() {
 }
 
 interface DashboardProps {
-    userData: { restaurantName: string; firstName: string; lastName: string };
     onSelectPOS: () => void;
     onSelectManagement: () => void;
     onLogout: () => void;
 }
 
-export function Dashboard({
-                              userData,
-                              onSelectPOS,
-                              onSelectManagement,
-                              onLogout,
-                          }: DashboardProps) {
+type NotificationVariant = "warning" | "danger" | "neutral";
+interface Notification {
+    id: number;
+    icon: LucideIcon;
+    text: string;
+    variant: NotificationVariant;
+    time: string;
+}
+
+const NOTIFICATION_ROW_BG: Record<NotificationVariant, string> = {
+    warning: "bg-status-reserved-soft",
+    danger: "bg-status-occupied-soft",
+    neutral: "",
+};
+const NOTIFICATION_ICON_COLOR: Record<NotificationVariant, string> = {
+    warning: "text-status-reserved",
+    danger: "text-status-occupied",
+    neutral: "text-muted-foreground",
+};
+
+export function Dashboard({ onSelectPOS, onSelectManagement, onLogout }: DashboardProps) {
     const navigate = useNavigate();
     const { profile } = useAuth();
     const rawRoles = (profile as any)?.role as string | string[] | undefined;
     const roles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
+    // Show Admin only for Admin or Owner
+    const canAccessAdmin = roles.includes("Admin") || roles.includes("Owner");
+
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
-    // Removed unused 'status' variable
-        hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
-    // Show Admin button only for Admin or Owner
-    const canAccessAdmin = roles.includes("Admin") || roles.includes("Owner");
+    hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
+
+    const { restaurantName: nameFromTenant, locations } = useTenantInfo();
+    const restaurantName = nameFromTenant || (profile?.["restaurant_name"] as string) || "Your Restaurant";
+    const locationLabel =
+        (locations?.find((l) => l.id === lid) ?? locations?.find((l) => l.isActive) ?? locations?.[0])?.name ?? "";
+
     const { data: tablesData } = useDomainTables();
     const employee = useEmployeeDomain();
     const employees = employee.useEmployees(rid ?? "", { page: 1, pageSize: 1 }, { enabled: !!rid });
     const kitchen = useKitchen();
     const activeOrdersCount = kitchen.active().length;
     const { displayName: userDisplay } = useUserDisplayName();
+    const userInitial = (userDisplay?.trim()?.[0] ?? "U").toUpperCase();
 
     const stats = useMemo(() => {
         const list = tablesData ?? [];
@@ -106,163 +110,162 @@ export function Dashboard({
         return { total, occupied, capacityText: `${capacityPct}% capacity` };
     }, [tablesData]);
 
+    const num = (v: React.ReactNode) => <span className="font-numeric">{v}</span>;
     const quickStats = [
-        { label: "Today's Sales", value: "$2,847.50", change: "+12.5%", trend: "up" as const },
-        { label: "Active Orders", value: String(activeOrdersCount), change: "", trend: "neutral" as const },
-        { label: "Staff On Duty", value: String(employees.data?.total), change: "", trend: "neutral" as const },
-        { label: "Tables Occupied", value: `${stats.occupied}/${stats.total}`, change: stats.capacityText, trend: "neutral" as const },
+        { label: "Today's Sales", value: num("$2,847.50"), change: "+12.5%", trend: "up" as const, onClick: () => navigate("/management") },
+        { label: "Active Orders", value: num(String(activeOrdersCount)), trend: "neutral" as const, onClick: () => navigate("/pos/current") },
+        { label: "Staff On Duty", value: num(String(employees.data?.total ?? "—")), trend: "neutral" as const, onClick: () => navigate("/management") },
+        { label: "Tables Occupied", value: num(`${stats.occupied}/${stats.total}`), change: stats.capacityText, trend: "neutral" as const, onClick: () => navigate("/pos/tables") },
     ];
 
-    const posFeatures = [
-        { icon: ShoppingCart, title: "Order Management", description: "Take orders, track progress, and manage tables" },
-        { icon: CreditCard,  title: "Payment Processing", description: "Accept all payment methods with secure checkout" },
-        { icon: Clock,       title: "Real-time Updates",  description: "Live order tracking and kitchen communication" },
-    ];
+    // Static demo notifications (no notifications backend yet)
+    const [notifications, setNotifications] = useState<Notification[]>([
+        { id: 1, icon: AlertTriangle, text: "3 menu items running low on stock", variant: "warning", time: "5 min ago" },
+        { id: 2, icon: CalendarClock, text: "Reservation conflict at 7:30 PM for Table 4", variant: "danger", time: "18 min ago" },
+        { id: 3, icon: UserPlus, text: "New staff member Priya added to schedule", variant: "neutral", time: "1 hr ago" },
+        { id: 4, icon: CreditCard, text: "Payment failed for order #482", variant: "danger", time: "2 hr ago" },
+        { id: 5, icon: Package, text: "Delivery from Riverside Produce arrived", variant: "neutral", time: "Yesterday" },
+    ]);
 
-    const managementFeatures = [
-        { icon: BarChart3, title: "Analytics & Reports",  description: "Sales reports, performance metrics, and insights" },
-        { icon: Users,     title: "Staff Management",     description: "Employee scheduling, roles, and performance" },
-        { icon: Package,   title: "Inventory Control",    description: "Stock management, suppliers, and cost tracking" },
-        { icon: Calendar,  title: "Reservations",         description: "Bookings, customer management, scheduling" },
-        { icon: Settings,  title: "Restaurant Settings",  description: "Menu, pricing, and system configuration" },
-        { icon: TrendingUp,title: "Business Intelligence",description: "Growth tracking, forecasting, optimization" },
+    const workspaces = [
+        { icon: ShoppingCart, title: "Floor & Orders", description: "Take orders, process payments, and manage your restaurant floor", onClick: onSelectPOS },
+        { icon: BarChart3, title: "Management Hub", description: "Analytics, staff management, inventory, and business insights", onClick: onSelectManagement },
     ];
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="bg-card shadow-sm border-b border-border">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                                <span className="text-primary-foreground font-bold">RMS</span>
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-foreground">{userData.restaurantName}</h1>
-                                <p className="text-sm text-muted-foreground">Restaurant Management Dashboard</p>
-                            </div>
+            {/* Header — translucent olive backdrop */}
+            <header
+                className="sticky top-0 z-10 border-b border-border"
+                style={{
+                    background: "color-mix(in srgb, var(--olive-300) 90%, transparent)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                }}
+            >
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 shrink-0 bg-primary rounded-[10px] flex items-center justify-center">
+                            <span className="text-primary-foreground font-bold text-sm">RMS</span>
                         </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="hidden sm:flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm text-foreground">{userDisplay}</span>
-                            </div>
-                            {canAccessAdmin && (
-                                <Button variant="outline" onClick={() => navigate("/admin")} size="sm">
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    Admin
-                                </Button>
-                            )}
-                            <Button variant="outline" onClick={onLogout} size="sm">
-                                <LogOut className="h-4 w-4 mr-2" />
-                                Logout
-                            </Button>
+                        <div>
+                            <h1 className="text-xl font-semibold text-foreground leading-tight">{restaurantName}</h1>
+                            {locationLabel && <p className="text-xs text-muted-foreground">{locationLabel}</p>}
                         </div>
                     </div>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                aria-label="User menu"
+                            >
+                                {userInitial}
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-44">
+                            <DropdownMenuLabel>{userDisplay}</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {canAccessAdmin && (
+                                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                                    <Shield className="h-4 w-4" />
+                                    Admin
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={onLogout}>
+                                <LogOut className="h-4 w-4" />
+                                Logout
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </header>
 
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-                {/* Welcome */}
-                <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back, {userDisplay}!</h2>
-                    <p className="text-lg text-muted-foreground">
-                        Choose your workspace to get started with your restaurant operations.
-                    </p>
-                </div>
-
                 {/* Quick Stats */}
-                <CardGrid cols={{ base: 1, md: 4 }} gap="gap-4" className="mb-12">
-                  {quickStats.map((s, i) => (
-                    <StatCard
-                      key={i}
-                      label={s.label}
-                      value={s.value}
-                      change={s.change}
-                      trend={s.trend}
-                      icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-status-available" /> : undefined}
-                    />
-                  ))}
+                <CardGrid cols={{ base: 1, md: 4 }} gap="gap-4" className="mb-8">
+                    {quickStats.map((s, i) => (
+                        <StatCard
+                            key={i}
+                            label={s.label}
+                            value={s.value}
+                            change={s.change}
+                            trend={s.trend}
+                            onClick={s.onClick}
+                            icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-status-available" /> : undefined}
+                        />
+                    ))}
                 </CardGrid>
 
-                {/* Main Action Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                    {/* POS */}
-                    <Card className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/30">
-                        <CardHeader className="text-center pb-6">
-                            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
-                                <ShoppingCart className="w-8 h-8 text-primary" />
-                            </div>
-                            <CardTitle className="text-2xl">Point of Sale</CardTitle>
-                            <CardDescription className="text-lg">
-                                Take orders, process payments, and manage your restaurant floor
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-4">
-                                {posFeatures.map((f, idx) => (
-                                    <div key={idx} className="flex items-start gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <f.icon className="w-4 h-4 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-medium text-foreground">{f.title}</h4>
-                                            <p className="text-sm text-muted-foreground">{f.description}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <Button onClick={onSelectPOS} size="lg" className="w-full group-hover:shadow-lg transition-all duration-200">
-                                Open POS System
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    {/* Management */}
-                    <Card className="group hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/30">
-                        <CardHeader className="text-center pb-6">
-                            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
-                                <BarChart3 className="w-8 h-8 text-primary" />
-                            </div>
-                            <CardTitle className="text-2xl">Management Suite</CardTitle>
-                            <CardDescription className="text-lg">
-                                Analytics, staff management, inventory, and business insights
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                                {managementFeatures.map((f, idx) => (
-                                    <div key={idx} className="flex items-start gap-2">
-                                        <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                            <f.icon className="w-3 h-3 text-primary" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-medium text-sm text-foreground">{f.title}</h4>
-                                            <p className="text-xs text-muted-foreground">{f.description}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <Button
-                                onClick={onSelectManagement}
-                                size="lg"
-                                variant="outline"
-                                className="w-full group-hover:shadow-lg transition-all duration-200 group-hover:bg-primary group-hover:text-primary-foreground"
+                {/* Workspaces + Notifications */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+                    {/* Workspaces */}
+                    <div className="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
+                        <div className="px-5 py-4 border-b border-border text-sm font-semibold text-foreground">
+                            Workspaces
+                        </div>
+                        {workspaces.map((w, i) => (
+                            <button
+                                key={w.title}
+                                onClick={w.onClick}
+                                className={`group flex flex-1 items-center gap-5 px-5 py-6 text-left transition-colors hover:bg-secondary focus:outline-none focus-visible:bg-secondary ${i < workspaces.length - 1 ? "border-b border-border" : ""}`}
                             >
-                                Open Management Dashboard
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
+                                <div className="w-16 h-16 shrink-0 bg-brand-soft rounded-[18px] flex items-center justify-center">
+                                    <w.icon className="w-8 h-8 text-brand" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="mb-1 text-xl font-semibold text-foreground">{w.title}</h3>
+                                    <p className="text-sm text-muted-foreground">{w.description}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                            </button>
+                        ))}
+                    </div>
 
-                {/* Recent Activity & Quick Actions */}
-                {/* ... keep your remaining sections unchanged ... */}
+                    {/* Notifications */}
+                    <div className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[340px]">
+                        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                            <span className="text-sm font-semibold text-foreground">Notifications</span>
+                            {notifications.length > 0 && (
+                                <button
+                                    onClick={() => setNotifications([])}
+                                    className="text-xs font-semibold text-brand hover:underline"
+                                >
+                                    Clear all
+                                </button>
+                            )}
+                        </div>
+
+                        {notifications.length === 0 ? (
+                            <div className="flex flex-col items-center gap-2 px-5 py-9 text-center text-muted-foreground">
+                                <CheckCircle2 className="w-6 h-6" />
+                                <span className="text-sm">You're all caught up</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col overflow-y-auto">
+                                {notifications.map((n) => (
+                                    <div
+                                        key={n.id}
+                                        className={`flex items-start gap-2.5 px-5 py-3 border-b border-border last:border-b-0 ${NOTIFICATION_ROW_BG[n.variant]}`}
+                                    >
+                                        <n.icon className={`w-4 h-4 shrink-0 mt-0.5 ${NOTIFICATION_ICON_COLOR[n.variant]}`} />
+                                        <div className="flex-1 flex flex-col gap-0.5">
+                                            <span className="text-sm text-foreground">{n.text}</span>
+                                            <span className="text-xs text-muted-foreground">{n.time}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setNotifications((list) => list.filter((x) => x.id !== n.id))}
+                                            className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md hover:bg-secondary"
+                                            aria-label="Dismiss notification"
+                                        >
+                                            <X className="w-3.5 h-3.5 text-muted-foreground" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

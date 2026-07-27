@@ -9,13 +9,29 @@ export interface StatCardProps {
   icon?: React.ReactNode;
   className?: string;
   size?: "sm" | "md" | "lg";
+  onClick?: () => void;
 }
 
-export function StatCard({ label, value, change, trend = "neutral", icon, className = "", size = "md" }: StatCardProps) {
+export function StatCard({ label, value, change, trend = "neutral", icon, className = "", size = "md", onClick }: StatCardProps) {
   const sizeCls = size === "sm" ? "p-4" : size === "lg" ? "p-8" : "p-6";
   const changeCls = trend === "up" ? "text-status-available" : trend === "down" ? "text-destructive" : "text-muted-foreground";
+  const interactive = onClick
+    ? "cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] hover:bg-secondary hover:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    : "";
   return (
-    <Card className={className + " h-full"}>
+    <Card
+      className={`${className} h-full ${interactive}`}
+      {...(onClick
+        ? {
+            role: "button" as const,
+            tabIndex: 0,
+            onClick,
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
+            },
+          }
+        : {})}
+    >
       <CardContent className={sizeCls}>
         <div className="flex items-center justify-between">
           <div>
