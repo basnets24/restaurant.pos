@@ -10,10 +10,11 @@ import { StatCard } from "@/components/primitives/StatCard";
 
 // Icons (lucide-react)
 import {
-    ShoppingCart, BarChart3, ChevronRight, Shield, TrendingUp,
+    ChevronRight, TrendingUp,
     AlertTriangle, CalendarClock, UserPlus, CreditCard, Package, CheckCircle2, X,
     type LucideIcon,
 } from "lucide-react";
+import { FloorsOrdersIcon, ManagementHubIcon } from "@/components/brand-icons/section-icons";
 
 // Data hooks
 import { useTables as useDomainTables } from "@/domain/tables/hooks";
@@ -68,10 +69,6 @@ const NOTIFICATION_ICON_COLOR: Record<NotificationVariant, string> = {
 export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const navigate = useNavigate();
     const { profile } = useAuth();
-    const rawRoles = (profile as any)?.role as string | string[] | undefined;
-    const roles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
-    // Show Admin only for Admin or Owner
-    const canAccessAdmin = roles.includes("Admin") || roles.includes("Owner");
 
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
@@ -114,8 +111,8 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     ]);
 
     const workspaces = [
-        { icon: ShoppingCart, title: "Floor & Orders", description: "Take orders, process payments, and manage your restaurant floor", onClick: onSelectPOS },
-        { icon: BarChart3, title: "Management Hub", description: "Analytics, staff management, inventory, and business insights", onClick: onSelectManagement },
+        { icon: FloorsOrdersIcon, title: "Floor & Orders", description: "Take orders, process payments, and manage your restaurant floor", onClick: onSelectPOS },
+        { icon: ManagementHubIcon, title: "Management Hub", description: "Analytics, staff management, inventory, and business insights", onClick: onSelectManagement },
     ];
 
     return (
@@ -124,7 +121,6 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                 title={restaurantName}
                 subtitle={locationLabel || undefined}
                 logo="RMS"
-                menuItems={canAccessAdmin ? [{ label: "Admin", icon: Shield, onClick: () => navigate("/admin") }] : []}
             />
 
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -156,8 +152,8 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                                 onClick={w.onClick}
                                 className={`group flex flex-1 items-center gap-5 px-5 py-6 text-left transition-colors hover:bg-secondary focus:outline-none focus-visible:bg-secondary ${i < workspaces.length - 1 ? "border-b border-border" : ""}`}
                             >
-                                <div className="w-16 h-16 shrink-0 bg-brand-soft rounded-[18px] flex items-center justify-center">
-                                    <w.icon className="w-8 h-8 text-brand" />
+                                <div className="w-20 h-20 shrink-0 bg-brand-soft rounded-[18px] flex items-center justify-center">
+                                    <w.icon className="w-14 h-14" />
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="mb-1 text-xl font-semibold text-foreground">{w.title}</h3>

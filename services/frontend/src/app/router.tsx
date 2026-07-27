@@ -32,8 +32,8 @@ const InventoryTab      = lazy(() => import("@/features/management/tabs/Inventor
 const MenuTab           = lazy(() => import("@/features/management/tabs/MenuTab"));
 const ReservationsTab   = lazy(() => import("@/features/management/tabs/ReservationsTab"));
 
-// ---- Admin (role-gated) ----
-const AdminLayout        = lazy(() => import("@/features/admin/AdminLayout"));
+// ---- Admin (nested under Management, role-gated) ----
+const AdminTab           = lazy(() => import("@/features/management/tabs/AdminTab"));
 const OrganizationPage   = lazy(() => import("@/features/admin/pages/OrganizationPage"));
 const FloorPlanDesigner  = lazy(() => import("@/features/admin/pages/FloorPlanDesigner"));
 const RolesPage          = lazy(() => import("@/features/admin/pages/RolesPage"));
@@ -103,24 +103,22 @@ export const router = createBrowserRouter([
       { path: "inventory",    element: <Suspense fallback={<Fallback />}><InventoryTab /></Suspense> },
       { path: "menu",         element: <Suspense fallback={<Fallback />}><MenuTab /></Suspense> },
       { path: "reservations", element: <Suspense fallback={<Fallback />}><ReservationsTab /></Suspense> },
-    ],
-  },
-
-  // Admin (Admin/Manager only)
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRoute roles={["Admin", "Manager"]}>
-        <Suspense fallback={<Fallback />}><AdminLayout /></Suspense>
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <Navigate to="organization" replace /> },
-      { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
-      { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
-      { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
-      { path: "locations",    element: <Suspense fallback={<Fallback />}><LocationsPage /></Suspense> },
-      { path: "integrations", element: <Suspense fallback={<Fallback />}><IntegrationsPage /></Suspense> },
+      {
+        path: "admin",
+        element: (
+          <ProtectedRoute roles={["Admin", "Manager"]}>
+            <Suspense fallback={<Fallback />}><AdminTab /></Suspense>
+          </ProtectedRoute>
+        ),
+        children: [
+          { index: true, element: <Navigate to="organization" replace /> },
+          { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
+          { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
+          { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
+          { path: "locations",    element: <Suspense fallback={<Fallback />}><LocationsPage /></Suspense> },
+          { path: "integrations", element: <Suspense fallback={<Fallback />}><IntegrationsPage /></Suspense> },
+        ],
+      },
     ],
   },
 
