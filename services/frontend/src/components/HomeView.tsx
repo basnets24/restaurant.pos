@@ -2,19 +2,15 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../api-authorization/AuthProvider";
-import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstants";
 
 // UI
+import { AppHeader } from "@/components/AppHeader";
 import { CardGrid } from "@/components/primitives/CardGrid";
 import { StatCard } from "@/components/primitives/StatCard";
-import {
-    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-    DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 
 // Icons (lucide-react)
 import {
-    ShoppingCart, BarChart3, ChevronRight, Shield, LogOut, TrendingUp,
+    ShoppingCart, BarChart3, ChevronRight, Shield, TrendingUp,
     AlertTriangle, CalendarClock, UserPlus, CreditCard, Package, CheckCircle2, X,
     type LucideIcon,
 } from "lucide-react";
@@ -26,27 +22,20 @@ import { useTenant } from "@/app/TenantContext";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
-import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 
 export default function Home() {
-    const { isAuthenticated, signOut } = useAuth();
+    const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     if (!isAuthenticated) return <div>Please log in first.</div>;
 
     const onSelectPOS = () => navigate("/pos/tables");
     const onSelectManagement = () => navigate("/management");
-    const onLogout = () => {
-        // Proper IdentityServer logout: redirects to IdP,
-        // then returns to /authentication/logout-callback
-        void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
-    };
 
     return (
         <Dashboard
             onSelectPOS={onSelectPOS}
             onSelectManagement={onSelectManagement}
-            onLogout={onLogout}
         />
     );
 }
@@ -54,7 +43,6 @@ export default function Home() {
 interface DashboardProps {
     onSelectPOS: () => void;
     onSelectManagement: () => void;
-    onLogout: () => void;
 }
 
 type NotificationVariant = "warning" | "danger" | "neutral";
@@ -77,7 +65,7 @@ const NOTIFICATION_ICON_COLOR: Record<NotificationVariant, string> = {
     neutral: "text-muted-foreground",
 };
 
-export function Dashboard({ onSelectPOS, onSelectManagement, onLogout }: DashboardProps) {
+export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const navigate = useNavigate();
     const { profile } = useAuth();
     const rawRoles = (profile as any)?.role as string | string[] | undefined;
@@ -99,8 +87,6 @@ export function Dashboard({ onSelectPOS, onSelectManagement, onLogout }: Dashboa
     const employees = employee.useEmployees(rid ?? "", { page: 1, pageSize: 1 }, { enabled: !!rid });
     const kitchen = useKitchen();
     const activeOrdersCount = kitchen.active().length;
-    const { displayName: userDisplay } = useUserDisplayName();
-    const userInitial = (userDisplay?.trim()?.[0] ?? "U").toUpperCase();
 
     const stats = useMemo(() => {
         const list = tablesData ?? [];
@@ -134,52 +120,12 @@ export function Dashboard({ onSelectPOS, onSelectManagement, onLogout }: Dashboa
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header — translucent olive backdrop */}
-            <header
-                className="sticky top-0 z-10 border-b border-border"
-                style={{
-                    background: "color-mix(in srgb, var(--olive-300) 90%, transparent)",
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                }}
-            >
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 shrink-0 bg-primary rounded-[10px] flex items-center justify-center">
-                            <span className="text-primary-foreground font-bold text-sm">RMS</span>
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-semibold text-foreground leading-tight">{restaurantName}</h1>
-                            {locationLabel && <p className="text-xs text-muted-foreground">{locationLabel}</p>}
-                        </div>
-                    </div>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                aria-label="User menu"
-                            >
-                                {userInitial}
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="min-w-44">
-                            <DropdownMenuLabel>{userDisplay}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {canAccessAdmin && (
-                                <DropdownMenuItem onClick={() => navigate("/admin")}>
-                                    <Shield className="h-4 w-4" />
-                                    Admin
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={onLogout}>
-                                <LogOut className="h-4 w-4" />
-                                Logout
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </header>
+            <AppHeader
+                title={restaurantName}
+                subtitle={locationLabel || undefined}
+                logo="RMS"
+                menuItems={canAccessAdmin ? [{ label: "Admin", icon: Shield, onClick: () => navigate("/admin") }] : []}
+            />
 
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 {/* Quick Stats */}
