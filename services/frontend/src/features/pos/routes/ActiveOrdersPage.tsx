@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Utensils, Timer, CheckCircle2, XCircle } from "lucide-react";
+import { Utensils, Timer, CheckCircle2, XCircle, ClipboardList } from "lucide-react";
 
 export default function ActiveOrdersPage() {
   const kitchen = useKitchen();
@@ -30,7 +30,12 @@ export default function ActiveOrdersPage() {
           <Utensils className="h-5 w-5" />
           <h1 className="text-lg font-semibold">Active Orders</h1>
         </div>
-        <Badge variant="secondary">{active.length} active</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{active.length} active</Badge>
+          <Button variant="outline" size="sm" onClick={() => navigate("/pos/orders")}>
+            <ClipboardList className="h-4 w-4 mr-1.5" /> All Orders
+          </Button>
+        </div>
       </div>
 
       {active.length === 0 ? (
