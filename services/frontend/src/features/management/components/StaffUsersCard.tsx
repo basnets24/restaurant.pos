@@ -96,8 +96,15 @@ export default function StaffUsersCard() {
               {items.map((e) => (
                 <TableRow key={e.userId}>
                   <TableCell>
-                    <div className="font-medium">{e.displayName || e.userName || "(no name)"}</div>
-                    <div className="text-xs opacity-70">{e.userName}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
+                        {(e.displayName || e.userName || "?").trim()[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium">{e.displayName || e.userName || "(no name)"}</div>
+                        <div className="text-xs opacity-70">{e.userName}</div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>{e.email ?? "—"}</TableCell>
                   <TableCell>
