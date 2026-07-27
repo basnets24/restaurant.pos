@@ -21,6 +21,7 @@ const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</di
 
 // ---- Public top-level ----
 const LandingView = lazy(() => import("@/features/landing/LandingView"));
+const EngineeringView = lazy(() => import("@/features/landing/EngineeringView"));
 const HomePage    = lazy(() => import("@/features/home/HomePage"));
 
 // ---- Management ----
@@ -61,6 +62,7 @@ const JoinPage      = lazy(() => import("@/features/join/JoinPage"));
 export const router = createBrowserRouter([
   // ========= PUBLIC =========
   { path: "/", element: <Suspense fallback={<Fallback />}><LandingView /></Suspense> },
+  { path: "/engineering", element: <Suspense fallback={<Fallback />}><EngineeringView /></Suspense> },
 
   // Auth endpoints (public)
   { path: AuthorizationPaths.Login,           element: <LoginPage /> },
