@@ -28,10 +28,9 @@ test("place an order from the POS floor plan through to order placed", async ({ 
   await page.getByRole("button", { name: /Fire to Kitchen/ }).click();
 
   // OrderSideBar's checkout button (bound to MenuPage.handleCheckout) creates the
-  // order and navigates to SuccessView — this is the "order placed" boundary;
-  // paying for the order is a separate, later step on OrderPage and is covered
-  // by payment.spec.ts instead.
+  // order and opens the inline payment dialog — the dialog's "Pay Now" button
+  // appearing is the "order placed" boundary. Actually paying (the Stripe
+  // PaymentElement step) is covered separately by payment.spec.ts.
   await page.getByRole("button", { name: /^Checkout/ }).click();
-  await page.waitForURL(/\/checkout\/success/, { timeout: 15000 });
-  await expect(page.getByRole("heading", { name: "Order Placed" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pay Now/i })).toBeVisible({ timeout: 15000 });
 });

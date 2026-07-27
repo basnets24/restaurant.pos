@@ -17,6 +17,7 @@ import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/dom
 import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
 import { OrderSidebar } from "@/features/pos/components/OrderSideBar";
+import { CheckoutPaymentDialog } from "@/features/pos/components/CheckoutPaymentDialog";
 import {
   useCreateCart,
   useCart,
@@ -92,6 +93,9 @@ export default function MenuPage() {
   // Sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
+  // Once checked out, the placed order id drives the inline payment dialog.
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  const [orderPlaced, setOrderPlaced] = useState(false);
 
   // Selected category + category rail / search state
   const [category, setCategory] = useState<string>("All");
@@ -251,9 +255,8 @@ export default function MenuPage() {
     await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
   }
 
-  // Firing an order just creates it and sends it to the kitchen - payment is
-  // a separate, later action the guest/staff triggers from OrderPage
-  // whenever they're ready to pay, not tied to this step or its timing.
+  // Checkout creates the order, then opens the inline payment dialog (Pay Now)
+  // right here instead of routing out to the success/order pages to pay.
   async function handleCheckout() {
     if (!cartId) return;
     setCheckingOut(true);
@@ -264,10 +267,21 @@ export default function MenuPage() {
         toast.error("Could not create order for checkout.");
         return;
       }
-      navigate(`/pos/table/${tableId}/checkout/success?order=${encodeURIComponent(orderId)}`);
+      setOrderPlaced(true);
+      setPaymentOrderId(orderId);
     } finally {
       setCheckingOut(false);
     }
+  }
+
+  // Guest has paid and is done → free the table (mirrors OrderPage), then
+  // return to the floor.
+  async function releaseTableAfterPayment() {
+    if (cartId) {
+      try { await unlinkOrder.mutateAsync(cartId); } catch { }
+    }
+    try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
+    store.clearTableSession(tableId);
   }
 
   // (table fetched above, near cart init)
@@ -286,7 +300,9 @@ export default function MenuPage() {
   // Navigation Guard: ask to release table if linked but no items
   // Consider table linked if we have a cart id OR server indicates active cart OR table is occupied
   const isLinked = Boolean(cartId || (table?.activeCartId ?? null) || table?.status === "occupied");
-  const shouldBlock = Boolean(isLinked && hasNoItems);
+  // Once the order is placed we're heading into payment — don't nag about
+  // releasing the table for having an "empty" cart.
+  const shouldBlock = Boolean(isLinked && hasNoItems && !orderPlaced);
   const blocker = useBlocker(shouldBlock);
   const [releaseOpen, setReleaseOpen] = useState(false);
   const blockerRef = useRef<typeof blocker | null>(null);
@@ -434,6 +450,29 @@ export default function MenuPage() {
             </div>
           </Button>
         </div>
+      )}
+
+      {/* Inline checkout → Pay Now dialog (created order pays here, no routing) */}
+      {paymentOrderId && (
+        <CheckoutPaymentDialog
+          open
+          orderId={paymentOrderId}
+          onOpenChange={(o) => {
+            // Dismissing the dialog (Back to Tables, X, or before paying)
+            // leaves the menu screen. An unpaid placed order stays payable
+            // later from Orders; a paid one already released the table below.
+            if (!o) {
+              setPaymentOrderId(null);
+              navigate("/pos/tables");
+            }
+          }}
+          onPaid={async () => {
+            // Payment confirmed — release the table; the dialog stays open on
+            // its success card until the user dismisses it.
+            await releaseTableAfterPayment();
+            toast.success("Payment confirmed!");
+          }}
+        />
       )}
 
       {/* Release confirmation dialog when navigating away with empty order */}

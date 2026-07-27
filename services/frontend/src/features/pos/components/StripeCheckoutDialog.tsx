@@ -28,15 +28,41 @@ export function StripeCheckoutDialog({
 }: StripeCheckoutDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Payment</DialogTitle>
         </DialogHeader>
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <PaymentForm orderId={orderId} onSuccess={onSuccess} onFailure={onFailure} />
-        </Elements>
+        <StripeElementsForm
+          orderId={orderId}
+          clientSecret={clientSecret}
+          onSuccess={onSuccess}
+          onFailure={onFailure}
+        />
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * The Stripe Elements + embedded PaymentElement form, without a surrounding
+ * Dialog — so it can be dropped into any dialog (e.g. the cart's inline
+ * checkout dialog) as well as StripeCheckoutDialog above.
+ */
+export function StripeElementsForm({
+  orderId,
+  clientSecret,
+  onSuccess,
+  onFailure,
+}: {
+  orderId: string;
+  clientSecret: string;
+  onSuccess: () => void;
+  onFailure: (message: string) => void;
+}) {
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <PaymentForm orderId={orderId} onSuccess={onSuccess} onFailure={onFailure} />
+    </Elements>
   );
 }
 
