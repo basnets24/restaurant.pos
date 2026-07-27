@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  ShoppingCart, UtensilsCrossed, Search, LayoutGrid, Soup, Utensils, Salad,
-  IceCreamBowl, CupSoda, PanelLeftOpen, PanelLeftClose, type LucideIcon,
+  ShoppingCart, UtensilsCrossed, Search, LayoutGrid,
+  PanelLeftOpen, PanelLeftClose,
 } from "lucide-react";
+import { AppetizerIcon, MainIcon, SideIcon, DessertIcon, DrinksIcon, KidsIcon, SpecialIcon } from "@/components/brand-icons/food-icons";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBlocker } from "react-router-dom";
@@ -36,15 +37,22 @@ type POSMenuItem = {
 };
 
 // Category → icon (design's MenuScreen rail); falls back to a generic glyph.
-const CAT_ICON: Record<string, LucideIcon> = {
+// The food-category glyphs are illustrated brand icons — Appetizer/Main/Side/
+// Dessert/Drinks from the design handoff (design_handoff_brand_icons),
+// Kids/Special designed to match; "All" and unmatched categories keep plain
+// Lucide glyphs.
+type CategoryIcon = React.ComponentType<{ className?: string }>;
+const CAT_ICON: Record<string, CategoryIcon> = {
   all: LayoutGrid,
-  appetizers: Soup, appetizer: Soup, starters: Soup, starter: Soup,
-  mains: Utensils, main: Utensils, entrees: Utensils, entree: Utensils, "main course": Utensils,
-  sides: Salad, side: Salad,
-  desserts: IceCreamBowl, dessert: IceCreamBowl, sweets: IceCreamBowl,
-  drinks: CupSoda, drink: CupSoda, beverages: CupSoda, beverage: CupSoda,
+  appetizers: AppetizerIcon, appetizer: AppetizerIcon, starters: AppetizerIcon, starter: AppetizerIcon,
+  mains: MainIcon, main: MainIcon, entrees: MainIcon, entree: MainIcon, "main course": MainIcon,
+  sides: SideIcon, side: SideIcon,
+  desserts: DessertIcon, dessert: DessertIcon, sweets: DessertIcon,
+  drinks: DrinksIcon, drink: DrinksIcon, beverages: DrinksIcon, beverage: DrinksIcon,
+  kids: KidsIcon, kid: KidsIcon, "kids menu": KidsIcon, children: KidsIcon,
+  special: SpecialIcon, specials: SpecialIcon, "chef's special": SpecialIcon, "chef special": SpecialIcon, featured: SpecialIcon,
 };
-const iconFor = (c: string): LucideIcon => CAT_ICON[c.trim().toLowerCase()] ?? UtensilsCrossed;
+const iconFor = (c: string): CategoryIcon => CAT_ICON[c.trim().toLowerCase()] ?? UtensilsCrossed;
 
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
@@ -341,7 +349,7 @@ export default function MenuPage() {
                   railOpen ? "justify-start" : "justify-center"
                 } ${active ? "bg-brand-soft text-brand-strong" : "text-muted-foreground hover:bg-secondary"}`}
               >
-                <Ico className="h-5 w-5 shrink-0" />
+                <Ico className="h-7 w-7 shrink-0" />
                 {railOpen && <span className="truncate">{c}</span>}
               </button>
             );
