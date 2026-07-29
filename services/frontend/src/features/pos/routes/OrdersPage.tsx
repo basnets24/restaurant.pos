@@ -37,8 +37,8 @@ export default function OrdersPage() {
     const navigate = useNavigate();
     const { profile } = useAuth();
     const tenant: TenantHeaders | undefined = useMemo(() => {
-        const restaurantId = (profile as any)?.restaurantId ?? (profile as any)?.restaurant_id;
-        const locationId = (profile as any)?.locationId ?? (profile as any)?.location_id;
+        const restaurantId = profile?.restaurantId ?? profile?.restaurant_id;
+        const locationId = profile?.locationId ?? profile?.location_id;
         if (!restaurantId && !locationId) return undefined;
         return { restaurantId, locationId };
     }, [profile]);
@@ -49,9 +49,7 @@ export default function OrdersPage() {
     // Resolve tableId → friendly number/section
     const { data: tablesData } = useTables();
     const tableMap = useMemo(() => {
-        const list: TableViewDto[] = Array.isArray(tablesData)
-            ? (tablesData as TableViewDto[])
-            : ((tablesData as any)?.items ?? []);
+        const list: TableViewDto[] = tablesData ?? [];
         return new Map(list.map((t) => [t.id, t]));
     }, [tablesData]);
 

@@ -17,14 +17,14 @@ export default function AccountPage() {
   const { rid } = useTenant();
   const employee = useEmployeeDomain();
   const rp = useRestaurantUserProfile();
-  const userId = (profile as any)?.sub as string | undefined;
+  const userId = profile?.sub;
   const employeeDetail = employee.useEmployee(rid ?? "", userId ?? "", { enabled: !!rid && !!userId });
   const locs = useTenantInfo().locations ?? [];
   const updateEmp = employee.useUpdateEmployee(rid ?? "", userId ?? "");
   const updateDefaultLoc = employee.useUpdateDefaultLocation(rid ?? "", userId ?? "");
   const [defaultLocDraft, setDefaultLocDraft] = useState<string | "">("");
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
-  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canAdmin = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
@@ -60,7 +60,7 @@ export default function AccountPage() {
     }
   };
   const display = useMemo(() => {
-    const ownerName = (profile as any)?.name || [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") || (profile as any)?.preferred_username || (profile as any)?.email || "User";
+    const ownerName = profile?.name || [profile?.given_name, profile?.family_name].filter(Boolean).join(" ") || profile?.preferred_username || profile?.email || "User";
     return { ownerName };
   }, [profile]);
 

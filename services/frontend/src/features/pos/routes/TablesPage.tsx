@@ -15,15 +15,11 @@ const GRID = 20;
 export default function TablesPage() {
   const { data, isLoading } = useTables();
   const { profile, getAccessToken } = useAuth();
-  const restaurantId = (profile as any)?.restaurantId ?? (profile as any)?.restaurant_id;
-  const locationId = (profile as any)?.locationId ?? (profile as any)?.location_id;
+  const restaurantId = profile?.restaurantId ?? profile?.restaurant_id;
+  const locationId = profile?.locationId ?? profile?.location_id;
   useFloorHub({ restaurantId, locationId, accessTokenFactory: async () => (await getAccessToken()) ?? "" });
 
-  const tables: TableViewDto[] = useMemo(() => {
-    if (Array.isArray(data)) return data as TableViewDto[];
-    if (data && Array.isArray((data as any).items)) return (data as any).items as TableViewDto[];
-    return [];
-  }, [data]);
+  const tables: TableViewDto[] = useMemo(() => data ?? [], [data]);
 
   const counts = useMemo(() => countByStatus(tables), [tables]);
   const [active, setActive] = useState<TableViewDto | null>(null);
@@ -150,7 +146,7 @@ function TableMark({ t, onOpen }: { t: TableViewDto; onOpen: () => void }) {
       data-table
       onClick={onOpen}
       className={`absolute border-2 shadow-sm flex flex-col items-center justify-center gap-0.5 focus:outline-none focus:ring-2 focus:ring-ring transition-transform duration-[120ms] ease-out hover:scale-[1.04] ${s.bg} ${s.border} ${shapeRadiusClass(t.shape)}`}
-      style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${(t as any).rotation ?? 0}deg)` }}
+      style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${(t as unknown as { rotation?: number }).rotation ?? 0}deg)` }}
     >
       <span className="font-numeric text-lg font-semibold text-foreground">{t.number}</span>
       <span className="text-xs text-muted-foreground">{t.seats} seats</span>

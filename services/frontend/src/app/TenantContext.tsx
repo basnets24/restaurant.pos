@@ -24,7 +24,9 @@ export const TenantProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       const l = localStorage.getItem(LS_LID);
       if (r) setRidState(r);
       if (l) setLidState(l);
-    } catch {}
+    } catch (e) {
+      console.warn("TenantContext: failed to hydrate tenant from localStorage", e);
+    }
   }, []);
 
   const setRid = useCallback((value: string | null) => {
@@ -32,7 +34,9 @@ export const TenantProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     try {
       if (value) localStorage.setItem(LS_RID, value);
       else localStorage.removeItem(LS_RID);
-    } catch {}
+    } catch (e) {
+      console.warn("TenantContext: failed to persist restaurantId to localStorage", e);
+    }
   }, []);
 
   const setLid = useCallback((value: string | null) => {
@@ -40,7 +44,9 @@ export const TenantProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     try {
       if (value) localStorage.setItem(LS_LID, value);
       else localStorage.removeItem(LS_LID);
-    } catch {}
+    } catch (e) {
+      console.warn("TenantContext: failed to persist locationId to localStorage", e);
+    }
   }, []);
 
   const clear = useCallback(() => {

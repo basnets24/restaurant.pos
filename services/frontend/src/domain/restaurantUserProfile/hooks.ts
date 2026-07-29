@@ -59,7 +59,7 @@ export function createRestaurantUserProfileHooks(
         ]);
         // After onboarding, refresh token/claims if provided
         if (opts?.onAuthRefresh) {
-          try { await opts.onAuthRefresh(); } catch {}
+          try { await opts.onAuthRefresh(); } catch (e) { console.warn("useOnboardRestaurant: onAuthRefresh failed", e); }
         }
         options?.onSuccess?.(data, vars, ctx);
       },
@@ -84,7 +84,7 @@ export function createRestaurantUserProfileHooks(
           queryClient.invalidateQueries({ queryKey: onboardingKey }),
         ]);
         if (opts?.onAuthRefresh) {
-          try { await opts.onAuthRefresh(); } catch {}
+          try { await opts.onAuthRefresh(); } catch (e) { console.warn("useJoinRestaurant: onAuthRefresh failed", e); }
         }
         options?.onSuccess?.(data, vars, ctx);
       },

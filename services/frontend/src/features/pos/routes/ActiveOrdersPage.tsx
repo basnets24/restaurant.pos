@@ -50,10 +50,10 @@ export default function ActiveOrdersPage() {
             <Card key={t.id} className="border-border">
               <CardHeader className="py-3 flex-row items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-numeric">
                     {t.tableNumber || "?"}
                   </span>
-                  Table {t.tableNumber || t.tableId}
+                  Table <span className="font-numeric">{t.tableNumber || t.tableId}</span>
                 </CardTitle>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Timer className="h-3.5 w-3.5" /> {formatAge(t.firedAt)}
@@ -65,7 +65,7 @@ export default function ActiveOrdersPage() {
                   {t.items.map((i, ix) => (
                     <div key={ix} className="flex justify-between py-0.5">
                       <span className="truncate mr-2">{i.name}</span>
-                      <span className="font-medium">×{i.quantity}</span>
+                      <span className="font-medium font-numeric">×{i.quantity}</span>
                     </div>
                   ))}
                 </div>

@@ -6,8 +6,8 @@ import { ENV } from "@/config/env";
 
 type FloorHubOpts = {
   baseUrl?: string;
-  restaurantId: string;
-  locationId: string;
+  restaurantId?: string;
+  locationId?: string;
   accessTokenFactory?: () => string | Promise<string>;
 };
 

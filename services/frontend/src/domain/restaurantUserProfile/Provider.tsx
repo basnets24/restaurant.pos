@@ -19,7 +19,7 @@ export const RestaurantUserProfileProvider: React.FC<React.PropsWithChildren> = 
     }) as RestaurantUserProfileApi;
     return createRestaurantUserProfileHooks(api, {
       onAuthRefresh: async () => {
-        try { await userManager.signinSilent(); } catch {}
+        try { await userManager.signinSilent(); } catch (e) { console.warn("RestaurantUserProfileProvider: silent auth refresh failed", e); }
       }
     });
   }, []);

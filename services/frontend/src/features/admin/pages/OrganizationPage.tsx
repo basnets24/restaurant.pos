@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
-import { ENV } from "@/config/env";
-import { getToken } from "@/lib/config";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
+import { useTenant } from "@/app/TenantContext";
+import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,29 +41,15 @@ function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)
 
 export default function OrganizationPage() {
   const { restaurantName: nameFromTenant, locations } = useTenantInfo();
+  const { rid, lid } = useTenant();
   const [tab, setTab] = useState("general");
   const [model, setModel] = useState<OrgProfile>(() => read());
   const [draft, setDraft] = useState<OrgProfile>(model);
-  const [joinCode, setJoinCode] = useState<{ restaurantId: string; slug?: string; joinUrl?: string } | null>(null);
+
+  const rp = useRestaurantUserProfile();
+  const { data: joinCode } = rp.useMyJoinCode({ rid: rid ?? undefined, lid: lid ?? undefined }, { enabled: !!rid });
 
   useEffect(() => setDraft(model), [tab]);
-
-  // Load join code for current restaurant (onboarding routes live on the identity service)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch(`${ENV.IDENTITY_URL}/api/onboarding/me/code`, {
-          headers: { Authorization: `Bearer ${getToken() ?? ""}` },
-          credentials: "include",
-        });
-        if (!r.ok) return;
-        const data = await r.json();
-        if (!cancelled) setJoinCode(data);
-      } catch { }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   // If tenant name is known and current model is default/demo, hydrate it for display convenience
   useEffect(() => {

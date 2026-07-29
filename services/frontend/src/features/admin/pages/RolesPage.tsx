@@ -18,7 +18,7 @@ export default function RolesPage() {
   const { profile } = useAuth();
   const rp = useRestaurantUserProfile();
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
-  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canManage = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
