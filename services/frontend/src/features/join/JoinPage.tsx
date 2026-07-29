@@ -43,6 +43,8 @@ export default function JoinPage() {
 
   useEffect(() => {
     const prefill = params.get("code");
+    // Prefilling from the URL (an external system), guarded so it never clobbers user input.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (prefill && !code) setCode(prefill);
   }, [params]);
 
@@ -123,6 +125,8 @@ export default function JoinPage() {
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (tz && NA_TIMEZONES.some(t => t.id === tz)) {
+          // Detecting from the browser's Intl API (an external system).
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setTimeZoneId(tz);
         }
       } catch {

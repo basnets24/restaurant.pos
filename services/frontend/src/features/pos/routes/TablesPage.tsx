@@ -52,7 +52,9 @@ export default function TablesPage() {
   };
 
   // Fit once the floor has tables to fit to (data arrives async after mount).
+  // fitToContent reads DOM layout (an external system) to compute the view.
   useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fitToContent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tables.length > 0]);
@@ -165,9 +167,13 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
   const clear = useClear(table?.id ?? "");
   const [party, setParty] = useState("2");
 
-  useEffect(() => {
+  // Reset party size whenever the selected table changes.
+  const [prevTableKey, setPrevTableKey] = useState(`${table?.id}:${table?.seats}`);
+  const tableKey = `${table?.id}:${table?.seats}`;
+  if (tableKey !== prevTableKey) {
+    setPrevTableKey(tableKey);
     if (table) setParty(String(Math.min(2, table.seats)));
-  }, [table?.id, table?.seats]);
+  }
 
   if (!table) return null;
   const s = STATUS_STYLE[table.status] ?? STATUS_STYLE.available;

@@ -43,7 +43,7 @@ export async function getPaymentClientSecret(
       return { clientSecret: null, status: "pending" };
     }
     const message: string = r?.data?.error || r?.statusText || errorMessage(err) || "Failed to fetch payment session";
-    throw new Error(message);
+    throw new Error(message, { cause: err });
   }
 }
 

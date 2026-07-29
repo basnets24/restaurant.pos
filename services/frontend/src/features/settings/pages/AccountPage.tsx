@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useTenant } from "@/auth/tenant";
@@ -213,7 +213,11 @@ function DisplayNameEditor({ valueFromDetail, onSave }: { valueFromDetail: strin
   const [name, setName] = useState<string>(valueFromDetail ?? "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
-  useEffect(() => { setName(valueFromDetail ?? ""); }, [valueFromDetail]);
+  const [prevValueFromDetail, setPrevValueFromDetail] = useState(valueFromDetail);
+  if (valueFromDetail !== prevValueFromDetail) {
+    setPrevValueFromDetail(valueFromDetail);
+    setName(valueFromDetail ?? "");
+  }
   const submit = async () => {
     setMsg(undefined); setSaving(true);
     try { await onSave(name.trim()); setMsg("Saved."); }

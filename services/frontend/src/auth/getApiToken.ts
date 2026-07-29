@@ -36,7 +36,7 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   if (hit && hit.exp > now) return hit.token;
 
   const scope = `${BASE_ID_SCOPES} ${neededScopes.join(" ")}`.trim();
-  let user: Awaited<ReturnType<typeof userManager.signinSilent>> | null = null;
+  let user: Awaited<ReturnType<typeof userManager.signinSilent>>;
   try {
     user = await userManager.signinSilent({ scope });
   } catch (err: unknown) {

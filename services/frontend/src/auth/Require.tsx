@@ -38,7 +38,7 @@ export function Require({ anyOf, check, fallback = null, children }: RequireProp
     paymentRefund: useCan("paymentRefund"),
   };
 
-  let ok = false;
+  let ok: boolean;
   if (typeof check === "function") ok = !!check();
   else if (anyOf && anyOf.length > 0) ok = anyOf.some((k) => permissions[k] === true);
   else ok = true;

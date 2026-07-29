@@ -321,6 +321,8 @@ export default function MenuPage() {
         return;
       }
       blockerRef.current = blocker;
+      // Reacting to react-router's navigation blocker (an external system).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReleaseOpen(true);
     }
   }, [blocker.state, blocker.location?.pathname, tableId]);

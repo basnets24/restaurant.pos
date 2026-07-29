@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto } from "@/domain/menu/types";
 import { useMenuCategories, useMenuList, useToggleMenuAvailability, usePatchMenuItem, useCreateMenuItem, useRemoveMenuItem } from "@/domain/menu/hooks";
 
@@ -54,7 +54,12 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
     const [editOpen, setEditOpen] = useState(false);
     const [editing, setEditing] = useState<MenuItemDto | null>(null);
 
-    useEffect(() => { if (!editOpen) setEditing(null); }, [editOpen]);
+    // Clear the editing item once the edit dialog closes.
+    const [prevEditOpen, setPrevEditOpen] = useState(editOpen);
+    if (editOpen !== prevEditOpen) {
+        setPrevEditOpen(editOpen);
+        if (!editOpen) setEditing(null);
+    }
 
     return (
         <Card>
@@ -214,9 +219,12 @@ function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
     const [price, setPrice] = useState("0.00");
     const [category, setCategory] = useState<string>("");
 
-    useEffect(() => {
+    // Reset the form once the create dialog closes.
+    const [prevOpen, setPrevOpen] = useState(open);
+    if (open !== prevOpen) {
+        setPrevOpen(open);
         if (!open) { setName(""); setDescription(""); setPrice("0.00"); setCategory(""); }
-    }, [open]);
+    }
 
     const canSubmit =
         name.trim().length > 0 &&
@@ -285,14 +293,19 @@ function EditDialog({ open, onOpenChange, item, onSave, saving, disabled }: {
     const [price, setPrice] = useState("0.00");
     const [category, setCategory] = useState<string>("");
 
-    useEffect(() => {
+    // Populate the form when the edit dialog opens for an item.
+    const [prevOpen, setPrevOpen] = useState(open);
+    const [prevItemId, setPrevItemId] = useState(item?.id);
+    if (open !== prevOpen || item?.id !== prevItemId) {
+        setPrevOpen(open);
+        setPrevItemId(item?.id);
         if (open && item) {
             setName(item.name ?? "");
             setDescription(item.description ?? "");
             setPrice(String(item.price ?? 0));
             setCategory(item.category ?? "");
         }
-    }, [open, item]);
+    }
 
     const canSubmit = !!item && name.trim().length > 0 && Number(price) > 0 && category.trim().length > 0;
 

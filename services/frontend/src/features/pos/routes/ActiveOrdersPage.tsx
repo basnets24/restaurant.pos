@@ -16,6 +16,8 @@ export default function ActiveOrdersPage() {
   }, [kitchen.tickets]);
 
   const formatAge = (ts: number) => {
+    // Elapsed-time display is intentionally live wall-clock time, recomputed each render.
+    // eslint-disable-next-line react-hooks/purity
     const mins = Math.floor((Date.now() - ts) / 60000);
     if (mins < 60) return `${mins}m`;
     const h = Math.floor(mins / 60);

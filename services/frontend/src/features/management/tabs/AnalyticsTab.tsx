@@ -23,6 +23,8 @@ export default function AnalyticsTab() {
     const orders = useMemo(() => (data?.items ?? []) as OrderDto[], [data]);
 
     const stats = useMemo(() => {
+        // Wall-clock cutoff is intentional here: recomputed whenever `orders` changes, not on every render.
+        // eslint-disable-next-line react-hooks/purity
         const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         const thisWeek = orders.filter((o) => new Date(o.createdAt).getTime() >= weekAgo);
         const paidThisWeek = thisWeek.filter(isPaid);

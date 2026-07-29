@@ -1,3 +1,5 @@
+import { tokenAccessor } from "@/auth/runtime";
+
 export function decodeJwt(token: string): Record<string, unknown> | null {
   try {
     const [, payload] = token.split(".");
@@ -39,7 +41,6 @@ export function logToken(token: string, label = "token") {
 }
 
 export function logCurrentBaseToken() {
-  const { tokenAccessor } = require("@/auth/runtime");
   const t = tokenAccessor?.() as string | undefined;
   if (!t) {
     console.warn("[auth] no base token available");

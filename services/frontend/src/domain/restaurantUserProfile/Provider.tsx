@@ -27,6 +27,7 @@ export const RestaurantUserProfileProvider: React.FC<React.PropsWithChildren> = 
   return <Ctx.Provider value={hooks}>{children}</Ctx.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRestaurantUserProfile() {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useRestaurantUserProfile must be used within RestaurantUserProfileProvider");

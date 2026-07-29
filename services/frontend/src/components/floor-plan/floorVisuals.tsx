@@ -8,8 +8,10 @@ import type { TableStatus } from "@/domain/tables/types";
 
 // "circle" is a legacy stored value from before the shape picker settled on the
 // backend's round|square|rectangle vocabulary (DiningTable.Shape) — still rendered as round.
+// eslint-disable-next-line react-refresh/only-export-components
 export const shapeRadiusClass = (shape: string) => (shape === "round" || shape === "circle" ? "rounded-full" : "rounded-2xl");
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_STYLE: Record<TableStatus, { bg: string; border: string; dot: string; label: string }> = {
   available: { bg: "bg-status-available-soft", border: "border-table-available-border", dot: "bg-status-available", label: "Available" },
   occupied: { bg: "bg-status-occupied-soft", border: "border-table-occupied-border", dot: "bg-status-occupied", label: "Occupied" },
@@ -31,6 +33,7 @@ export function StatusLegend({ counts }: { counts: Record<string, number> }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function countByStatus(tables: { status: string }[]) {
   const res: Record<string, number> = { available: 0, occupied: 0, reserved: 0, dirty: 0 };
   tables.forEach(t => { res[t.status] = (res[t.status] ?? 0) + 1; });
@@ -63,6 +66,7 @@ function bboxGap(a: SignableTable, b: SignableTable) {
   return Math.hypot(dx, dy);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function computeSectionSigns(tables: SignableTable[]): SectionSign[] {
   const bySection = new Map<string, SignableTable[]>();
   for (const t of tables) {

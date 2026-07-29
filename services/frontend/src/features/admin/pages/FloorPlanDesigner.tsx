@@ -262,12 +262,6 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
   { type: "rotate"; id: string; cx: number; cy: number };
   const dragRef = useRef<DragMode | null>(null);
 
-  useEffect(() => {
-    // Fit view on entering edit mode
-    fitToContent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Fit-to-content on mount + helper
   const fitToContent = () => {
     const el = wrapRef.current;
@@ -290,6 +284,13 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
     setZoom(parseFloat(nz.toFixed(2)));
     setPan({ x: Math.round(offX), y: Math.round(offY) });
   };
+
+  useEffect(() => {
+    // Fit view on entering edit mode. fitToContent reads DOM layout (an external system).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fitToContent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onMouseDown = (e: React.MouseEvent, id: string) => {
     if (e.button !== 0) return;

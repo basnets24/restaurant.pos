@@ -49,11 +49,18 @@ export default function OrganizationPage() {
   const rp = useRestaurantUserProfile();
   const { data: joinCode } = rp.useMyJoinCode({ rid: rid ?? undefined, lid: lid ?? undefined }, { enabled: !!rid });
 
-  useEffect(() => setDraft(model), [tab]);
+  // Reset the draft to the saved model whenever the active tab changes.
+  const [prevTab, setPrevTab] = useState(tab);
+  if (tab !== prevTab) {
+    setPrevTab(tab);
+    setDraft(model);
+  }
 
-  // If tenant name is known and current model is default/demo, hydrate it for display convenience
+  // If tenant name is known and current model is default/demo, hydrate it for display convenience.
+  // Hydrating from async tenant-info data as it resolves, not a derived-state reset.
   useEffect(() => {
     if (nameFromTenant) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (model.restaurantName === DEFAULTS.restaurantName) setModel((m) => ({ ...m, restaurantName: nameFromTenant }));
       if (draft.restaurantName === DEFAULTS.restaurantName) setDraft((d) => ({ ...d, restaurantName: nameFromTenant }));
     }

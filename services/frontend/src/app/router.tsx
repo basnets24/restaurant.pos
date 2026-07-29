@@ -59,6 +59,7 @@ const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
 const JoinPage      = lazy(() => import("@/features/join/JoinPage"));
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const router = createBrowserRouter([
   // ========= PUBLIC =========
   { path: "/", element: <Suspense fallback={<Fallback />}><LandingView /></Suspense> },

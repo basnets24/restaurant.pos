@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { InventoryItemDto } from "@/domain/inventory/types";
 import { useInventoryItems, useUpdateInventoryItem, useAdjustInventoryQuantity } from "@/domain/inventory/hooks";
 import { toast } from "sonner";
@@ -96,9 +96,11 @@ function InventoryRow({ it, onUpdate, onAdjust, busy, canWrite }: {
 }) {
     const [qtyEdit, setQtyEdit] = useState<string>(String(it.quantity ?? 0));
     // Keep input in sync with server updates
-    useEffect(() => {
+    const [prevQuantity, setPrevQuantity] = useState(it.quantity);
+    if (it.quantity !== prevQuantity) {
+        setPrevQuantity(it.quantity);
         setQtyEdit(String(it.quantity ?? 0));
-    }, [it.quantity]);
+    }
     const qty = Number.isFinite(Number(qtyEdit)) ? Math.max(0, Number(qtyEdit)) : it.quantity;
 
     return (
