@@ -5,11 +5,15 @@ test("place an order from the POS floor plan through to order placed", async ({ 
 
   await page.goto("/pos/tables");
 
-  // TableNode (TablesPage.tsx) renders "{section} #{number} {seats} seats" as
-  // one button whose accessible name concatenates all three. No data-testid
-  // exists on this screen, so match by text — exact table number, since
-  // leftover tables from previous runs of this suite aren't cleaned up.
-  await page.getByRole("button", { name: `Main #${tableNumber} 2 seats` }).click();
+  // TableMark (TablesPage.tsx) renders just the number + seat count, no
+  // data-testid, so match on the `data-table` marker plus the exact table
+  // number text — leftover tables from previous runs of this suite aren't
+  // cleaned up, so an exact, unique number is required.
+  await page.locator("[data-table]", { hasText: tableNumber }).click();
+
+  // Clicking a table opens the TableActionDialog rather than navigating
+  // straight to the menu; seating the party is what actually takes you there.
+  await page.getByRole("button", { name: "Seat Party" }).click();
   await page.waitForURL(/\/pos\/table\/.+\/menu/, { timeout: 15000 });
 
   // Scope to the seeded item's own card (menu-item-card) so this doesn't
