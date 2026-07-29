@@ -51,7 +51,7 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
 
     // Optional role gating
     if (roles && roles.length > 0) {
-        const raw = (profile as any)?.role as string | string[] | undefined;
+        const raw = profile?.role;
         const userRoles = Array.isArray(raw) ? raw : raw ? [raw] : [];
         let ok = roles.some(r => userRoles.includes(r));
         // Fallback: if Admin is required but claim hasn't propagated yet, trust onboarding status

@@ -13,15 +13,8 @@ import { EmployeeProvider } from "@/domain/employee/Provider";
 import { TenantDomainProvider } from "@/domain/tenant/Provider";
 import { TenantInfoProvider } from "@/app/TenantInfoProvider";
 import "./index.css";
-import { bootstrapAuth } from "@/auth/bootstrap";
 
-async function start() {
-  try {
-    await bootstrapAuth();
-  } catch {
-    // ignore bootstrap failures; UI will still render and AuthProvider will hydrate
-  }
-
+function start() {
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
