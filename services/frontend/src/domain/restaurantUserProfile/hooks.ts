@@ -38,8 +38,6 @@ export function createRestaurantUserProfileHooks(
   api: RestaurantUserProfileApi,
   opts?: { onAuthRefresh?: () => Promise<void> }
 ) {
-  const qc = () => useQueryClient();
-
   /**
    * Onboard restaurant mutation.
    * Invalidates user profile and onboarding status on success.
@@ -47,7 +45,7 @@ export function createRestaurantUserProfileHooks(
   function useOnboardRestaurant(
     options?: UseMutationOptions<OnboardRestaurantRes, unknown, OnboardRestaurantReq, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<OnboardRestaurantRes, unknown, OnboardRestaurantReq>({
       mutationFn: (req) => api.onboardRestaurant(req),
       retry: shouldRetry,
@@ -73,7 +71,7 @@ export function createRestaurantUserProfileHooks(
   function useJoinRestaurant(
     options?: UseMutationOptions<OnboardRestaurantRes, unknown, JoinRestaurantReq, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<OnboardRestaurantRes, unknown, JoinRestaurantReq>({
       mutationFn: (req) => api.joinRestaurant(req),
       retry: shouldRetry,

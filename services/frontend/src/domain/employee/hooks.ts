@@ -25,8 +25,6 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
 }
 
 export function createEmployeeHooks(api: EmployeeApi) {
-  const qc = () => useQueryClient();
-
   // ---------- List
   function useEmployees(
     restaurantId: string,
@@ -143,7 +141,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
     restaurantId: string,
     options?: UseMutationOptions<void, unknown, AddEmployeeDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, AddEmployeeDto>({
       mutationFn: (dto) => api.addEmployee(restaurantId, dto),
       retry: shouldRetry,
@@ -160,7 +158,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, UserUpdateDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, UserUpdateDto>({
       mutationFn: (dto) => api.updateEmployee(restaurantId, userId, dto),
       retry: shouldRetry,
@@ -180,7 +178,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, DefaultLocationUpdateDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, DefaultLocationUpdateDto>({
       mutationFn: (dto) => api.updateDefaultLocation(restaurantId, userId, dto),
       retry: shouldRetry,
@@ -200,7 +198,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, EmployeeRoleUpdateDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, EmployeeRoleUpdateDto>({
       mutationFn: (dto) => api.updateEmployeeRoles(restaurantId, userId, dto),
       retry: shouldRetry,
@@ -220,7 +218,7 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, string, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, string>({
       mutationFn: (role: string) => api.deleteEmployeeRole(restaurantId, userId, role),
       retry: shouldRetry,

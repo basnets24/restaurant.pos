@@ -21,8 +21,6 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
 }
 
 export function createTenantHooks(api: TenantApi) {
-  const qc = () => useQueryClient();
-
   function useMyTenants(options?: UseQueryOptions<readonly TenantRestaurantDto[], unknown>) {
     return useQuery<readonly TenantRestaurantDto[], unknown>({
       queryKey: tenantKeys.mine,
@@ -58,7 +56,7 @@ export function createTenantHooks(api: TenantApi) {
     restaurantId: string,
     options?: UseMutationOptions<TenantLocationDto, unknown, CreateLocationDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<TenantLocationDto, unknown, CreateLocationDto>({
       mutationFn: (dto) => api.createLocation(restaurantId, dto),
       retry: shouldRetry,
@@ -75,7 +73,7 @@ export function createTenantHooks(api: TenantApi) {
     locationId: string,
     options?: UseMutationOptions<void, unknown, UpdateLocationDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, UpdateLocationDto>({
       mutationFn: (dto) => api.updateLocation(restaurantId, locationId, dto),
       retry: shouldRetry,
