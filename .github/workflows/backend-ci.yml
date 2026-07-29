@@ -23,12 +23,16 @@ jobs:
         include:
           - name: IdentityService
             project: services/identity/src/IdentityService/IdentityService.csproj
+            dotnet-version: 8.0.x
           - name: CatalogService
             project: services/catalog/src/CatalogService/CatalogService.csproj
+            dotnet-version: 10.0.x
           - name: OrderService
             project: services/order/src/OrderService/OrderService.csproj
+            dotnet-version: 8.0.x
           - name: PaymentService
             project: services/payment/PaymentService/PaymentService.csproj
+            dotnet-version: 8.0.x
     env:
       # NuGet.config's github source reads credentials from %GH_PAT%
       GH_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +41,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: ${{ matrix.dotnet-version }}
 
       - name: Restore
         run: dotnet restore ${{ matrix.project }}
