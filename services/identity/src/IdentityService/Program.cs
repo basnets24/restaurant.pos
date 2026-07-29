@@ -66,7 +66,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear(); // Loopback by default, this should be configured to your load balancer IP(s)
+    options.KnownIPNetworks.Clear(); // Loopback by default, this should be configured to your load balancer IP(s)
     options.KnownProxies.Clear();    
 });
 

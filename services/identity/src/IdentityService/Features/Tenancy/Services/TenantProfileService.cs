@@ -16,7 +16,7 @@ public class TenantProfileService : IProfileService
     public TenantProfileService(ITenantClaimsProvider claims, ILogger<TenantProfileService> logger)
     { _claims = claims; _logger = logger; }
 
-    public async Task GetProfileDataAsync(ProfileDataRequestContext context)
+    public async Task GetProfileDataAsync(ProfileDataRequestContext context, CancellationToken cancellationToken)
     {
         var subjectId = context.Subject.FindFirstValue("sub");
         if (string.IsNullOrWhiteSpace(subjectId) || !Guid.TryParse(subjectId, out var userId))
@@ -36,7 +36,7 @@ public class TenantProfileService : IProfileService
             return;
         }
 
-        var claims = await _claims.GetAsync(userId, CancellationToken.None);
+        var claims = await _claims.GetAsync(userId, cancellationToken);
         if (claims is null)
         {
             _logger.LogWarning("No tenant membership/claims resolved for user {UserId}; issuing no tenant/location/role claims", userId);
@@ -69,7 +69,7 @@ public class TenantProfileService : IProfileService
             context.IssuedClaims.Count(c => c.Type == "role"));
     }
 
-    public Task IsActiveAsync(IsActiveContext context)
+    public Task IsActiveAsync(IsActiveContext context, CancellationToken cancellationToken)
     {
         // user activity is handled by ASP.NET Identity; we don’t gate by tenant here
         context.IsActive = true;
