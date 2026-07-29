@@ -61,9 +61,9 @@ export function createTenantHooks(api: TenantApi) {
       mutationFn: (dto) => api.createLocation(restaurantId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: tenantKeys.detail(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx as any);
       },
     });
   }
@@ -78,9 +78,9 @@ export function createTenantHooks(api: TenantApi) {
       mutationFn: (dto) => api.updateLocation(restaurantId, locationId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: tenantKeys.detail(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx as any);
       },
     });
   }

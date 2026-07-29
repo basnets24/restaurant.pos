@@ -146,9 +146,9 @@ export function createEmployeeHooks(api: EmployeeApi) {
       mutationFn: (dto) => api.addEmployee(restaurantId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -163,12 +163,12 @@ export function createEmployeeHooks(api: EmployeeApi) {
       mutationFn: (dto) => api.updateEmployee(restaurantId, userId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -183,12 +183,12 @@ export function createEmployeeHooks(api: EmployeeApi) {
       mutationFn: (dto) => api.updateDefaultLocation(restaurantId, userId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -203,12 +203,12 @@ export function createEmployeeHooks(api: EmployeeApi) {
       mutationFn: (dto) => api.updateEmployeeRoles(restaurantId, userId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.roles(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -223,12 +223,12 @@ export function createEmployeeHooks(api: EmployeeApi) {
       mutationFn: (role: string) => api.deleteEmployeeRole(restaurantId, userId, role),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.roles(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }

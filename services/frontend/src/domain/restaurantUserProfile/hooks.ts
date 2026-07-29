@@ -50,7 +50,7 @@ export function createRestaurantUserProfileHooks(
       mutationFn: (req) => api.onboardRestaurant(req),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: userProfileKey }),
           queryClient.invalidateQueries({ queryKey: onboardingKey }),
@@ -59,7 +59,7 @@ export function createRestaurantUserProfileHooks(
         if (opts?.onAuthRefresh) {
           try { await opts.onAuthRefresh(); } catch (e) { console.warn("useOnboardRestaurant: onAuthRefresh failed", e); }
         }
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -76,7 +76,7 @@ export function createRestaurantUserProfileHooks(
       mutationFn: (req) => api.joinRestaurant(req),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: userProfileKey }),
           queryClient.invalidateQueries({ queryKey: onboardingKey }),
@@ -84,7 +84,7 @@ export function createRestaurantUserProfileHooks(
         if (opts?.onAuthRefresh) {
           try { await opts.onAuthRefresh(); } catch (e) { console.warn("useJoinRestaurant: onAuthRefresh failed", e); }
         }
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
