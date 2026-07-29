@@ -37,7 +37,7 @@ const DEFAULTS: OrgProfile = {
 function read(): OrgProfile {
   try { const raw = localStorage.getItem(LS); return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS; } catch { return DEFAULTS; }
 }
-function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch { } }
+function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch (e) { console.warn("OrganizationPage: failed to persist profile to localStorage", e); } }
 
 export default function OrganizationPage() {
   const { restaurantName: nameFromTenant, locations } = useTenantInfo();
@@ -98,7 +98,7 @@ export default function OrganizationPage() {
                     <Input readOnly value={joinCode.joinUrl ?? "(configure CORS origins)"} />
                     <button
                       className="btn"
-                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch { } }}
+                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch (e) { console.warn("OrganizationPage: failed to copy join link to clipboard", e); } }}
                       title="Copy link"
                     >
                       <Copy className="h-4 w-4" />

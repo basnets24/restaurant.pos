@@ -174,14 +174,14 @@ export default function MenuPage() {
       if (cartId && !linkedOnce.current) {
         try {
           await linkOrder.mutateAsync(cartId);
-        } catch { }
+        } catch (e) { console.warn("MenuPage: failed to link cart to table", e); }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
           if (guestCount != null) {
             await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
             store.setTableSession(tableId, { guestCount });
           }
-        } catch { }
+        } catch (e) { console.warn("MenuPage: failed to mark table occupied", e); }
         store.setTableSession(tableId, { cartId });
         linkedOnce.current = true;
       }
@@ -217,11 +217,11 @@ export default function MenuPage() {
         id = res.id;
         setCartId(res.id);
         store.setTableSession(tableId, { cartId: res.id, guestCount: location.state?.partySize ?? initialSession?.guestCount ?? null });
-        try { await linkOrder.mutateAsync(res.id); } catch { }
+        try { await linkOrder.mutateAsync(res.id); } catch (e) { console.warn("MenuPage: failed to link cart to table", e); }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
           if (guestCount != null) await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
-        } catch { }
+        } catch (e) { console.warn("MenuPage: failed to mark table occupied", e); }
       } catch {
         toast.error("Could not start an order");
         return;
@@ -286,9 +286,9 @@ export default function MenuPage() {
   // return to the floor.
   async function releaseTableAfterPayment() {
     if (cartId) {
-      try { await unlinkOrder.mutateAsync(cartId); } catch { }
+      try { await unlinkOrder.mutateAsync(cartId); } catch (e) { console.warn("MenuPage: failed to unlink order from table", e); }
     }
-    try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
+    try { await setTableStatus.mutateAsync({ status: "available" }); } catch (e) { console.warn("MenuPage: failed to mark table available", e); }
     store.clearTableSession(tableId);
   }
 

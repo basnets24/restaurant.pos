@@ -1,7 +1,7 @@
 import axios from "axios";
-import type { AxiosError, AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 import { withTenantHeaders } from "@/auth/tenantHeaders";
-import { UnauthorizedError, ApiError } from "@/lib/apiErrors";
+import { UnauthorizedError, ApiError, mergeHeaders, toApiError } from "@/lib/apiErrors";
 export { UnauthorizedError, ApiError };
 
 // DTOs
@@ -48,22 +48,6 @@ export type CreateTenantApiOptions = {
   getAccessToken: GetAccessToken;
 };
 
-function isAxiosError<T = any>(e: unknown): e is AxiosError<T> {
-  return typeof e === "object" && e !== null && (e as any).isAxiosError === true;
-}
-
-function pickMessage(data: any): string | undefined {
-  if (!data) return undefined;
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-  if (typeof data === "object") {
-    if (typeof (data as any).message === "string") return (data as any).message;
-    if (Array.isArray((data as any).errors)) return (data as any).errors.join(", ");
-    if ((data as any).title) return String((data as any).title);
-  }
-  return undefined;
-}
-
 async function withAuthHeaders(getAccessToken: GetAccessToken) {
   const token = await getAccessToken();
   const headers: Record<string, string> = {};
@@ -71,26 +55,8 @@ async function withAuthHeaders(getAccessToken: GetAccessToken) {
   return headers;
 }
 
-function mergeHeaders(...parts: Array<Record<string, string> | undefined>): Record<string, string> {
-  return Object.assign({}, ...parts.filter(Boolean));
-}
-
 export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
   const instance = opts.axiosInstance ?? axios.create({ baseURL: opts.baseURL ?? "/" });
-
-  const handleError = (e: unknown): never => {
-    if (isAxiosError(e)) {
-      const status = e.response?.status;
-      if (status === 401) throw new UnauthorizedError();
-      if (status === 400 || status === 409) {
-        const msg = pickMessage(e.response?.data) ?? "Request failed";
-        throw new ApiError(msg, status, e.response?.data);
-      }
-      const msg = pickMessage(e.response?.data) ?? e.message;
-      throw new ApiError(msg, status, e.response?.data);
-    }
-    throw e as Error;
-  };
 
   const base = "/tenants";
 
@@ -100,7 +66,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
         const headers = await withAuthHeaders(opts.getAccessToken);
         const res = await instance.get<readonly TenantRestaurantDto[]>(`${base}/mine`, { headers });
         return res.data;
-      } catch (e) { handleError(e); throw e as any; }
+      } catch (e) { throw toApiError(e); }
     },
 
     async getTenant(restaurantId: string) {
@@ -114,7 +80,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
           { headers }
         );
         return res.data;
-      } catch (e) { handleError(e); throw e as any; }
+      } catch (e) { throw toApiError(e); }
     },
 
     async createLocation(restaurantId: string, body: CreateLocationDto) {
@@ -129,7 +95,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
           { headers }
         );
         return res.data;
-      } catch (e) { handleError(e); throw e as any; }
+      } catch (e) { throw toApiError(e); }
     },
 
     async updateLocation(restaurantId: string, locationId: string, body: UpdateLocationDto) {
@@ -143,7 +109,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
           body,
           { headers }
         );
-      } catch (e) { handleError(e); throw e as any; }
+      } catch (e) { throw toApiError(e); }
     },
   };
 }

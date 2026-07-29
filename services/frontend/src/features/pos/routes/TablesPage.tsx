@@ -175,7 +175,7 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
 
   const onSeatParty = async () => {
     const size = Math.max(1, Math.min(table.seats, parseInt(party || "1")));
-    try { await seat.mutateAsync(size); } catch {}
+    try { await seat.mutateAsync(size); } catch (e) { console.warn("TablesPage: failed to seat party", e); }
     onClose();
     navigate(`/pos/table/${table.id}/menu`, { state: { partySize: size } });
   };

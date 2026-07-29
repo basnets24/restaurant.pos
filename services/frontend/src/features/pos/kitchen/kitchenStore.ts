@@ -37,7 +37,9 @@ function read(): KitchenState {
 function write(s: KitchenState) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(s));
-  } catch {}
+  } catch (e) {
+    console.warn("kitchenStore: failed to persist state to localStorage", e);
+  }
 }
 
 let state: KitchenState = read();

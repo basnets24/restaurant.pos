@@ -149,7 +149,7 @@ export default function AccountPage() {
                       size="sm"
                       onClick={async () => {
                         if (!defaultLocDraft) return;
-                        try { await updateDefaultLoc.mutateAsync({ defaultLocationId: defaultLocDraft }); setDefaultLocDraft(""); } catch {}
+                        try { await updateDefaultLoc.mutateAsync({ defaultLocationId: defaultLocDraft }); setDefaultLocDraft(""); } catch (e) { console.warn("AccountPage: failed to update default location", e); }
                       }}
                       disabled={updateDefaultLoc.isPending || !defaultLocDraft}
                     >Save</Button>

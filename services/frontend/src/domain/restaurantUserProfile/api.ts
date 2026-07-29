@@ -1,7 +1,7 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, { type AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
 import { withTenantHeaders } from "@/auth/tenantHeaders";
-import { UnauthorizedError, ApiError } from "@/lib/apiErrors";
+import { UnauthorizedError, ApiError, mergeHeaders, toApiError, isAxiosError } from "@/lib/apiErrors";
 import type {
   OnboardRestaurantReq,
   OnboardRestaurantRes,
@@ -55,53 +55,12 @@ export type CreateApiOptions = {
   getAccessToken: GetAccessToken;
 };
 
-/** Narrow unknown to AxiosError */
-function isAxiosError<T = unknown>(e: unknown): e is AxiosError<T> {
-  return typeof e === "object" && e !== null && (e as any).isAxiosError === true;
-}
-
-/** Extract a reasonable message from common error payload shapes */
-function pickMessage(data: any): string | undefined {
-  if (!data) return undefined;
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-  if (typeof data === "object") {
-    if (typeof (data as any).message === "string") return (data as any).message;
-    if (Array.isArray((data as any).errors)) return (data as any).errors.join(", ");
-    if ((data as any).title) return String((data as any).title);
-  }
-  return undefined;
-}
-
 /** Build auth header from access token provider */
 async function withAuthHeaders(getAccessToken: GetAccessToken) {
   const token = await getAccessToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
-}
-
-/** Shallow-merge header objects */
-function mergeHeaders(
-  ...parts: Array<Record<string, string> | undefined>
-): Record<string, string> {
-  return Object.assign({}, ...parts.filter(Boolean));
-}
-
-/** Convert any error to our domain error types */
-function toApiError(e: unknown): Error {
-  if (isAxiosError(e)) {
-    const status = e.response?.status;
-    if (status === 401) return new UnauthorizedError();
-
-    const msg = pickMessage(e.response?.data) ?? e.message;
-
-    if (status === 400 || status === 409) {
-      return new ApiError(msg, status, e.response?.data);
-    }
-    return new ApiError(msg, status, e.response?.data);
-  }
-  return e instanceof Error ? e : new Error(String(e));
 }
 
 /**

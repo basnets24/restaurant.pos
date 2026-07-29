@@ -55,8 +55,8 @@ export default function OrderPage() {
     setPaymentDialog(null);
     // Table-freeing logic - the guest has paid and is done, so this is the
     // right moment to release the table, not at fire-time.
-    try { await unlinkOrder.mutateAsync(orderId); } catch { }
-    try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
+    try { await unlinkOrder.mutateAsync(orderId); } catch (e) { console.warn("OrderPage: failed to unlink order from table", e); }
+    try { await setTableStatus.mutateAsync({ status: "available" }); } catch (e) { console.warn("OrderPage: failed to mark table available", e); }
     store.clearTableSession(tableId);
     await refetch();
     toast.success("Payment confirmed!");

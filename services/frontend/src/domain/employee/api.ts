@@ -1,7 +1,7 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, { type AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
 import { withTenantHeaders } from "@/auth/tenantHeaders";
-import { UnauthorizedError, ApiError } from "@/lib/apiErrors";
+import { UnauthorizedError, ApiError, mergeHeaders, toApiError } from "@/lib/apiErrors";
 export { UnauthorizedError, ApiError };
 
 // Types (DTOs)
@@ -89,47 +89,13 @@ export type CreateEmployeeApiOptions = {
   getAccessToken: GetAccessToken;
 };
 
-function isAxiosError<T = any>(e: unknown): e is AxiosError<T> {
-  return typeof e === "object" && e !== null && (e as any).isAxiosError === true;
-}
-
-function pickMessage(data: any): string | undefined {
-  if (!data) return undefined;
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-  if (typeof data === "object") {
-    if (typeof (data as any).message === "string") return (data as any).message;
-    if (Array.isArray((data as any).errors)) return (data as any).errors.join(", ");
-    if ((data as any).title) return String((data as any).title);
-  }
-  return undefined;
-}
-
 async function withIdentityHeaders() {
   const token = await getApiToken('IdentityServerApi', ['IdentityServerApi']);
   return { Authorization: `Bearer ${token}` } as Record<string, string>;
 }
 
-function mergeHeaders(...parts: Array<Record<string, string> | undefined>): Record<string, string> {
-  return Object.assign({}, ...parts.filter(Boolean));
-}
-
 export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
   const instance = opts.axiosInstance ?? axios.create({ baseURL: opts.baseURL ?? "/" });
-
-  const handleError = (e: unknown): never => {
-    if (isAxiosError(e)) {
-      const status = e.response?.status;
-      if (status === 401) throw new UnauthorizedError();
-      if (status === 400 || status === 409) {
-        const msg = pickMessage(e.response?.data) ?? "Request failed";
-        throw new ApiError(msg, status, e.response?.data);
-      }
-      const msg = pickMessage(e.response?.data) ?? e.message;
-      throw new ApiError(msg, status, e.response?.data);
-    }
-    throw e as Error;
-  };
 
   const path = (rid: string, suffix = "") => `/tenants/${encodeURIComponent(rid)}/employees${suffix}`;
 
@@ -147,7 +113,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
           },
         });
         return res.data;
-      } catch (e) { return handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async getEmployeeById(restaurantId, userId) {
@@ -155,28 +121,28 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         const res = await instance.get<EmployeeDetailDto>(path(restaurantId, `/${encodeURIComponent(userId)}`), { headers });
         return res.data;
-      } catch (e) { return handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async updateEmployee(restaurantId, userId, body) {
       try {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         await instance.put(path(restaurantId, `/${encodeURIComponent(userId)}`), body, { headers });
-      } catch (e) { handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async addEmployee(restaurantId, body) {
       try {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         await instance.post(path(restaurantId), body, { headers });
-      } catch (e) { handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async updateDefaultLocation(restaurantId, userId, body) {
       try {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         await instance.put(path(restaurantId, `/${encodeURIComponent(userId)}/default-location`), body, { headers });
-      } catch (e) { handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async getEmployeeRoles(restaurantId, userId) {
@@ -184,21 +150,21 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         const res = await instance.get<readonly string[]>(path(restaurantId, `/${encodeURIComponent(userId)}/roles`), { headers });
         return res.data;
-      } catch (e) { return handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async updateEmployeeRoles(restaurantId, userId, body) {
       try {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         await instance.post(path(restaurantId, `/${encodeURIComponent(userId)}/roles`), body, { headers });
-      } catch (e) { handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async deleteEmployeeRole(restaurantId, userId, role) {
       try {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         await instance.delete(path(restaurantId, `/${encodeURIComponent(userId)}/roles/${encodeURIComponent(role)}`), { headers });
-      } catch (e) { handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
 
     async getAvailableRoles(restaurantId) {
@@ -206,7 +172,7 @@ export function createEmployeeApi(opts: CreateEmployeeApiOptions): EmployeeApi {
         const headers = mergeHeaders(await withIdentityHeaders(), withTenantHeaders({ restaurantId }));
         const res = await instance.get<readonly string[]>(path(restaurantId, "/roles"), { headers });
         return res.data;
-      } catch (e) { return handleError(e); }
+      } catch (e) { throw toApiError(e); }
     },
   };
 }

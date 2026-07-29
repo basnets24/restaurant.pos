@@ -63,7 +63,7 @@ export default function JoinPage() {
           const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
           const userId = (profile as any)?.sub as string | undefined;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
-        } catch { }
+        } catch (e) { console.warn("JoinPage: failed to set display name after onboarding", e); }
       }
       navigate("/home", { replace: true });
     } catch (err: any) {
@@ -86,7 +86,7 @@ export default function JoinPage() {
           const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
           const userId = (profile as any)?.sub as string | undefined;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
-        } catch { }
+        } catch (e) { console.warn("JoinPage: failed to set display name after joining", e); }
       }
       navigate("/home", { replace: true });
     } catch (err: any) {
