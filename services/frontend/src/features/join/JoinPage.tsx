@@ -130,17 +130,22 @@ export default function JoinPage() {
     }
   }, [timeZoneId]);
 
+  // Fetch status, redirect if already has membership (safety) — skipped once
+  // alreadyOnboarded already answers that, but the hook itself must still run
+  // unconditionally every render (Rules of Hooks).
+  const { data: status } = hooks.useOnboardingStatus(
+    { rid: rid ?? undefined, lid: lid ?? undefined },
+    { retry: 1, enabled: !alreadyOnboarded }
+  );
+  useEffect(() => {
+    if (status?.hasMembership) navigate("/home", { replace: true });
+  }, [status]);
+
   if (alreadyOnboarded) {
     // If a token refresh happened elsewhere, bounce to app
     navigate("/home", { replace: true });
     return null;
   }
-
-  // On mount: fetch status, redirect if already has membership (safety)
-  const { data: status } = hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
-  useEffect(() => {
-    if (status?.hasMembership) navigate("/home", { replace: true });
-  }, [status]);
 
   return (
     <div>

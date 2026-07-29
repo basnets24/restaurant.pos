@@ -150,6 +150,7 @@ function OrderSidebarContent({
                                  onCheckout,
                                  checkoutLoading,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
+    const kitchen = useKitchen();
     if (!table) return null;
 
     // compute money safely from order items
@@ -164,7 +165,6 @@ function OrderSidebarContent({
     const total = +(subtotal + tax).toFixed(2);
 
     const itemCount = order?.items.reduce((n, it) => n + it.quantity, 0) ?? 0;
-    const kitchen = useKitchen();
     const isFired = order ? kitchen.isFired(order.id) : false;
 
     return (
