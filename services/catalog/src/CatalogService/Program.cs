@@ -13,7 +13,7 @@ using Common.Library.Configuration;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using CatalogService.Services;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using OpenTelemetry.Metrics;
 using Serilog;
 using Common.Library.HealthChecks;

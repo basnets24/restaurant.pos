@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 5062
 
@@ -6,10 +6,10 @@ ENV ASPNETCORE_URLS=http://+:5062
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-dotnet-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+RUN useradd --uid 5678 --no-create-home --shell /usr/sbin/nologin appuser && chown -R appuser /app
 USER appuser
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 COPY ["src/CatalogService/CatalogService.csproj", "src/CatalogService/"]
 
 RUN --mount=type=secret,id=GH_OWNER --mount=type=secret,id=GH_PAT \
