@@ -37,7 +37,10 @@ public record UpdateTableLayoutDto(
     double? Height,
     double Rotation, // reserved for future use
     string Shape,
-    int Version
+    int Version,
+    string? Number = null,
+    string? Section = null,
+    int? Seats = null
 );
 
 
@@ -49,7 +52,10 @@ public record BulkLayoutItemDto(
     double? Height,
     double Rotation,
     string Shape,
-    int Version
+    int Version,
+    string? Number = null,
+    string? Section = null,
+    int? Seats = null
 );
 
 

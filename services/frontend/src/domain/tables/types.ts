@@ -47,6 +47,9 @@ export interface UpdateTableLayoutDto {
   rotation: number;
   shape?: string;
   version: number; // optimistic concurrency
+  number?: string;
+  section?: string | null;
+  seats?: number;
 }
 
 export interface BulkLayoutItemDto extends UpdateTableLayoutDto {

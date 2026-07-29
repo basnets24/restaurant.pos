@@ -177,6 +177,9 @@ public class DiningTableService : IDiningTableService
         if (dto.Height.HasValue) t.Height = dto.Height.Value;
         t.Shape    = dto.Shape ?? t.Shape;
         t.Rotation = dto.Rotation;
+        if (dto.Number is not null)  t.Number  = dto.Number;
+        if (dto.Section is not null) t.Section = dto.Section;
+        if (dto.Seats.HasValue)      t.Seats   = dto.Seats.Value;
         t.Version++;
 
         await _repo.UpdateAsync(t);
@@ -190,7 +193,10 @@ public class DiningTableService : IDiningTableService
             height   = t.Height,
             rotation = t.Rotation,
             version  = t.Version,
-            shape    = t.Shape
+            shape    = t.Shape,
+            number   = t.Number,
+            section  = t.Section,
+            seats    = t.Seats
         }, ct);
     }
 
@@ -207,6 +213,9 @@ public class DiningTableService : IDiningTableService
             if (i.Height.HasValue) t.Height = i.Height.Value;
             t.Shape    = i.Shape ?? t.Shape;
             t.Rotation = i.Rotation;
+            if (i.Number is not null)  t.Number  = i.Number;
+            if (i.Section is not null) t.Section = i.Section;
+            if (i.Seats.HasValue)      t.Seats   = i.Seats.Value;
             t.Version++;
 
             await _repo.UpdateAsync(t);
@@ -220,7 +229,10 @@ public class DiningTableService : IDiningTableService
                 height   = t.Height,
                 rotation = t.Rotation,
                 version  = t.Version,
-                shape    = t.Shape
+                shape    = t.Shape,
+                number   = t.Number,
+                section  = t.Section,
+                seats    = t.Seats
             }, ct);
         }
     }
