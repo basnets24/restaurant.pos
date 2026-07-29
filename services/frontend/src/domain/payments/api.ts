@@ -2,7 +2,7 @@
 import { ENV } from "@/config/env";
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
-import { tenantAccessor } from "@/auth/runtime";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
 
 export type PaymentSessionStatus = "pending" | "succeeded" | "failed" | string;
 
@@ -17,14 +17,6 @@ export type PaymentConfirmResponse = {
   receiptUrl?: string | null;
   error?: string;
 };
-
-function withTenantHeaders(): Record<string, string> {
-  const t = tenantAccessor() ?? {};
-  const headers: Record<string, string> = {};
-  if (t.restaurantId) headers["x-restaurant-id"] = String(t.restaurantId);
-  if (t.locationId) headers["x-location-id"] = String(t.locationId);
-  return headers;
-}
 
 async function authHeaders() {
   const token = await getApiToken("Payment", ["payment.read"]);

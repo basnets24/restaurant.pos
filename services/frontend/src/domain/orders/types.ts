@@ -52,10 +52,7 @@ export interface OrderDto {
     lastPaymentFailedAt?: string | null;
 }
 
-export interface TenantHeaders {
-    restaurantId?: string;
-    locationId?: string;
-}
+export type { TenantHeaders } from "@/auth/tenantHeaders";
 
 export interface PageResult<T> {
     items: T[];

@@ -196,15 +196,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     useEffect(() => {
-        bindAuthAccessors({
-            getToken: () => accessToken,
-            getTenant: () => {
-                const rid = profile?.restaurant_id ?? profile?.restaurantId;
-                const lid = profile?.location_id ?? profile?.locationId;
-                return rid ? { restaurantId: rid, locationId: lid } : undefined;
-            },
-        });
-    }, [accessToken, profile]);
+        bindAuthAccessors({ getToken: () => accessToken });
+    }, [accessToken]);
 
 
     const value = useMemo<AuthState>(

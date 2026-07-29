@@ -1,5 +1,8 @@
 import axios from "axios";
 import type { AxiosError, AxiosInstance } from "axios";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
+import { UnauthorizedError, ApiError } from "@/lib/apiErrors";
+export { UnauthorizedError, ApiError };
 
 // DTOs
 export type TenantRestaurantDto = {
@@ -29,19 +32,6 @@ export type UpdateLocationDto = {
   isActive: boolean;
   timeZoneId?: string | null;
 };
-
-// Errors
-export class UnauthorizedError extends Error {
-  constructor(message = "Unauthorized") { super(message); this.name = "UnauthorizedError"; }
-}
-
-export class ApiError extends Error {
-  status?: number;
-  details?: unknown;
-  constructor(message: string, status?: number, details?: unknown) {
-    super(message); this.name = "ApiError"; this.status = status; this.details = details;
-  }
-}
 
 type GetAccessToken = () => Promise<string | null | undefined>;
 
@@ -81,12 +71,6 @@ async function withAuthHeaders(getAccessToken: GetAccessToken) {
   return headers;
 }
 
-function withTenantHeaders(rid?: string) {
-  const headers: Record<string, string> = {};
-  if (rid) headers["x-restaurant-id"] = rid;
-  return headers;
-}
-
 function mergeHeaders(...parts: Array<Record<string, string> | undefined>): Record<string, string> {
   return Object.assign({}, ...parts.filter(Boolean));
 }
@@ -123,7 +107,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
+          withTenantHeaders({ restaurantId })
         );
         const res = await instance.get<{ restaurant: TenantRestaurantDto; locations: readonly TenantLocationDto[] }>(
           `${base}/${encodeURIComponent(restaurantId)}`,
@@ -137,7 +121,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
+          withTenantHeaders({ restaurantId })
         );
         const res = await instance.post<TenantLocationDto>(
           `${base}/${encodeURIComponent(restaurantId)}/locations`,
@@ -152,7 +136,7 @@ export function createTenantApi(opts: CreateTenantApiOptions): TenantApi {
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(restaurantId)
+          withTenantHeaders({ restaurantId })
         );
         await instance.put(
           `${base}/${encodeURIComponent(restaurantId)}/locations/${encodeURIComponent(locationId)}`,

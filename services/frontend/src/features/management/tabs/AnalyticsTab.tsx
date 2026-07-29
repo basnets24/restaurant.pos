@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/api-authorization/AuthProvider";
+import { useTenant } from "@/app/TenantContext";
 import { useOrders } from "@/domain/orders/hooks";
 import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
 import { CardGrid } from "@/components/primitives/CardGrid";
@@ -13,13 +13,11 @@ const isPaid = (o: OrderDto) => !!o.paidAt || (o.status ?? "").toLowerCase() ===
 
 export default function AnalyticsTab() {
     const navigate = useNavigate();
-    const { profile } = useAuth();
-    const tenant: TenantHeaders | undefined = useMemo(() => {
-        const restaurantId = (profile as any)?.restaurantId ?? (profile as any)?.restaurant_id;
-        const locationId = (profile as any)?.locationId ?? (profile as any)?.location_id;
-        if (!restaurantId && !locationId) return undefined;
-        return { restaurantId, locationId };
-    }, [profile]);
+    const { rid, lid } = useTenant();
+    const tenant: TenantHeaders | undefined = useMemo(
+        () => (rid ? { restaurantId: rid, locationId: lid ?? undefined } : undefined),
+        [rid, lid]
+    );
 
     const { data } = useOrders(tenant);
     const orders = useMemo(() => (data?.items ?? []) as OrderDto[], [data]);

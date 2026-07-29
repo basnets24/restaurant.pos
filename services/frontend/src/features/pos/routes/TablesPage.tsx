@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTables, useSeat, useSetTableStatus, useClear } from "@/domain/tables/hooks";
 import { useFloorHub } from "@/domain/tables/realtime";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { useTenant } from "@/app/TenantContext";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { TableViewDto, TableStatus } from "@/domain/tables/types";
@@ -14,10 +15,13 @@ const GRID = 20;
 
 export default function TablesPage() {
   const { data, isLoading } = useTables();
-  const { profile, getAccessToken } = useAuth();
-  const restaurantId = profile?.restaurantId ?? profile?.restaurant_id;
-  const locationId = profile?.locationId ?? profile?.location_id;
-  useFloorHub({ restaurantId, locationId, accessTokenFactory: async () => (await getAccessToken()) ?? "" });
+  const { getAccessToken } = useAuth();
+  const { rid, lid } = useTenant();
+  useFloorHub({
+    restaurantId: rid ?? undefined,
+    locationId: lid ?? undefined,
+    accessTokenFactory: async () => (await getAccessToken()) ?? "",
+  });
 
   const tables: TableViewDto[] = useMemo(() => data ?? [], [data]);
 

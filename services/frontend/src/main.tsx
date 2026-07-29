@@ -7,7 +7,6 @@ import { queryClient } from "./lib/react-query";
 
 import { AuthProvider } from "./api-authorization/AuthProvider";
 import { AppRouter } from "./app/router";
-import { TenantProvider } from "./app/TenantContext";
 import { RestaurantUserProfileProvider } from "@/domain/restaurantUserProfile/Provider";
 import { EmployeeProvider } from "@/domain/employee/Provider";
 import { TenantDomainProvider } from "@/domain/tenant/Provider";
@@ -19,17 +18,15 @@ function start() {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <TenantProvider>
-            <RestaurantUserProfileProvider>
-              <TenantDomainProvider>
-                <EmployeeProvider>
-                  <TenantInfoProvider>
-                    <AppRouter />
-                  </TenantInfoProvider>
-                </EmployeeProvider>
-              </TenantDomainProvider>
-            </RestaurantUserProfileProvider>
-          </TenantProvider>
+          <RestaurantUserProfileProvider>
+            <TenantDomainProvider>
+              <EmployeeProvider>
+                <TenantInfoProvider>
+                  <AppRouter />
+                </TenantInfoProvider>
+              </EmployeeProvider>
+            </TenantDomainProvider>
+          </RestaurantUserProfileProvider>
         </AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

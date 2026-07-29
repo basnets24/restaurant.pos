@@ -1,5 +1,7 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { getApiToken } from "@/auth/getApiToken";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
+import { UnauthorizedError, ApiError } from "@/lib/apiErrors";
 import type {
   OnboardRestaurantReq,
   OnboardRestaurantRes,
@@ -9,24 +11,7 @@ import type {
   MyJoinCodeRes,
 } from "./types";
 
-/** Domain errors */
-export class UnauthorizedError extends Error {
-  constructor(message = "Unauthorized") {
-    super(message);
-    this.name = "UnauthorizedError";
-  }
-}
-
-export class ApiError extends Error {
-  status?: number;
-  details?: unknown;
-  constructor(message: string, status?: number, details?: unknown) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.details = details;
-  }
-}
+export { UnauthorizedError, ApiError };
 
 /** Types */
 type GetAccessToken = () => Promise<string | null>;
@@ -93,14 +78,6 @@ async function withAuthHeaders(getAccessToken: GetAccessToken) {
   const token = await getAccessToken();
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  return headers;
-}
-
-/** Tenant routing headers */
-function withTenantHeaders(rid?: string, lid?: string) {
-  const headers: Record<string, string> = {};
-  if (rid) headers["x-restaurant-id"] = rid;
-  if (lid) headers["x-location-id"] = lid;
   return headers;
 }
 
@@ -171,7 +148,7 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(params?.rid, params?.lid)
+          withTenantHeaders({ restaurantId: params?.rid, locationId: params?.lid })
         );
         const res = await tenantInstance.post<OnboardRestaurantRes>(
           "/api/onboarding/join",
@@ -194,7 +171,7 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(params?.rid, params?.lid)
+          withTenantHeaders({ restaurantId: params?.rid, locationId: params?.lid })
         );
         const res = await tenantInstance.get<OnboardingStatus>(
           "/api/onboarding/status",
@@ -217,7 +194,7 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
       try {
         const headers = mergeHeaders(
           await withAuthHeaders(opts.getAccessToken),
-          withTenantHeaders(params?.rid, params?.lid)
+          withTenantHeaders({ restaurantId: params?.rid, locationId: params?.lid })
         );
         const res = await tenantInstance.get<MyJoinCodeRes>(
           "/api/onboarding/me/code",
@@ -244,7 +221,7 @@ export function createRestaurantUserProfileApi(opts: CreateApiOptions): Restaura
         // If you prefer to reuse opts.getAccessToken(), swap this for withAuthHeaders().
         const idHeaders = {
           Authorization: `Bearer ${await getApiToken("IdentityServerApi", ["IdentityServerApi"])}`,
-          ...withTenantHeaders(params?.rid, params?.lid), // include tenant if needed downstream
+          ...withTenantHeaders({ restaurantId: params?.rid, locationId: params?.lid }), // include tenant if needed downstream
         };
         const res = await idInstance.get<UserProfile>("/users/me", { headers: idHeaders });
         return res.data;

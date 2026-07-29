@@ -1,21 +1,8 @@
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
-import { tenantAccessor } from "@/auth/runtime";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
 import { MenuAPI } from "./api";
 import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult } from "./types";
-
-// Explicit tenant headers, sourced from the auth profile (tenantAccessor) rather
-// than relying on http.ts's interceptor, which infers them from a *different*
-// (default, unscoped) token than the one actually used for this call's
-// Authorization header - unreliable, and was silently falling back to
-// TenantMiddleware's hardcoded defaults instead of the real tenant.
-function withTenantHeaders(): Record<string, string> {
-  const t = tenantAccessor() ?? {};
-  const headers: Record<string, string> = {};
-  if (t.restaurantId) headers["x-restaurant-id"] = String(t.restaurantId);
-  if (t.locationId) headers["x-location-id"] = String(t.locationId);
-  return headers;
-}
 
 export const MenuItems = {
   list: async (

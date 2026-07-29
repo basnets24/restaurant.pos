@@ -51,7 +51,4 @@ export interface CheckoutResponse {
 }
 
 // Optional multi-tenant header values
-export interface TenantHeaders {
-    restaurantId?: string;
-    locationId?: string;
-}
+export type { TenantHeaders } from "@/auth/tenantHeaders";
