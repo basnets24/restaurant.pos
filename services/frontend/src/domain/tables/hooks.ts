@@ -69,6 +69,9 @@ export function useUpdateTableLayout(id: string) {
                 },
                 // shape & version updates for immediate feedback
                 shape: dto.shape ?? t.shape,
+                number: dto.number ?? t.number,
+                section: dto.section ?? t.section,
+                seats: dto.seats ?? t.seats,
                 version: t.version + 1
               }
             : t
@@ -103,6 +106,9 @@ export function useBulkUpdateLayout() {
             position: { x: u.x, y: u.y },
             size: { width: u.width ?? t.size.width, height: u.height ?? t.size.height },
             shape: u.shape ?? t.shape,
+            number: u.number ?? t.number,
+            section: u.section ?? t.section,
+            seats: u.seats ?? t.seats,
             version: t.version + 1
           };
         });

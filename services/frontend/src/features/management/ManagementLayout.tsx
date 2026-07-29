@@ -1,130 +1,119 @@
 // src/features/management/ManagementLayout.tsx
 import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { ArrowLeft, Home, BarChart3, Users, Package, Calendar, Utensils } from "lucide-react";
+import { Utensils, Settings } from "lucide-react";
 import { useCan } from "@/auth/permissions";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CircleUserRound, User, Shield, Bell, LogOut } from "lucide-react";
-import { useAuth } from "@/api-authorization/AuthProvider";
-import { useUserDisplayName } from "@/hooks/useUserDisplayName";
-import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
+import { User, Shield, Bell } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
+import { GrowthChartIcon } from "@/components/brand-icons/report-icons";
+import { ChefIcon } from "@/components/brand-icons/staff-icons";
+import { StockroomShelfIcon } from "@/components/brand-icons/inventory-icons";
+import { TwoTopPlaceSettingIcon } from "@/components/brand-icons/table-icons";
 
-type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations";
+type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations" | "admin";
 
 const TAB_LIST: { value: ManagementTab; label: string; Icon: any }[] = [
-    { value: "analytics",    label: "Analytics",    Icon: BarChart3 },
-    { value: "staff",        label: "Staff",        Icon: Users },
-    { value: "inventory",    label: "Inventory",    Icon: Package },
+    { value: "analytics",    label: "Analytics",    Icon: GrowthChartIcon },
+    { value: "staff",        label: "Staff",        Icon: ChefIcon },
+    { value: "inventory",    label: "Inventory",    Icon: StockroomShelfIcon },
     { value: "menu",         label: "Menu",         Icon: Utensils },
-    { value: "reservations", label: "Reservations", Icon: Calendar },
+    { value: "reservations", label: "Reservations", Icon: TwoTopPlaceSettingIcon },
 ];
+
+const ADMIN_ITEM: { value: ManagementTab; label: string; Icon: any } = { value: "admin", label: "Admin", Icon: Settings };
+const ALL_TABS = [...TAB_LIST, ADMIN_ITEM];
 
 export type ManagementOutletContext = { userData: any };
 
 export default function ManagementLayout({ userData }: { userData?: any }) {
     const navigate = useNavigate();
     const { pathname } = useLocation();
-    const { signOut } = useAuth();
     const { restaurantName: nameFromTenant } = useTenantInfo();
-    const { displayName } = useUserDisplayName();
-    const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
 
     // derive the active tab from the path: /management/<tab>
     const active = (pathname.split("/")[2] as ManagementTab) ?? "analytics";
-    const isValid = TAB_LIST.some(t => t.value === active);
+    const isValid = ALL_TABS.some(t => t.value === active);
     const activeTab = isValid ? active : "analytics";
 
     const go = (to: string) => navigate(to);
     const canManageStaff = useCan("manageStaff");
-    const backToDashboard = () => navigate("/home");
-    const backToLanding = () => navigate("/home");
+
+    const coreTabs = TAB_LIST.filter(t => t.value !== "staff" || canManageStaff);
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="bg-card shadow-sm border-b border-border">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Button variant="ghost" onClick={backToDashboard} className="flex items-center gap-2">
-                                <ArrowLeft className="h-4 w-4" />
-                                Back to Dashboard
-                            </Button>
+            <AppHeader
+                title="Management Dashboard"
+                subtitle={nameFromTenant ?? userData?.restaurantName}
+                logo="RMS"
+                menuItems={[
+                    { label: "Account", icon: User, onClick: () => navigate("/settings/account") },
+                    { label: "Security", icon: Shield, onClick: () => navigate("/settings/security") },
+                    { label: "Notifications", icon: Bell, onClick: () => navigate("/settings/notifications") },
+                ]}
+            />
 
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center">
-                                    <span className="text-primary-foreground font-bold text-sm">RMS</span>
-                                </div>
-                                <div>
-                                    <h1 className="text-lg font-bold text-foreground">Management Dashboard</h1>
-                                    <p className="text-sm text-muted-foreground">{nameFromTenant ?? userData?.restaurantName}</p>
-                                </div>
-                            </div>
-                        </div>
+            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8 items-start">
+                <Tabs
+                    value={activeTab}
+                    onValueChange={(v) => go(`/management/${v}`)}
+                    orientation="vertical"
+                    className="hidden md:block w-[232px] shrink-0 sticky top-24 gap-1"
+                >
+                    <TabsList className="flex-col h-auto w-full bg-transparent p-0 gap-1 items-stretch">
+                        {coreTabs.map(({ value, label, Icon }) => (
+                            <TabsTrigger
+                                key={value}
+                                value={value}
+                                className="justify-start gap-3 px-3.5 py-3 text-base font-semibold rounded-[10px] text-muted-foreground bg-transparent shadow-none data-[state=active]:bg-brand-soft data-[state=active]:text-brand-strong data-[state=active]:shadow-none"
+                            >
+                                <Icon className="h-8 w-8 shrink-0" />
+                                {label}
+                            </TabsTrigger>
+                        ))}
 
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" onClick={backToLanding} className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-                              <Home className="h-4 w-4" />
-                              Home
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="gap-2">
-                                <CircleUserRound className="h-4 w-4" />
-                                <span className="hidden sm:inline">{displayName}</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                              <DropdownMenuLabel className="text-xs">Signed in as</DropdownMenuLabel>
-                              <div className="px-2 pb-1 text-sm truncate">{displayName}</div>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => navigate("/settings/account")}>
-                                <User className="h-4 w-4 mr-2" /> Account
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate("/settings/security")}>
-                                <Shield className="h-4 w-4 mr-2" /> Security
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => navigate("/settings/notifications")}>
-                                <Bell className="h-4 w-4 mr-2" /> Notifications
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={onLogout}>
-                                <LogOut className="h-4 w-4 mr-2" /> Logout
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            {/* Tabs bar (driven by route) */}
-            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <div className="overflow-x-auto">
-                    <Tabs value={activeTab} onValueChange={(v) => go(`/management/${v}`)} className="space-y-8">
-                        <TabsList className="w-full rounded-2xl p-2 flex items-center gap-3 overflow-x-auto">
-                            {TAB_LIST.filter(t => t.value !== "staff" || canManageStaff).map(({ value, label, Icon }) => (
+                        {canManageStaff && (
+                            <>
+                                <div className="h-px bg-border my-2 mx-1" />
                                 <TabsTrigger
-                                  key={value}
-                                  value={value}
-                                  className="flex items-center gap-2 px-6 py-3.5 text-xl flex-none"
+                                    value={ADMIN_ITEM.value}
+                                    className="justify-start gap-3 px-3.5 py-3 text-base font-semibold rounded-[10px] text-muted-foreground bg-transparent shadow-none data-[state=active]:bg-brand-soft data-[state=active]:text-brand-strong data-[state=active]:shadow-none"
                                 >
-                                    <Icon className="h-6 w-6" />
-                                    <span className="hidden sm:inline">{label}</span>
+                                    <ADMIN_ITEM.Icon className="h-8 w-8 shrink-0" />
+                                    {ADMIN_ITEM.label}
                                 </TabsTrigger>
-                            ))}
-                        </TabsList>
+                            </>
+                        )}
+                    </TabsList>
+                </Tabs>
 
-                        {/* Route content renders here */}
-                        <div className="space-y-8">
-                            <Suspense fallback={<div className="p-6 text-muted-foreground">Loading…</div>}>
-                                <Outlet context={{ userData } satisfies ManagementOutletContext} />
-                            </Suspense>
-                        </div>
-                    </Tabs>
+                {/* Mobile: horizontal scroll nav */}
+                <Tabs
+                    value={activeTab}
+                    onValueChange={(v) => go(`/management/${v}`)}
+                    className="md:hidden w-full"
+                >
+                    <TabsList className="w-full h-auto rounded-2xl p-1.5 flex items-center gap-1.5 bg-muted/50 overflow-x-auto">
+                        {(canManageStaff ? [...coreTabs, ADMIN_ITEM] : coreTabs).map(({ value, label, Icon }) => (
+                            <TabsTrigger
+                                key={value}
+                                value={value}
+                                className="flex items-center gap-2.5 px-5 py-2.5 text-base font-medium flex-none data-[state=active]:shadow-sm"
+                            >
+                                <Icon className="h-6 w-6 shrink-0" />
+                                <span className="hidden sm:inline">{label}</span>
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
+
+                {/* Route content renders here */}
+                <div className="flex-1 min-w-0">
+                    <Suspense fallback={<div className="p-6 text-muted-foreground">Loading…</div>}>
+                        <Outlet context={{ userData } satisfies ManagementOutletContext} />
+                    </Suspense>
                 </div>
             </div>
         </div>

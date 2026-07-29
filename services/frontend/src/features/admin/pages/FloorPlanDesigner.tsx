@@ -17,9 +17,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FloorPlanGridIcon, RectangleTableIcon, RoundTableIcon, SquareTableIcon } from "@/components/brand-icons/table-icons";
+import { SectionSigns, shapeRadiusClass, STATUS_STYLE, StatusLegend, countByStatus } from "@/components/floor-plan/floorVisuals";
 
 import { Plus, Save, UploadCloud, Undo2, Redo2, Trash2, Play } from "lucide-react";
 
@@ -31,6 +32,12 @@ type DraftTable = TableViewDto & {
   isNew?: boolean;
   _deleted?: boolean;
 };
+
+const SHAPE_OPTIONS: { value: string; label: string; Icon: typeof RectangleTableIcon }[] = [
+  { value: "rectangle", label: "Rectangle", Icon: RectangleTableIcon },
+  { value: "square", label: "Square", Icon: SquareTableIcon },
+  { value: "round", label: "Round", Icon: RoundTableIcon },
+];
 
 export default function FloorPlanDesigner() {
   const { data, isLoading } = useTables();
@@ -49,24 +56,36 @@ export default function FloorPlanDesigner() {
 
 function ViewMode({ tables, onEdit }: { tables: TableViewDto[]; onEdit: () => void }) {
   const hasAny = tables.length > 0;
+  const counts = useMemo(() => countByStatus(tables), [tables]);
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Floor Plan</h1>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Floor Plan</h1>
+          <p className="text-sm text-muted-foreground">Design your restaurant's tables and seating layout</p>
+        </div>
         <Button onClick={onEdit}>{hasAny ? "Edit layout" : "Add first table"}</Button>
       </div>
       {!hasAny ? (
-        <Card>
-          <CardHeader>
+        <Card className="rounded-2xl">
+          <CardHeader className="items-center text-center pt-10">
+            <div className="w-16 h-16 rounded-2xl bg-brand-soft flex items-center justify-center mb-2">
+              <FloorPlanGridIcon className="h-10 w-10" />
+            </div>
             <CardTitle>No tables yet</CardTitle>
             <CardDescription>Design your restaurant floor plan to get started.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex justify-center pb-10">
             <Button onClick={onEdit}><Plus className="h-4 w-4 mr-2" />Add first table</Button>
           </CardContent>
         </Card>
       ) : (
-        <ReadOnlyCanvas tables={tables} />
+        <>
+          <ReadOnlyCanvas tables={tables} />
+          <div className="rounded-xl border border-border bg-card px-5 py-3.5">
+            <StatusLegend counts={counts} />
+          </div>
+        </>
       )}
     </div>
   );
@@ -74,18 +93,25 @@ function ViewMode({ tables, onEdit }: { tables: TableViewDto[]; onEdit: () => vo
 
 function ReadOnlyCanvas({ tables }: { tables: TableViewDto[] }) {
   return (
-    <div className="relative h-[640px] rounded-lg border bg-muted/20 overflow-hidden">
-      {tables.map((t) => (
-        <div
-          key={t.id}
-          className="absolute rounded-md border bg-white/90 shadow-sm"
-          style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${(t as any).rotation ?? 0}deg)` }}
-        >
-          <div className="text-xs px-2 py-1 opacity-70">{t.section || "Section"}</div>
-          <div className="px-2">#{t.number}</div>
-          <div className="px-2 text-xs">{t.seats} seats</div>
-        </div>
-      ))}
+    <div
+      className="relative h-[640px] rounded-2xl border border-border bg-muted overflow-hidden"
+      style={{ backgroundImage: "linear-gradient(90deg, rgba(53,25,3,.05) 1px, transparent 1px), linear-gradient(180deg, rgba(53,25,3,.05) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
+    >
+      <SectionSigns tables={tables} />
+      {tables.map((t) => {
+        const s = STATUS_STYLE[t.status] ?? STATUS_STYLE.available;
+        return (
+          <div
+            key={t.id}
+            className={`absolute border-2 shadow-sm ${s.bg} ${s.border} ${shapeRadiusClass(t.shape)}`}
+            style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${(t as any).rotation ?? 0}deg)` }}
+          >
+            <div className="text-xs px-2 py-1 text-muted-foreground">{t.section || "Section"}</div>
+            <div className="px-2 font-numeric font-semibold text-foreground">#{t.number}</div>
+            <div className="px-2 text-xs text-muted-foreground">{t.seats} seats</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -118,6 +144,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
 
   // selection helpers
   const selectedIds = useMemo(() => draft.filter(d => d.selected && !d._deleted).map(d => d.id), [draft]);
+  const counts = useMemo(() => countByStatus(draft.filter(d => !d._deleted)), [draft]);
   const pushUndo = () => setUndo((s) => [...s, structuredClone(draft)]);
 
   const mutateTable = (id: string, updater: (t: DraftTable) => DraftTable) => {
@@ -127,22 +154,29 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
   const onAddTable = () => {
     pushUndo();
     const nid = `tmp-${Date.now()}`;
-    setDraft((prev) => [
-      ...prev,
-      {
-        id: nid,
-        number: String(prev.length + 1),
-        section: "Main",
-        seats: 4,
-        shape: "rectangle",
-        status: "available",
-        position: { x: snap(32 + prev.length * 10), y: snap(32 + prev.length * 6) },
-        size: { width: 80, height: 80 },
-        version: 0,
-        isNew: true,
-        rotation: 0,
-      },
-    ]);
+    setDraft((prev) => {
+      const visible = prev.filter(t => !t._deleted);
+      const size = { width: 80, height: 80 };
+      const position = visible.length === 0
+        ? { x: snap(32), y: snap(32) }
+        : { x: snap(Math.max(...visible.map(t => t.position.x + t.size.width)) + 40), y: snap(32) };
+      return [
+        ...prev,
+        {
+          id: nid,
+          number: String(prev.length + 1),
+          section: "Main",
+          seats: 4,
+          shape: "rectangle",
+          status: "available",
+          position,
+          size,
+          version: 0,
+          isNew: true,
+          rotation: 0,
+        },
+      ];
+    });
   };
 
   const onDelete = () => {
@@ -167,7 +201,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
   const changedLayouts = (): BulkLayoutItemDto[] => {
     return draft
       .filter(d => !d.isNew && !d._deleted)
-      .map(d => ({ id: d.id, x: d.position.x, y: d.position.y, width: d.size.width, height: d.size.height, rotation: d.rotation ?? 0, shape: d.shape, version: d.version }));
+      .map(d => ({ id: d.id, x: d.position.x, y: d.position.y, width: d.size.width, height: d.size.height, rotation: d.rotation ?? 0, shape: d.shape, version: d.version, number: d.number, section: d.section, seats: d.seats }));
   };
 
   const onPublish = async () => {
@@ -350,9 +384,10 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
   const onMouseUp = () => { dragRef.current = null; setGuides({}); };
 
   const selected = draft.filter(d => d.selected && !d._deleted)[0];
+  const activeShape = selected ? (selected.shape === "circle" ? "round" : selected.shape) : null;
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="space-y-3">
       {/* Toolbar */}
       <div className="flex items-center gap-2">
         <Button variant="outline" onClick={onAddTable}><Plus className="h-4 w-4 mr-1" />Add table</Button>
@@ -366,6 +401,8 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
         <Separator orientation="vertical" className="mx-2" />
         <Button variant="outline" onClick={onUndo} disabled={undoStack.length === 0}><Undo2 className="h-4 w-4" /></Button>
         <Button variant="outline" onClick={onRedo} disabled={redoStack.length === 0}><Redo2 className="h-4 w-4" /></Button>
+        <div className="flex-1" />
+        <StatusLegend counts={counts} />
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -382,22 +419,25 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                 setZoom(z => Math.max(0.25, Math.min(2, +(z + dz).toFixed(2))));
               }
             }}
-            className="relative aspect-[16/10] max-h-[70vh] rounded-lg border overflow-hidden bg-[linear-gradient(90deg,rgba(0,0,0,.05)_1px,transparent_1px),linear-gradient(180deg,rgba(0,0,0,.05)_1px,transparent_1px)]"
-            style={{ backgroundSize: `${GRID}px ${GRID}px` }}
+            className="relative aspect-[16/10] max-h-[70vh] rounded-2xl border border-border overflow-hidden bg-muted"
+            style={{ backgroundImage: "linear-gradient(90deg,rgba(53,25,3,.06) 1px,transparent 1px),linear-gradient(180deg,rgba(53,25,3,.06) 1px,transparent 1px)", backgroundSize: `${GRID}px ${GRID}px` }}
           >
             <div className="absolute inset-0" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
-              {draft.filter(d => !d._deleted).map((t) => (
+              <SectionSigns tables={draft.filter(d => !d._deleted)} />
+              {draft.filter(d => !d._deleted).map((t) => {
+                const s = STATUS_STYLE[t.status] ?? STATUS_STYLE.available;
+                return (
                 <div
                   key={t.id}
-                  className={`absolute rounded-md border shadow-sm cursor-move ${t.selected ? "ring-2 ring-primary" : ""}`}
+                  className={`absolute border-2 shadow-sm cursor-move ${s.bg} ${s.border} ${shapeRadiusClass(t.shape)} ${t.selected ? "ring-2 ring-primary ring-offset-1" : ""}`}
                   style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${t.rotation ?? 0}deg)` }}
                   onMouseDown={(e) => onMouseDown(e, t.id)}
                 >
-                  <div className="text-[10px] px-1 py-0.5 opacity-70">{t.section || "Section"}</div>
-                  <div className="px-1 text-sm font-medium">#{t.number}</div>
-                  <div className="px-1 text-[10px]">{t.seats} seats</div>
-                  {t.isNew && <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] px-1 rounded">new</div>}
-                  {t._deleted && <div className="absolute inset-0 bg-red-500/10" />}
+                  <div className="text-[10px] px-1 py-0.5 text-muted-foreground">{t.section || "Section"}</div>
+                  <div className="px-1 text-sm font-numeric font-semibold text-foreground">#{t.number}</div>
+                  <div className="px-1 text-[10px] text-muted-foreground">{t.seats} seats</div>
+                  {t.isNew && <div className="absolute -top-2 -right-2 bg-status-reserved text-white text-[10px] px-1 rounded">new</div>}
+                  {t._deleted && <div className="absolute inset-0 bg-destructive/10" />}
 
                   {/* Resize handles on selection */}
                   {t.selected && (
@@ -417,7 +457,8 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                     </>
                   )}
                 </div>
-              ))}
+                );
+              })}
               {/* Guides */}
               {guides.vx?.map((x, i) => (
                 <div key={`vx-${i}`} className="absolute top-0 bottom-0 w-px bg-primary/50" style={{ left: x }} />
@@ -431,7 +472,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
 
         {/* Inspector */}
         <div className="col-span-4">
-          <Card>
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle>Inspector</CardTitle>
               <CardDescription>Edit selected table properties</CardDescription>
@@ -450,22 +491,33 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                       <label className="text-xs">Seats</label>
                       <Input type="number" min={1} value={selected.seats} onChange={(e) => mutateTable(selected.id, t => ({ ...t, seats: Math.max(1, parseInt(e.target.value || "1")) }))} />
                     </div>
-                    <div>
+                    <div className="col-span-2">
                       <label className="text-xs">Section</label>
                       <Input value={selected.section ?? ""} onChange={(e) => mutateTable(selected.id, t => ({ ...t, section: e.target.value || null }))} />
                     </div>
-                    <div>
-                      <label className="text-xs">Shape</label>
-                      <Select value={selected.shape} onValueChange={(v) => mutateTable(selected.id, t => ({ ...t, shape: v }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="rectangle">Rectangle</SelectItem>
-                          <SelectItem value="square">Square</SelectItem>
-                          <SelectItem value="circle">Circle</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs mb-1.5 block">Shape</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {SHAPE_OPTIONS.map(({ value, label, Icon }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => mutateTable(selected.id, t => ({ ...t, shape: value }))}
+                          className={`flex flex-col items-center gap-1 rounded-xl border py-2.5 transition-colors ${
+                            activeShape === value
+                              ? "border-brand bg-brand-soft text-brand-strong"
+                              : "border-border bg-card text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Icon className="h-8 w-8" />
+                          <span className="text-[11px] font-medium">{label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
+
                   <Separator />
                   <div className="grid grid-cols-3 gap-2">
                     <div>
@@ -490,7 +542,13 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
                     </div>
                   </div>
                   <Separator />
-                  <div className="text-xs text-muted-foreground">Status preview: {selected.status}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Status preview</span>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[selected.status].bg}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${STATUS_STYLE[selected.status].dot}`} />
+                      {STATUS_STYLE[selected.status].label}
+                    </span>
+                  </div>
                 </>
               )}
             </CardContent>

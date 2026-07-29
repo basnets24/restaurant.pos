@@ -182,7 +182,7 @@ export default function JoinPage() {
         <p className="text-muted-foreground mt-1">Create a new restaurant or join an existing one.</p>
 
         {error && (
-          <div className="mt-4 p-3 rounded-md border border-red-300 text-red-700 bg-red-50">
+          <div className="mt-4 p-3 rounded-md border border-destructive/30 text-destructive bg-destructive/10">
             {error}
           </div>
         )}

@@ -184,7 +184,7 @@ export default function AccountPage() {
             <ModalTitle>Edit Profile</ModalTitle>
           </ModalHeader>
           <div className="grid gap-3 py-2">
-            {editError && <div className="text-sm text-red-600">{editError}</div>}
+            {editError && <div className="text-sm text-destructive">{editError}</div>}
             <label className="text-xs">User name</label>
             <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)} />
             <label className="text-xs">Display name</label>

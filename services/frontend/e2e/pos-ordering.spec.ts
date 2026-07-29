@@ -5,11 +5,15 @@ test("place an order from the POS floor plan through to order placed", async ({ 
 
   await page.goto("/pos/tables");
 
-  // TableNode (TablesPage.tsx) renders "{section} #{number} {seats} seats" as
-  // one button whose accessible name concatenates all three. No data-testid
-  // exists on this screen, so match by text — exact table number, since
-  // leftover tables from previous runs of this suite aren't cleaned up.
-  await page.getByRole("button", { name: `Main #${tableNumber} 2 seats` }).click();
+  // TableMark (TablesPage.tsx) renders just the number + seat count, no
+  // data-testid, so match on the `data-table` marker plus the exact table
+  // number text — leftover tables from previous runs of this suite aren't
+  // cleaned up, so an exact, unique number is required.
+  await page.locator("[data-table]", { hasText: tableNumber }).click();
+
+  // Clicking a table opens the TableActionDialog rather than navigating
+  // straight to the menu; seating the party is what actually takes you there.
+  await page.getByRole("button", { name: "Seat Party" }).click();
   await page.waitForURL(/\/pos\/table\/.+\/menu/, { timeout: 15000 });
 
   // Scope to the seeded item's own card (menu-item-card) so this doesn't
@@ -23,11 +27,14 @@ test("place an order from the POS floor plan through to order placed", async ({ 
   // the stable signal that the add-to-cart call actually succeeded.
   await expect(page.getByRole("heading", { name: menuItemName, level: 4 })).toBeVisible({ timeout: 15000 });
 
-  // OrderSideBar's checkout button (bound to MenuPage.handleCheckout) fires the
-  // order to the kitchen and navigates to SuccessView — this is the "order
-  // placed" boundary; paying for the order is a separate, later step on
-  // OrderPage and is covered by payment.spec.ts instead.
+  // Checkout is gated behind firing the order to the kitchen — the sidebar
+  // disables it until "Fire to Kitchen" has been pressed, so fire first.
+  await page.getByRole("button", { name: /Fire to Kitchen/ }).click();
+
+  // OrderSideBar's checkout button (bound to MenuPage.handleCheckout) creates the
+  // order and opens the inline payment dialog — the dialog's "Pay Now" button
+  // appearing is the "order placed" boundary. Actually paying (the Stripe
+  // PaymentElement step) is covered separately by payment.spec.ts.
   await page.getByRole("button", { name: /^Checkout/ }).click();
-  await page.waitForURL(/\/checkout\/success/, { timeout: 15000 });
-  await expect(page.getByRole("heading", { name: "Order Placed" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Pay Now/i })).toBeVisible({ timeout: 15000 });
 });

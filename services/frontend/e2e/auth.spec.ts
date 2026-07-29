@@ -19,6 +19,8 @@ test("authenticated session reaches protected POS content", async ({ page }) => 
   // Uses the "chromium" project's default storageState — the login performed
   // once by auth.setup.ts. Reaching real POS content (not a login redirect)
   // is the observable proof that login succeeded and the session persists.
+  // TablesPage (floor canvas) has no page heading — the "Fit" zoom-control
+  // button is always rendered regardless of whether the tenant has tables yet.
   await page.goto("/pos/tables");
-  await expect(page.getByRole("heading", { name: "Restaurant Floor Plan" })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: "Fit" })).toBeVisible({ timeout: 15000 });
 });
