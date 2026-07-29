@@ -13,7 +13,7 @@ import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provide
 import { createEmployeeApi } from "@/domain/employee";
 import { getApiToken } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 
 export default function JoinPage() {
   const { profile, signOut } = useAuth();

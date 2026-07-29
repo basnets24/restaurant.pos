@@ -4,7 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { AuthorizationPaths, QueryParameterNames } from './ApiAuthorizationConstants';
 import { useAuth } from './AuthProvider';
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { UnauthorizedError } from "@/domain/restaurantUserProfile/api";
 
 type Props = React.PropsWithChildren<{ roles?: string[] }>;

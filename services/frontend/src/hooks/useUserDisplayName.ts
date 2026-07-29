@@ -1,5 +1,5 @@
 import { useAuth } from "@/api-authorization/AuthProvider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import type { EmployeeDetailDto } from "@/domain/employee/api";
 

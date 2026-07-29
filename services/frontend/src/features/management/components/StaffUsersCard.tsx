@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useAuth } from "@/api-authorization/AuthProvider";

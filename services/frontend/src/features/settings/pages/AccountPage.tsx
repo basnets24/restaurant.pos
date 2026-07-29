@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { Badge } from "@/components/ui/badge";

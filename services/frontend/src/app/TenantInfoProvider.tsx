@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import { useTenant } from "./TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useTenantDomain } from "@/domain/tenant/Provider";
 
 type TenantInfo = {

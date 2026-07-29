@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useOrders } from "@/domain/orders/hooks";
 import { useTables } from "@/domain/tables/hooks";
 import type { OrderDto, TenantHeaders } from "@/domain/orders/types";

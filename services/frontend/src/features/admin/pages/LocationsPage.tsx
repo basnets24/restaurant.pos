@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin } from "lucide-react";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useTenantDomain } from "@/domain/tenant/Provider";
 import { useAuth } from "@/api-authorization/AuthProvider";

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTables, useSeat, useSetTableStatus, useClear } from "@/domain/tables/hooks";
 import { useFloorHub } from "@/domain/tables/realtime";
 import { useAuth } from "@/api-authorization/AuthProvider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { TableViewDto, TableStatus } from "@/domain/tables/types";

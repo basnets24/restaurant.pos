@@ -19,7 +19,7 @@ import { FloorsOrdersIcon, ManagementHubIcon } from "@/components/brand-icons/se
 // Data hooks
 import { useTables as useDomainTables } from "@/domain/tables/hooks";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
