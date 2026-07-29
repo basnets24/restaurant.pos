@@ -21,17 +21,41 @@ export interface CartItemDto {
     notes?: string | null;
 }
 
-// Pricing detail objects come from OrderService.Pricing.*.
-// If you have their exact shapes, replace the `any` types below.
+// Pricing detail objects mirror OrderService.Pricing.Contracts.cs records.
+export interface AppliedDiscount {
+    id: string;
+    name: string;
+    percent?: number | null;
+    amount?: number | null;
+    scope: string; // "Line" | "Order"
+}
+
+export interface ServiceCharge {
+    id: string;
+    name: string;
+    percent?: number | null;
+    amount?: number | null;
+    taxable: boolean;
+    scope: string; // "Line" | "Order"
+}
+
+export interface AppliedTax {
+    id: string;
+    name: string;
+    ratePercent?: number | null;
+    amount?: number | null;
+    scope: string; // "Line" | "Order"
+}
+
 export interface CartEstimateDto {
     subtotal: number;
     discountTotal: number;
     serviceChargeTotal: number;
     taxTotal: number;
     grandTotal: number;
-    appliedDiscounts: any[];
-    serviceCharges: any[];
-    appliedTaxes: any[];
+    appliedDiscounts: AppliedDiscount[];
+    serviceCharges: ServiceCharge[];
+    appliedTaxes: AppliedTax[];
 }
 
 export interface CartDto {

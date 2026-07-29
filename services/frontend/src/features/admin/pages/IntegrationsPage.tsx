@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Printer, Webhook, KeyRound } from "lucide-react";
+import { CreditCard, Printer, Webhook, KeyRound, type LucideIcon } from "lucide-react";
 
-type Integration = { key: string; name: string; desc: string; status: "Connected" | "Not Connected" | "Partial"; Icon: any };
+type Integration = { key: string; name: string; desc: string; status: "Connected" | "Not Connected" | "Partial"; Icon: LucideIcon };
 
 const INTEGRATIONS: Integration[] = [
   { key: "payments", name: "Payment Processor", desc: "Connect Stripe/Square for card payments", status: "Connected", Icon: CreditCard },

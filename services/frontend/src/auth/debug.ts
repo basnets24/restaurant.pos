@@ -1,4 +1,4 @@
-export function decodeJwt(token: string): any {
+export function decodeJwt(token: string): Record<string, unknown> | null {
   try {
     const [, payload] = token.split(".");
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
@@ -22,10 +22,10 @@ export function logToken(token: string, label = "token") {
   }
   const aud = toArray<string>(p["aud"]);
   const scopes = toArray<string>(p["scope"]);
-  const roles = toArray<string>((p as any)["role"]);
-  const rid = (p as any)["restaurant_id"] ?? (p as any)["restaurantId"];
-  const lid = (p as any)["location_id"] ?? (p as any)["locationId"];
-  const exp = (p as any)["exp"] as number | undefined;
+  const roles = toArray<string>(p["role"]);
+  const rid = p["restaurant_id"] ?? p["restaurantId"];
+  const lid = p["location_id"] ?? p["locationId"];
+  const exp = p["exp"] as number | undefined;
   const now = Math.floor(Date.now() / 1000);
   const ttl = exp ? `${Math.max(0, exp - now)}s` : "?";
 

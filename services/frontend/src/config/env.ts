@@ -8,6 +8,8 @@ declare global {
         PAYMENT_SERVICE_URL?: string;
         RABBITMQ_URL?: string;
         STRIPE_PUBLISHABLE_KEY?: string;
+        // Dev-only flag: set on window from the console to enable auth/getApiToken.ts's token logging
+        AUTH_DEBUG?: boolean;
     }
 }
 

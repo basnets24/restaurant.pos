@@ -1,11 +1,11 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from "@/components/AppHeader";
-import { User, ShieldCheck, Bell } from "lucide-react";
+import { User, ShieldCheck, Bell, type LucideIcon } from "lucide-react";
 
 type SettingsTab = "account" | "security" | "notifications";
 
-const TAB_LIST: { value: SettingsTab; label: string; Icon: any }[] = [
+const TAB_LIST: { value: SettingsTab; label: string; Icon: LucideIcon }[] = [
   { value: "account",       label: "Account",       Icon: User },
   { value: "security",      label: "Security",      Icon: ShieldCheck },
   { value: "notifications", label: "Notifications", Icon: Bell },

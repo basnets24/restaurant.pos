@@ -17,7 +17,7 @@ import { useLinkOrder, useSetTableStatus, useTable, useUnlinkOrder } from "@/dom
 import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/domain/menu/hooks";
 import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
-import { OrderSidebar } from "@/features/pos/components/OrderSideBar";
+import { OrderSidebar, type SidebarOrder, type SidebarTable } from "@/features/pos/components/OrderSideBar";
 import { CheckoutPaymentDialog } from "@/features/pos/components/CheckoutPaymentDialog";
 import {
   useCreateCart,
@@ -27,14 +27,8 @@ import {
 } from "@/domain/cart";
 import type { CartDto } from "@/domain/cart";
 import { useStore } from "@/stores";
-
-type POSMenuItem = {
-  id: string;
-  name: string;
-  price: number;
-  description?: string | null;
-  category?: string | null;
-};
+import { errorMessage, errorStatus, isAxiosError } from "@/lib/apiErrors";
+import type { MenuItem as POSMenuItem } from "@/types/pos";
 
 // Category → icon (design's MenuScreen rail); falls back to a generic glyph.
 // The food-category glyphs are illustrated brand icons — Appetizer/Main/Side/
@@ -61,8 +55,8 @@ const toPOS = (m: MenuItemDto): POSMenuItem => ({
   id: m.id,
   name: m.name,
   price: m.price,
-  description: (m as any).description ?? undefined,
-  category: (m as any).category ?? undefined,
+  description: m.description,
+  category: m.category,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,10 +154,10 @@ export default function MenuPage() {
           });
           // Proceed to link and set status below on next pass when cartId is set
           return;
-        } catch (e: any) {
+        } catch (e: unknown) {
           // 409 = table already marked in-use with a cart we can't resolve
           // (e.g. a stale phantom link). Don't silently dead-end — tell the user.
-          if (e?.response?.status === 409) {
+          if (errorStatus(e) === 409) {
             toast.error("This table already has an open order that couldn't be loaded. Clear the table to start a new one.");
           }
           return;
@@ -232,8 +226,9 @@ export default function MenuPage() {
       await qc.invalidateQueries({ queryKey: cartKeys.byId(id!) });
       setSidebarOpen(true);
       toast.success(`Added ${quantity}× ${item.name}`);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.detail || "Failed to add item");
+    } catch (e: unknown) {
+      const detail = isAxiosError<{ detail?: string }>(e) ? e.response?.data?.detail : undefined;
+      toast.error(detail || "Failed to add item");
     }
   }
 
@@ -250,8 +245,9 @@ export default function MenuPage() {
         await cartApi.removeCartItem(cartId, menuItemId);
         await cartApi.addCartItem(cartId, { menuItemId, quantity: newQty });
       }
-    } catch (e: any) {
-      toast.error(e?.response?.data?.detail || "Failed to update item");
+    } catch (e: unknown) {
+      const detail = isAxiosError<{ detail?: string }>(e) ? e.response?.data?.detail : undefined;
+      toast.error(detail || "Failed to update item");
     } finally {
       await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
     }
@@ -293,7 +289,7 @@ export default function MenuPage() {
   }
 
   // (table fetched above, near cart init)
-  const sidebarTable = useMemo(
+  const sidebarTable: SidebarTable = useMemo(
     () => ({
       id: tableId,
       number: table?.number ?? tableId,
@@ -303,7 +299,7 @@ export default function MenuPage() {
     [tableId, table?.number, table?.section, location.state?.partySize]
   );
 
-  const sidebarOrder = mapCartToSidebarOrder(cart);
+  const sidebarOrder: SidebarOrder | null = mapCartToSidebarOrder(cart);
 
   // Navigation Guard: ask to release table if linked but no items
   // Consider table linked if we have a cart id OR server indicates active cart OR table is occupied
@@ -407,7 +403,7 @@ export default function MenuPage() {
           ) : shown.length > 0 ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-5 lg:gap-6">
               {shown.map((m) => (
-                <MenuItemCard key={m.id} item={toPOS(m) as any} onAddToOrder={handleAddToOrder} />
+                <MenuItemCard key={m.id} item={toPOS(m)} onAddToOrder={handleAddToOrder} />
               ))}
             </div>
           ) : (
@@ -425,8 +421,8 @@ export default function MenuPage() {
 
       {/* Fixed Sidebar (desktop) / Sheet (mobile) */}
       <OrderSidebar
-        order={sidebarOrder as any}
-        table={sidebarTable as any}
+        order={sidebarOrder}
+        table={sidebarTable}
         isOpen={sidebarOpen}
         isMobile={false}
         onClose={() => setSidebarOpen(false)}
@@ -506,10 +502,10 @@ export default function MenuPage() {
               onClick={async () => {
                 if (cartId) {
                   try { await unlinkOrder.mutateAsync(cartId); }
-                  catch (e: any) { toast.error(e?.message || "Failed to unlink order"); }
+                  catch (e: unknown) { toast.error(errorMessage(e) || "Failed to unlink order"); }
                 }
                 try { await setTableStatus.mutateAsync({ status: "available" }); }
-                catch (e: any) { toast.error(e?.message || "Failed to set table available"); }
+                catch (e: unknown) { toast.error(errorMessage(e) || "Failed to set table available"); }
                 store.clearTableSession(tableId);
                 toast.success("Table released");
                 const b = blockerRef.current;

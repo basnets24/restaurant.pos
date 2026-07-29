@@ -6,6 +6,7 @@ import { useAuth } from './AuthProvider';
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { useTenant } from "@/auth/tenant";
 import { UnauthorizedError } from "@/domain/restaurantUserProfile/api";
+import { errorStatus } from "@/lib/apiErrors";
 
 type Props = React.PropsWithChildren<{ roles?: string[] }>;
 
@@ -30,7 +31,7 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
     if (loc.pathname !== "/join") {
         if (isLoading) return null;
         if (error) {
-            const statusCode = (error as any)?.status ?? (error as any)?.response?.status;
+            const statusCode = errorStatus(error);
             // If onboarding status call returns 401 while authenticated, treat it as not onboarded
             // and send to onboarding instead of bouncing to login (avoids loops).
             if (statusCode === 401) {

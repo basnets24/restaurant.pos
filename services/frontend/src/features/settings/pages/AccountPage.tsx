@@ -10,6 +10,7 @@ import { Dialog as Modal, DialogContent as ModalContent, DialogHeader as ModalHe
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function AccountPage() {
   const { profile } = useAuth();
@@ -55,8 +56,8 @@ export default function AccountPage() {
         accessCode: editAccessCode || null,
       });
       setEditOpen(false);
-    } catch (e: any) {
-      setEditError(e?.message ?? "Failed to update profile");
+    } catch (e: unknown) {
+      setEditError(errorMessage(e) ?? "Failed to update profile");
     }
   };
   const display = useMemo(() => {
@@ -216,7 +217,7 @@ function DisplayNameEditor({ valueFromDetail, onSave }: { valueFromDetail: strin
   const submit = async () => {
     setMsg(undefined); setSaving(true);
     try { await onSave(name.trim()); setMsg("Saved."); }
-    catch (e: any) { setMsg(e?.message ?? "Failed to save"); }
+    catch (e: unknown) { setMsg(errorMessage(e) ?? "Failed to save"); }
     finally { setSaving(false); }
   };
   return (

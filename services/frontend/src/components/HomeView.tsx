@@ -68,14 +68,13 @@ const NOTIFICATION_ICON_COLOR: Record<NotificationVariant, string> = {
 
 export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const navigate = useNavigate();
-    const { profile } = useAuth();
 
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
     hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
 
     const { restaurantName: nameFromTenant, locations } = useTenantInfo();
-    const restaurantName = nameFromTenant || (profile?.["restaurant_name"] as string) || "Your Restaurant";
+    const restaurantName = nameFromTenant || "Your Restaurant";
     const locationLabel =
         (locations?.find((l) => l.id === lid) ?? locations?.find((l) => l.isActive) ?? locations?.[0])?.name ?? "";
 
@@ -88,7 +87,7 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const stats = useMemo(() => {
         const list = tablesData ?? [];
         const total = list.length;
-        const occupied = list.filter((t: any) => t.status === "occupied").length;
+        const occupied = list.filter((t) => t.status === "occupied").length;
         const capacityPct = total ? Math.round((occupied / total) * 100) : 0;
         return { total, occupied, capacityText: `${capacityPct}% capacity` };
     }, [tablesData]);

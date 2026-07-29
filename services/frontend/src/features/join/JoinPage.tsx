@@ -14,6 +14,7 @@ import { createEmployeeApi } from "@/domain/employee";
 import { getApiToken } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
 import { useTenant } from "@/auth/tenant";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function JoinPage() {
   const { profile, signOut } = useAuth();
@@ -21,7 +22,7 @@ export default function JoinPage() {
   const { rid, lid, setRid, setLid } = useTenant();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const alreadyOnboarded = useMemo(() => !!((profile as any)?.restaurant_id ?? (profile as any)?.restaurantId), [profile]);
+  const alreadyOnboarded = useMemo(() => !!(profile?.restaurant_id ?? profile?.restaurantId), [profile]);
 
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -33,10 +34,10 @@ export default function JoinPage() {
   const [error, setError] = useState<string | undefined>();
 
   const displayName =
-    (profile as any)?.name ||
-    [(profile as any)?.given_name, (profile as any)?.family_name].filter(Boolean).join(" ") ||
-    (profile as any)?.preferred_username ||
-    (profile as any)?.email ||
+    profile?.name ||
+    [profile?.given_name, profile?.family_name].filter(Boolean).join(" ") ||
+    profile?.preferred_username ||
+    profile?.email ||
     "User";
   const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
 
@@ -61,13 +62,13 @@ export default function JoinPage() {
       if (displayNameInput.trim()) {
         try {
           const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
-          const userId = (profile as any)?.sub as string | undefined;
+          const userId = profile?.sub;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
         } catch (e) { console.warn("JoinPage: failed to set display name after onboarding", e); }
       }
       navigate("/home", { replace: true });
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to create restaurant");
+    } catch (err: unknown) {
+      setError(errorMessage(err) ?? "Failed to create restaurant");
     } finally { setCreating(false); }
   };
 
@@ -84,13 +85,13 @@ export default function JoinPage() {
       if (displayNameInput.trim()) {
         try {
           const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
-          const userId = (profile as any)?.sub as string | undefined;
+          const userId = profile?.sub;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
         } catch (e) { console.warn("JoinPage: failed to set display name after joining", e); }
       }
       navigate("/home", { replace: true });
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to join restaurant");
+    } catch (err: unknown) {
+      setError(errorMessage(err) ?? "Failed to join restaurant");
     } finally { setJoining(false); }
   };
 

@@ -13,10 +13,11 @@ import type {
   UpdateLocationDto,
 } from "./api";
 import { tenantKeys } from "./keys";
+import { errorStatus } from "@/lib/apiErrors";
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
-  if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) return false;
+  const status = errorStatus(error);
+  if (typeof status === "number" && status >= 400 && status < 500) return false;
   return failureCount < 2;
 }
 
@@ -63,7 +64,7 @@ export function createTenantHooks(api: TenantApi) {
       ...options,
       onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: tenantKeys.detail(restaurantId) });
-        options?.onSuccess?.(data, vars, onMutateResult, ctx as any);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -80,7 +81,7 @@ export function createTenantHooks(api: TenantApi) {
       ...options,
       onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: tenantKeys.detail(restaurantId) });
-        options?.onSuccess?.(data, vars, onMutateResult, ctx as any);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }

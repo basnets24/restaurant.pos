@@ -16,11 +16,7 @@ export default function InventoryStockCard() {
     const { data, isLoading } = useInventoryItems();
     const canWrite = useCan("inventoryWrite");
 
-    const items: InventoryItemDto[] = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.items)
-            ? ((data as any).items as InventoryItemDto[])
-            : [];
+    const items: InventoryItemDto[] = data ?? [];
 
     const updateMut = useUpdateInventoryItem();
     const adjustMut = useAdjustInventoryQuantity();

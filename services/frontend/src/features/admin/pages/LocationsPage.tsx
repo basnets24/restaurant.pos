@@ -11,6 +11,7 @@ import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useTenantDomain } from "@/domain/tenant/Provider";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function LocationsPage() {
   const { rid } = useTenant();
@@ -19,7 +20,7 @@ export default function LocationsPage() {
   const { profile } = useAuth();
   const rp = useRestaurantUserProfile();
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
-  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canManage = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
@@ -48,8 +49,8 @@ export default function LocationsPage() {
       setName("");
       setTimeZoneId("");
       setOpen(false);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to create location");
+    } catch (e: unknown) {
+      setError(errorMessage(e) ?? "Failed to create location");
     }
   };
 
@@ -113,8 +114,8 @@ export default function LocationsPage() {
                             try {
                               await update.mutateAsync({ name: editName.trim(), isActive: editActive, timeZoneId: editTz || null });
                               setEditingId(null);
-                            } catch (e: any) {
-                              setEditError(e?.message ?? "Failed to update location");
+                            } catch (e: unknown) {
+                              setEditError(errorMessage(e) ?? "Failed to update location");
                             }
                           }}
                           disabled={update.isPending}

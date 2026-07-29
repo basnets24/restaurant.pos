@@ -23,6 +23,7 @@ import { FloorPlanGridIcon, RectangleTableIcon, RoundTableIcon, SquareTableIcon 
 import { SectionSigns, shapeRadiusClass, STATUS_STYLE, StatusLegend, countByStatus } from "@/components/floor-plan/floorVisuals";
 
 import { Plus, Save, UploadCloud, Undo2, Redo2, Trash2, Play } from "lucide-react";
+import { errorStatus } from "@/lib/apiErrors";
 
 type Mode = "view" | "edit";
 
@@ -44,11 +45,7 @@ export default function FloorPlanDesigner() {
   const [mode, setMode] = useState<Mode>("view");
 
   if (isLoading) return <div className="p-6">Loading…</div>;
-  const tables: TableViewDto[] = Array.isArray(data)
-    ? (data as TableViewDto[])
-    : Array.isArray((data as any)?.items)
-      ? ((data as any).items as TableViewDto[])
-      : [];
+  const tables: TableViewDto[] = data ?? [];
 
   if (mode === "view") return <ViewMode tables={tables} onEdit={() => setMode("edit")} />;
   return <EditMode initial={tables} onExit={() => setMode("view")} />;
@@ -104,7 +101,7 @@ function ReadOnlyCanvas({ tables }: { tables: TableViewDto[] }) {
           <div
             key={t.id}
             className={`absolute border-2 shadow-sm ${s.bg} ${s.border} ${shapeRadiusClass(t.shape)}`}
-            style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height, transform: `rotate(${(t as any).rotation ?? 0}deg)` }}
+            style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height }}
           >
             <div className="text-xs px-2 py-1 text-muted-foreground">{t.section || "Section"}</div>
             <div className="px-2 font-numeric font-semibold text-foreground">#{t.number}</div>
@@ -122,7 +119,7 @@ const snap = (v: number) => Math.round(v / GRID) * GRID;
 function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => void }) {
   const qc = useQueryClient();
   const { profile } = useAuth();
-  const rolesRaw = (profile as any)?.role as string | string[] | undefined;
+  const rolesRaw = profile?.role;
   const roles = Array.isArray(rolesRaw) ? rolesRaw : rolesRaw ? [rolesRaw] : [];
   const canPublish = roles.includes("Admin") || roles.includes("Manager");
 
@@ -230,8 +227,8 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
       toast.success("Layout published");
       qc.invalidateQueries({ queryKey: tableKeys.all });
       onExit();
-    } catch (e: any) {
-      if (e?.response?.status === 409) {
+    } catch (e: unknown) {
+      if (errorStatus(e) === 409) {
         setConflictOpen(true);
       } else {
         toast.error("Failed to publish layout");
@@ -338,7 +335,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
         mutateTable(dm.id, (t) => ({ ...t, position: { x: nx, y: ny } }));
       }
       // Alignment guides
-      const moving = draft.find(d => d.id === (dm as any).id);
+      const moving = draft.find(d => d.id === dm.id);
       if (moving) {
         const edges = { l: nx, r: nx + moving.size.width, t: ny, b: ny + moving.size.height, cx: nx + moving.size.width / 2, cy: ny + moving.size.height / 2 };
         const vx: number[] = []; const hy: number[] = [];

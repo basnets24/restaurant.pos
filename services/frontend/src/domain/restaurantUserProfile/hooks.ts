@@ -15,10 +15,11 @@ import type {
   JoinRestaurantReq,
   MyJoinCodeRes,
 } from "./types";
+import { errorStatus } from "@/lib/apiErrors";
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
-  if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) {
+  const status = errorStatus(error);
+  if (typeof status === "number" && status >= 400 && status < 500) {
     return false; // don't retry on 4xx
   }
   return failureCount < 2;

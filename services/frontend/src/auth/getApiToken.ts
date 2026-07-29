@@ -2,6 +2,7 @@ import { userManager, BASE_ID_SCOPES } from "@/api-authorization/oidc";
 import { addGrantedScopes } from "./permissions";
 import { logToken } from "./debug";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
+import { errorMessage } from "@/lib/apiErrors";
 
 type Audience = "Tenant" | "Catalog" | "Order" | "Payment" | "IdentityServerApi";
 
@@ -38,8 +39,8 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   let user: Awaited<ReturnType<typeof userManager.signinSilent>> | null = null;
   try {
     user = await userManager.signinSilent({ scope });
-  } catch (err: any) {
-    const msg = String(err?.message || err || "signinSilent failed").toLowerCase();
+  } catch (err: unknown) {
+    const msg = String(errorMessage(err) || err || "signinSilent failed").toLowerCase();
     // If the OP requires interactive login, send user to login preserving returnUrl
     if (msg.includes("login_required") || msg.includes("consent_required") || msg.includes("interaction_required")) {
       const returnUrl = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -61,7 +62,7 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   // merge granted scopes into the accumulator so permission checks update
   addGrantedScopes(neededScopes);
 
-  if (import.meta.env.DEV && (window as any)?.AUTH_DEBUG) {
+  if (import.meta.env.DEV && window.AUTH_DEBUG) {
     logToken(token, `scoped token (scopes=${neededScopes.join(" ")})`);
   }
 

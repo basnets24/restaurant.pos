@@ -55,3 +55,21 @@ export function toApiError(e: unknown): Error {
   }
   return e instanceof Error ? e : new Error(String(e));
 }
+
+/** `.message` off a caught `unknown`, for `Error`/`DOMException`/axios errors alike. */
+export function errorMessage(e: unknown): string | undefined {
+  return e instanceof Error || e instanceof DOMException ? e.message : undefined;
+}
+
+/** `.name` off a caught `unknown` (e.g. to detect `AbortError`). */
+export function errorName(e: unknown): string | undefined {
+  return e instanceof Error || e instanceof DOMException ? e.name : undefined;
+}
+
+/** HTTP status off a caught `unknown` — checks both `ApiError.status` and a raw axios `.response.status`. */
+export function errorStatus(e: unknown): number | undefined {
+  if (typeof e !== "object" || e === null) return undefined;
+  const status = (e as { status?: unknown }).status
+    ?? (e as { response?: { status?: unknown } }).response?.status;
+  return typeof status === "number" ? status : undefined;
+}

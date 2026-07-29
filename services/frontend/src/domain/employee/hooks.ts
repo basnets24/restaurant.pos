@@ -16,10 +16,11 @@ import type {
   UserUpdateDto,
 } from "./api";
 import { employeeKeys } from "./keys";
+import { errorStatus } from "@/lib/apiErrors";
 
 // Conservative retry: don't retry 4xx; retry 2x otherwise
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  const status = (error as any)?.status ?? (error as any)?.response?.status;
+  const status = errorStatus(error);
   if (typeof status === "number" && status >= 400 && status < 500) return false; // don't retry 4xx
   return failureCount < 2; // retry up to 2 times otherwise
 }
