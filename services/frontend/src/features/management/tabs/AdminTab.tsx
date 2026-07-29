@@ -1,9 +1,10 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Building2, Grid3x3, Shield, MapPin, Plug } from "lucide-react";
+import { Building2, Shield, MapPin, Plug } from "lucide-react";
+import { FloorPlanGridIcon } from "@/components/brand-icons/table-icons";
 
 const SUB_NAV = [
     { to: "organization", label: "Organization",        icon: Building2 },
-    { to: "floor-plan",   label: "Floor Plan",          icon: Grid3x3 },
+    { to: "floor-plan",   label: "Floor Plan",          icon: FloorPlanGridIcon },
     { to: "roles",        label: "Roles & Permissions", icon: Shield },
     { to: "locations",    label: "Locations",           icon: MapPin },
     { to: "integrations", label: "Integrations",        icon: Plug },
