@@ -12,6 +12,7 @@ import type { AppProfile, SignInState } from "@/auth/types";
 type AuthState = {
     isReady: boolean;
     isAuthenticated: boolean;
+    isSigningOut: boolean;
     accessToken?: string;
     profile?: AppProfile;
     signIn: (returnUrl?: string) => Promise<void>;
@@ -29,6 +30,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const [profile, setProfile] = useState<AppProfile>();
     const [accessToken, setAccessToken] = useState<string>();
     const lastSubRef = useRef<string | undefined>(undefined);
+    // signoutRedirect() clears the local user (firing onUnloaded -> isAuthenticated=false)
+    // *before* it navigates the browser away to the IdP. Without this flag, ProtectedRoute
+    // reacts to that transient unauthenticated state while still on the page and kicks off
+    // its own auto re-login redirect, which races the real sign-out redirect and can pre-empt
+    // it - leaving the IdP session alive while the app thinks it's logged out.
+    const isSigningOutRef = useRef(false);
 
     // small helper to sync local state from a User
     const setFromUser = (u: User | null | undefined) => {
@@ -164,6 +171,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     const signOut = async (returnUrl?: string) => {
+        // Set before anything else: signoutRedirect() removes the local user (and thus
+        // flips isAuthenticated to false) before it navigates away, so this must already
+        // be true by the time that happens - see isSigningOutRef's declaration comment.
+        isSigningOutRef.current = true;
         // Signal to the next login attempt to skip silent once
         try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch (e) { console.warn("AuthProvider: failed to set skipSilentOnce flag", e); }
         await userManager.signoutRedirect({
@@ -204,6 +215,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         () => ({
             isReady,
             isAuthenticated,
+            // Read fresh on every recompute rather than tracked as a dep: what matters is
+            // that it's already true by the time isAuthenticated flips to false on sign-out
+            // (see isSigningOutRef's declaration comment), and that recompute is triggered
+            // by the isAuthenticated dependency below.
+            isSigningOut: isSigningOutRef.current,
             accessToken,
             profile,
             signIn,

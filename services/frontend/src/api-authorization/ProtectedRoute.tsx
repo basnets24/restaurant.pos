@@ -11,7 +11,7 @@ import { errorStatus } from "@/lib/apiErrors";
 type Props = React.PropsWithChildren<{ roles?: string[] }>;
 
 export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
-    const { isReady, isAuthenticated, profile } = useAuth();
+    const { isReady, isAuthenticated, isSigningOut, profile } = useAuth();
     const loc = useLocation();
     const returnUrl = `${window.location.origin}${loc.pathname}${loc.search}${loc.hash}`;
     const loginUrl = `${AuthorizationPaths.Login}?${QueryParameterNames.ReturnUrl}=${encodeURIComponent(returnUrl)}`;
@@ -26,6 +26,11 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
 
     // Now branch based on state
     if (!isReady) return null;
+    // signOut() clears the local user (isAuthenticated -> false) before the browser actually
+    // navigates away to the IdP's sign-out endpoint. Redirecting to login here would race that
+    // real redirect and can pre-empt it, leaving the IdP session alive while the app thinks
+    // it's logged out (a later "Log In" click then silently re-authenticates the old user).
+    if (isSigningOut) return null;
     if (!isAuthenticated) return <Navigate to={loginUrl} replace />;
 
     if (loc.pathname !== "/join") {

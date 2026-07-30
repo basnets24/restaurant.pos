@@ -39,7 +39,7 @@ export default function JoinPage() {
     profile?.preferred_username ||
     profile?.email ||
     "User";
-  const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
+  const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.LoggedOut}`);
 
   useEffect(() => {
     const prefill = params.get("code");

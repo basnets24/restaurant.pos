@@ -71,7 +71,7 @@ export function AppHeader({
   const { displayName } = useUserDisplayName();
   const userInitial = (displayName?.trim()?.[0] ?? "U").toUpperCase();
   const onLogout = () =>
-    void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
+    void signOut(`${window.location.origin}${AuthorizationPaths.LoggedOut}`);
 
   return (
     <header
