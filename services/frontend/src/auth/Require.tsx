@@ -8,8 +8,6 @@ type PermissionKey =
   | "menuWrite"
   | "orderRead"
   | "orderWrite"
-  | "inventoryRead"
-  | "inventoryWrite"
   | "paymentCharge"
   | "paymentRefund";
 
@@ -32,8 +30,6 @@ export function Require({ anyOf, check, fallback = null, children }: RequireProp
     menuWrite: useCan("menuWrite"),
     orderRead: useCan("orderRead"),
     orderWrite: useCan("orderWrite"),
-    inventoryRead: useCan("inventoryRead"),
-    inventoryWrite: useCan("inventoryWrite"),
     paymentCharge: useCan("paymentCharge"),
     paymentRefund: useCan("paymentRefund"),
   };

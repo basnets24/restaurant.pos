@@ -14,12 +14,12 @@ export interface SeededPosData {
  * Creates one dining table and one available, in-stock menu item via direct
  * API calls (not by clicking through FloorPlanDesigner/MenuTab, which have no
  * data-testid selectors and aren't the flow under test). Getting the menu
- * item to a state where it can actually be added to a cart takes three calls,
+ * item to a state where it can actually be added to a cart takes two calls,
  * not one — see the comments below — because CatalogService.MenuItemsController
  * .PostAsync creates new items unavailable with zero stock, and OrderService's
  * CartService.AddItemAsync (services/order/src/OrderService/Services/CartService.cs)
- * rejects add-to-cart unless both menu- and inventory-availability are true
- * and stock covers the requested quantity.
+ * rejects add-to-cart unless the item is available and stock covers the
+ * requested quantity.
  */
 export async function seedTableAndMenuItem(request: APIRequestContext): Promise<SeededPosData> {
   // Random component, not just Date.now(): two spec files seeding concurrently
@@ -72,43 +72,16 @@ export async function seedTableAndMenuItem(request: APIRequestContext): Promise<
   }
   const menuItem = (await menuItemResponse.json()) as { id: string };
 
-  // Mark it available — publishes MenuItemUpdated, which OrderService's
-  // PosReadModelProjector consumes to set MenuAvailable=true for this item.
-  const availabilityResponse = await request.post(`${CATALOG_URL}/menu-items/${menuItem.id}:availability`, {
-    headers: { ...menuHeaders, "Content-Type": "application/json" },
-    data: "true", // endpoint binds a raw bool from the body, not a wrapped object
-  });
-  if (!availabilityResponse.ok()) {
-    throw new Error(
-      `Failed to mark menu item available: ${availabilityResponse.status()} ${await availabilityResponse.text()}`
-    );
-  }
-
-  // Stock it. A positive Quantity delta on a zero-stock item trips
-  // InventoryManager's "restock" branch (Quantity 0 -> N), which sets
-  // IsAvailable=true and publishes InventoryItemRestocked — the POS
-  // projector then sets InventoryAvailable=true and Quantity=N for this item.
-  const inventoryHeaders = {
-    ...TENANT_HEADERS,
-    ...(await authHeader(request, ["catalog.inventory.read", "catalog.inventory.write"])),
-  };
-  const inventoryListResponse = await request.get(`${CATALOG_URL}/inventory-items`, {
-    headers: inventoryHeaders,
-    params: { name: menuItemName },
-  });
-  if (!inventoryListResponse.ok()) {
-    throw new Error(`Failed to look up seeded inventory item: ${inventoryListResponse.status()}`);
-  }
-  const inventoryPage = (await inventoryListResponse.json()) as { items: { id: string }[] };
-  const inventoryItemId = inventoryPage.items[0]?.id;
-  if (!inventoryItemId) throw new Error(`No inventory item found for menu item "${menuItemName}"`);
-
-  const stockResponse = await request.put(`${CATALOG_URL}/inventory-items/${inventoryItemId}`, {
-    headers: inventoryHeaders,
-    data: { quantity: 25 },
+  // Mark it available and stock it in one call — publishes both MenuItemUpdated
+  // and InventoryItemRestocked, which OrderService's PosReadModelProjector
+  // consumes to set MenuAvailable=true / InventoryAvailable=true / Quantity=25
+  // for this item.
+  const stockResponse = await request.patch(`${CATALOG_URL}/menu-items/${menuItem.id}`, {
+    headers: menuHeaders,
+    data: { isAvailable: true, quantity: 25 },
   });
   if (!stockResponse.ok()) {
-    throw new Error(`Failed to stock seeded inventory item: ${stockResponse.status()} ${await stockResponse.text()}`);
+    throw new Error(`Failed to stock seeded menu item: ${stockResponse.status()} ${await stockResponse.text()}`);
   }
 
   // OrderService's PosReadModelProjector consumes the events above off
@@ -123,9 +96,7 @@ export async function seedTableAndMenuItem(request: APIRequestContext): Promise<
  * Deletes what seedTableAndMenuItem created. Nothing in this suite cleans up
  * after itself otherwise — repeated runs would otherwise accumulate "E2E-*"
  * tables and "E2E Item *" menu items in whatever tenant these tests point at
- * forever. Deleting the menu item also deletes its linked inventory item
- * server-side (CatalogService.MenuItemsController.DeleteAsync), so there's
- * nothing extra to clean up there.
+ * forever.
  */
 export async function cleanupSeeded(request: APIRequestContext, data: SeededPosData): Promise<void> {
   const TENANT_HEADERS = readTenantHeaders();

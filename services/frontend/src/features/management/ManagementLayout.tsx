@@ -9,17 +9,15 @@ import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { GrowthChartIcon } from "@/components/brand-icons/report-icons";
 import { ChefIcon } from "@/components/brand-icons/staff-icons";
-import { StockroomShelfIcon } from "@/components/brand-icons/inventory-icons";
 import { TwoTopPlaceSettingIcon } from "@/components/brand-icons/table-icons";
 import type { RestaurantUserData } from "./types";
 
-type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations" | "admin";
+type ManagementTab = "analytics" | "staff" | "menu" | "reservations" | "admin";
 type TabIcon = ComponentType<{ className?: string }>;
 
 const TAB_LIST: { value: ManagementTab; label: string; Icon: TabIcon }[] = [
     { value: "analytics",    label: "Analytics",    Icon: GrowthChartIcon },
     { value: "staff",        label: "Staff",        Icon: ChefIcon },
-    { value: "inventory",    label: "Inventory",    Icon: StockroomShelfIcon },
     { value: "menu",         label: "Menu",         Icon: Utensils },
     { value: "reservations", label: "Reservations", Icon: TwoTopPlaceSettingIcon },
 ];

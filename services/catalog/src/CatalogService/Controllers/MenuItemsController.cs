@@ -3,6 +3,7 @@ using Common.Library.Tenancy;
 using MassTransit;
 using CatalogService.Auth;
 using CatalogService.Entities;
+using CatalogService.Services;
 using Messaging.Contracts.Events.Menu;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,19 +16,19 @@ namespace CatalogService.Controllers;
 public class MenuItemsController : Controller
 {
     private readonly IRepository<MenuItem> _repository;
-    private readonly IRepository<InventoryItem> _inventoryRepository;
+    private readonly MenuStockService _stock;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ITenantContext _tenant;
     private readonly ILogger<MenuItemsController> _logger;
 
     public MenuItemsController(IRepository<MenuItem> repository,
-        IRepository<InventoryItem> inventoryRepository,
+        MenuStockService stock,
         IPublishEndpoint publishEndpoint,
         ITenantContext tenant,
         ILogger<MenuItemsController> logger)
     {
         _repository = repository;
-        _inventoryRepository = inventoryRepository;
+        _stock = stock;
         _publishEndpoint = publishEndpoint;
         _tenant = tenant;
         _logger = logger;
@@ -52,6 +53,7 @@ public class MenuItemsController : Controller
             query = query.Where(m => m.IsAvailable == q.Available.Value);
         if (q.MinPrice.HasValue) query = query.Where(m => m.Price >= q.MinPrice.Value);
         if (q.MaxPrice.HasValue) query = query.Where(m => m.Price <= q.MaxPrice.Value);
+        if (q.MinQty.HasValue) query = query.Where(m => m.Quantity >= q.MinQty.Value);
 
         var total = query.LongCount();
         var page = Math.Max(1, q.Page);
@@ -90,7 +92,9 @@ public class MenuItemsController : Controller
             Price = item.Price,
             Category = normalized,
             IsAvailable = false,
+            Quantity = 0,
             CreatedAt = DateTimeOffset.UtcNow,
+            AcquiredDate = DateTimeOffset.UtcNow,
             RestaurantId = _tenant.RestaurantId,
             LocationId = _tenant.LocationId
         };
@@ -105,22 +109,6 @@ public class MenuItemsController : Controller
             _tenant.RestaurantId,
             _tenant.LocationId
             ));
-
-        // Every menu item gets a linked inventory record (starts at zero stock).
-        // Direct in-process call - this used to happen via inventory's
-        // MenuItemCreatedConsumer reacting to MenuItemCreated over the broker.
-        var inventoryItem = new InventoryItem
-        {
-            Id = Guid.NewGuid(),
-            MenuItemId = menuItem.Id,
-            MenuItemName = menuItem.Name,
-            Quantity = 0,
-            IsAvailable = menuItem.IsAvailable,
-            AcquiredDate = DateTimeOffset.UtcNow
-        };
-        await _inventoryRepository.CreateAsync(inventoryItem);
-        _logger.LogInformation("Created InventoryItem for MenuItem {MenuItemName} - {MenuItemId}",
-            menuItem.Name, menuItem.Id);
 
         return CreatedAtAction(nameof(GetByIdAsync), new { id = menuItem.Id }, menuItem.ToDto());
     }
@@ -145,26 +133,28 @@ public class MenuItemsController : Controller
         if (item.Price is not null)
             menuItem.Price = item.Price.Value;
 
-        var normalized = MenuCategories.Normalize(item.Category);
-        if (normalized is null)
-            return BadRequest(new { error = "Invalid category", allowed = MenuCategories.All });
-        menuItem.Category = normalized;
+        if (item.Category is not null)
+        {
+            var normalized = MenuCategories.Normalize(item.Category);
+            if (normalized is null)
+                return BadRequest(new { error = "Invalid category", allowed = MenuCategories.All });
+            menuItem.Category = normalized;
+        }
 
+        // Persists the entity (including the text-field changes above) and handles
+        // Quantity/IsAvailable + the Inventory* event, all in one write.
+        await _stock.ApplyStockChangeAsync(menuItem, item.Quantity, item.IsAvailable);
 
-
-        await _repository.UpdateAsync(menuItem);
         await _publishEndpoint.Publish(new MenuItemUpdated(
             menuItem.Id,
             menuItem.Name,
             menuItem.Description,
             menuItem.Price,
-            normalized,
+            menuItem.Category,
             menuItem.IsAvailable,
             _tenant.RestaurantId,
             _tenant.LocationId
         ));
-
-        await SyncInventoryItemAsync(menuItem.Id, menuItem.Name, menuItem.IsAvailable);
 
         return Ok(menuItem.ToDto());
     }
@@ -183,15 +173,6 @@ public class MenuItemsController : Controller
         await _publishEndpoint.Publish(new MenuItemDeleted(id,
             _tenant.RestaurantId,
             _tenant.LocationId));
-
-        // Direct in-process call - this used to happen via inventory's
-        // MenuItemDeletedConsumer reacting to MenuItemDeleted over the broker.
-        var inventoryItem = await _inventoryRepository.GetAsync(i => i.MenuItemId == id);
-        if (inventoryItem is not null)
-        {
-            await _inventoryRepository.DeleteAsync(inventoryItem.Id);
-            _logger.LogInformation("Deleted InventoryItem linked to MenuItem: {MenuItemId}", id);
-        }
 
         return NoContent();
     }
@@ -212,36 +193,12 @@ public class MenuItemsController : Controller
         var menuItem = await _repository.GetAsync(id);
         if (menuItem is null) return NotFound();
 
-        menuItem.IsAvailable = isAvailable;
-        await _repository.UpdateAsync(menuItem);
+        await _stock.ApplyStockChangeAsync(menuItem, quantity: null, isAvailableOverride: isAvailable);
 
         await _publishEndpoint.Publish(new MenuItemUpdated(
             menuItem.Id, menuItem.Name, menuItem.Description, menuItem.Price, menuItem.Category,
             menuItem.IsAvailable, _tenant.RestaurantId, _tenant.LocationId));
 
-        await SyncInventoryItemAsync(menuItem.Id, menuItem.Name, menuItem.IsAvailable);
-
         return NoContent();
-    }
-
-    // Replaces the old cross-service MenuItemUpdatedConsumer that inventory used to
-    // react to over the broker - now a direct in-process call since both entities
-    // live in the same service.
-    private async Task SyncInventoryItemAsync(Guid menuItemId, string name, bool isAvailable)
-    {
-        var inventoryItem = await _inventoryRepository.GetAsync(i => i.MenuItemId == menuItemId);
-        if (inventoryItem is null)
-        {
-            _logger.LogWarning("InventoryItem not found for MenuItem {MenuItemId}", menuItemId);
-            return;
-        }
-
-        if (inventoryItem.MenuItemName == name && inventoryItem.IsAvailable == isAvailable)
-            return;
-
-        inventoryItem.MenuItemName = name;
-        inventoryItem.IsAvailable = isAvailable;
-        await _inventoryRepository.UpdateAsync(inventoryItem);
-        _logger.LogInformation("Updated InventoryItem for MenuItem {MenuItemName} {MenuItemId}", name, menuItemId);
     }
 }

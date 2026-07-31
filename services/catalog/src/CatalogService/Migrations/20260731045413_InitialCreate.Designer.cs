@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CatalogService.Migrations
 {
     [DbContext(typeof(CatalogDbContext))]
-    [Migration("20260722015705_InitialCreate")]
+    [Migration("20260731045413_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -21,12 +21,12 @@ namespace CatalogService.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("catalog")
-                .HasAnnotation("ProductVersion", "8.0.19")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CatalogService.Entities.InventoryItem", b =>
+            modelBuilder.Entity("CatalogService.Entities.MenuItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -34,40 +34,6 @@ namespace CatalogService.Migrations
 
                     b.Property<DateTimeOffset>("AcquiredDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LocationId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("MenuItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("MenuItemName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("RestaurantId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RestaurantId", "LocationId");
-
-                    b.ToTable("InventoryItems", "catalog");
-                });
-
-            modelBuilder.Entity("CatalogService.Entities.MenuItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -93,6 +59,9 @@ namespace CatalogService.Migrations
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
 
                     b.Property<string>("RestaurantId")
                         .IsRequired()

@@ -1,5 +1,6 @@
 using Common.Library;
 using CatalogService.Entities;
+using CatalogService.Services;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 
@@ -8,13 +9,16 @@ namespace CatalogService.Consumers;
 
 public class ReleaseInventoryConsumer : IConsumer<ReleaseInventory>
 {
-    private readonly IRepository<InventoryItem> _inventoryRepo;
+    private readonly IRepository<MenuItem> _menuRepository;
+    private readonly MenuStockService _stock;
     private readonly ILogger<ReleaseInventoryConsumer> _logger;
 
-    public ReleaseInventoryConsumer(IRepository<InventoryItem> inventoryRepo,
+    public ReleaseInventoryConsumer(IRepository<MenuItem> menuRepository,
+        MenuStockService stock,
         ILogger<ReleaseInventoryConsumer> logger)
     {
-        _inventoryRepo = inventoryRepo;
+        _menuRepository = menuRepository;
+        _stock = stock;
         _logger = logger;
     }
 
@@ -22,16 +26,17 @@ public class ReleaseInventoryConsumer : IConsumer<ReleaseInventory>
     {
         foreach (var item in context.Message.Items)
         {
-            var inventoryItem = await _inventoryRepo.GetAsync(i => i.MenuItemId == item.MenuItemId);
-            if (inventoryItem is null)
+            var menuItem = await _menuRepository.GetAsync(m => m.Id == item.MenuItemId);
+            if (menuItem is null)
             {
-                _logger.LogWarning("No inventory found for menu item {MenuItemId} during release", item.MenuItemId);
+                _logger.LogWarning("No menu item found for {MenuItemId} during inventory release", item.MenuItemId);
                 continue;
             }
 
-            inventoryItem.Quantity += item.Quantity;
-            inventoryItem.IsAvailable = inventoryItem.Quantity > 0;
-            await _inventoryRepo.UpdateAsync(inventoryItem);
+            // Routed through MenuStockService so IsAvailable auto-derives correctly
+            // when a release restocks a depleted item. Quantity is an absolute
+            // value, not a delta.
+            await _stock.ApplyStockChangeAsync(menuItem, menuItem.Quantity + item.Quantity, isAvailableOverride: null);
         }
 
         _logger.LogInformation("Inventory released for OrderId {OrderId}", context.Message.OrderId);

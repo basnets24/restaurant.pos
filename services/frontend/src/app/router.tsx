@@ -28,7 +28,6 @@ const HomePage    = lazy(() => import("@/features/home/HomePage"));
 const ManagementLayout  = lazy(() => import("@/features/management/ManagementLayout"));
 const AnalyticsTab      = lazy(() => import("@/features/management/tabs/AnalyticsTab"));
 const StaffTab          = lazy(() => import("@/features/management/tabs/StaffTab"));
-const InventoryTab      = lazy(() => import("@/features/management/tabs/InventoryTab"));
 const MenuTab           = lazy(() => import("@/features/management/tabs/MenuTab"));
 const ReservationsTab   = lazy(() => import("@/features/management/tabs/ReservationsTab"));
 
@@ -101,7 +100,6 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="analytics" replace /> },
       { path: "analytics",    element: <Suspense fallback={<Fallback />}><AnalyticsTab /></Suspense> },
       { path: "staff",        element: <Suspense fallback={<Fallback />}><StaffTab /></Suspense> },
-      { path: "inventory",    element: <Suspense fallback={<Fallback />}><InventoryTab /></Suspense> },
       { path: "menu",         element: <Suspense fallback={<Fallback />}><MenuTab /></Suspense> },
       { path: "reservations", element: <Suspense fallback={<Fallback />}><ReservationsTab /></Suspense> },
       {

@@ -22,7 +22,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddScoped<InventoryManager>();
+builder.Services.AddScoped<MenuStockService>();
 
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
@@ -64,7 +64,6 @@ builder.Services.AddMassTransit(cfg =>
 
 builder.Services.AddTenancy();
 builder.Services.AddTenantEfRepository<MenuItem, CatalogDbContext>();
-builder.Services.AddTenantEfRepository<InventoryItem, CatalogDbContext>();
 
 builder.Services.AddCatalogPolicies().AddPosJwtBearer();
 builder.Services.AddControllers(options =>

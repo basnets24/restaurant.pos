@@ -20,8 +20,10 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
     const [notes, setNotes] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showNotes, setShowNotes] = useState(false);
+    const unavailable = !item.isAvailable;
 
     const handleAdd = async () => {
+        if (unavailable) return;
         setIsLoading(true);
         try {
             await onAddToOrder(item, quantity, notes.trim() || undefined);
@@ -40,7 +42,7 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
     const decrementQuantity = () => setQuantity((q) => Math.max(1, q - 1));
 
     const handleQuickAdd = async () => {
-        if (isLoading) return;
+        if (isLoading || unavailable) return;
         setIsLoading(true);
         try {
             await onAddToOrder(item, 1);
@@ -50,21 +52,28 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
     };
 
     return (
-        <Card className="menu-item-card h-full min-h-[260px] flex flex-col hover:shadow-lg transition-all duration-200 border-border bg-card group">
+        <Card className={`menu-item-card h-full min-h-[260px] flex flex-col transition-all duration-200 border-border bg-card group ${unavailable ? "opacity-60" : "hover:shadow-lg"}`}>
             {/* Top: title + price, description */}
             <CardContent className="p-5 sm:p-6 lg:p-7 flex-1">
                 <div
-                    className="flex items-start justify-between gap-3 mb-2 cursor-pointer select-none"
+                    className={`flex items-start justify-between gap-3 mb-2 select-none ${unavailable ? "cursor-not-allowed" : "cursor-pointer"}`}
                     onClick={handleQuickAdd}
                     role="button"
-                    aria-label={`Add ${item.name} quickly`}
+                    aria-disabled={unavailable}
+                    aria-label={unavailable ? `${item.name} is out of stock` : `Add ${item.name} quickly`}
                 >
                     <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground leading-snug">
                         {item.name}
                     </h3>
-                    <Badge className="bg-primary text-primary-foreground px-2.5 py-1 text-sm font-medium font-numeric shadow-sm shrink-0">
-                        ${item.price.toFixed(2)}
-                    </Badge>
+                    {unavailable ? (
+                        <Badge variant="secondary" className="px-2.5 py-1 text-sm font-medium shadow-sm shrink-0">
+                            Out of Stock
+                        </Badge>
+                    ) : (
+                        <Badge className="bg-primary text-primary-foreground px-2.5 py-1 text-sm font-medium font-numeric shadow-sm shrink-0">
+                            ${item.price.toFixed(2)}
+                        </Badge>
+                    )}
                 </div>
 
                 {item.description && (
@@ -84,7 +93,7 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                             variant="outline"
                             size="sm"
                             onClick={decrementQuantity}
-                            disabled={quantity <= 1 || isLoading}
+                            disabled={quantity <= 1 || isLoading || unavailable}
                             className="h-8 w-8 p-0"
                         >
                             <Minus className="h-3 w-3" />
@@ -96,7 +105,7 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                             variant="outline"
                             size="sm"
                             onClick={incrementQuantity}
-                            disabled={quantity >= 99 || isLoading}
+                            disabled={quantity >= 99 || isLoading || unavailable}
                             className="h-8 w-8 p-0"
                         >
                             <Plus className="h-3 w-3" />
@@ -107,11 +116,13 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                 {/* Primary action */}
                 <Button
                     onClick={handleAdd}
-                    disabled={isLoading}
+                    disabled={isLoading || unavailable}
                     className="w-full shadow-sm hover:shadow-md transition-all duration-200 text-base py-5"
                     size="lg"
                 >
-                    {isLoading ? (
+                    {unavailable ? (
+                        "Out of Stock"
+                    ) : isLoading ? (
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                             Adding...

@@ -3,6 +3,7 @@ using Common.Library.Tenancy;
 using MassTransit;
 using CatalogService.Entities;
 using CatalogService.Exceptions;
+using CatalogService.Services;
 using Messaging.Contracts.Events.Inventory;
 
 
@@ -10,16 +11,19 @@ namespace CatalogService.Consumers;
 
 public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
 {
-    private readonly IRepository<InventoryItem> _inventoryRepository;
+    private readonly IRepository<MenuItem> _menuRepository;
+    private readonly MenuStockService _stock;
     private readonly ILogger<ReserveInventoryConsumer> _logger;
     private readonly ITenantContext _tenant;
 
     public ReserveInventoryConsumer(
-        IRepository<InventoryItem> inventoryRepository,
+        IRepository<MenuItem> menuRepository,
+        MenuStockService stock,
         ILogger<ReserveInventoryConsumer> logger,
         ITenantContext tenant)
     {
-        _inventoryRepository = inventoryRepository;
+        _menuRepository = menuRepository;
+        _stock = stock;
         _logger = logger;
         _tenant = tenant;
     }
@@ -30,24 +34,32 @@ public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
         var orderId = context.Message.OrderId;
         var items = context.Message.Items;
 
+        // Tracks each item's pre-reservation quantity, so a later item's failure
+        // can restore the exact original value rather than leaving a partial
+        // reservation in place.
+        var decremented = new List<(Guid MenuItemId, int OriginalQuantity)>();
+
         try
         {
             foreach (var item in items)
             {
-                var inventoryItem = await _inventoryRepository.GetAsync(i=> i.MenuItemId == item.MenuItemId);
-                if (inventoryItem is null)
+                var menuItem = await _menuRepository.GetAsync(m => m.Id == item.MenuItemId);
+                if (menuItem is null)
                 {
                     throw new UnknownItemException(item.MenuItemId);
                 }
 
-                if (inventoryItem.Quantity < item.Quantity)
+                if (menuItem.Quantity < item.Quantity)
                 {
-                    throw new InsufficientInventoryException(item.MenuItemId, item.Quantity, inventoryItem.Quantity);
+                    throw new InsufficientInventoryException(item.MenuItemId, item.Quantity, menuItem.Quantity);
                 }
 
-                inventoryItem.Quantity -= item.Quantity;
-                inventoryItem.IsAvailable = inventoryItem.Quantity > 0;
-                await _inventoryRepository.UpdateAsync(inventoryItem);
+                // Routed through MenuStockService (not a raw repository write) so
+                // IsAvailable auto-derives correctly when quantity hits zero.
+                // Quantity is an absolute value, not a delta.
+                var originalQuantity = menuItem.Quantity;
+                await _stock.ApplyStockChangeAsync(menuItem, originalQuantity - item.Quantity, isAvailableOverride: null);
+                decremented.Add((menuItem.Id, originalQuantity));
             }
 
             await context.Publish(new InventoryReserved(
@@ -62,6 +74,13 @@ public class ReserveInventoryConsumer : IConsumer<ReserveInventory>
         catch (Exception ex)
         {
             _logger.LogWarning("Failed to reserve inventory for order {OrderId}: {Message}", orderId, ex.Message);
+
+            foreach (var (menuItemId, originalQuantity) in decremented)
+            {
+                var menuItem = await _menuRepository.GetAsync(menuItemId);
+                if (menuItem is null) continue;
+                await _stock.ApplyStockChangeAsync(menuItem, originalQuantity, isAvailableOverride: null);
+            }
 
             await context.Publish(new InventoryReserveFaulted(
                 correlationId,

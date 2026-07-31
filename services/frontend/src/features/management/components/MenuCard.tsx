@@ -114,51 +114,28 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                                 <TableHead>Name</TableHead>
                                 <TableHead>Category</TableHead>
                                 <TableHead className="w-32 text-right">Price</TableHead>
+                                <TableHead className="w-48">Stock</TableHead>
                                 <TableHead>Availability</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {list.isLoading && <TableRow><TableCell colSpan={5}>Loading…</TableCell></TableRow>}
-                            {!list.isLoading && items.length === 0 && <TableRow><TableCell colSpan={5}>No menu items</TableCell></TableRow>}
+                            {list.isLoading && <TableRow><TableCell colSpan={6}>Loading…</TableCell></TableRow>}
+                            {!list.isLoading && items.length === 0 && <TableRow><TableCell colSpan={6}>No menu items</TableCell></TableRow>}
                             {items.map((m) => (
-                                <TableRow key={m.id}>
-                                    <TableCell>
-                                        <div className="font-medium">{m.name}</div>
-                                        <div className="text-xs opacity-70">{m.description || ""}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">{m.category || "—"}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">${m.price.toFixed(2)}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Switch disabled={!canWrite} checked={m.isAvailable} onCheckedChange={(v) => mToggle.mutate({ id: m.id, value: v })} />
-                                            <span className="text-sm">{m.isAvailable ? "Available" : "Hidden"}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        {canWrite && (
-                                            <>
-                                                <Button size="sm" variant="outline" onClick={() => { setEditing(m); setEditOpen(true); }}><Pencil className="h-4 w-4 mr-1"/>Edit</Button>
-                                                <Button
-                                                    size="icon"
-                                                    variant="outline"
-                                                    className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                    onClick={() =>
-                                                        mDelete.mutate(m.id, {
-                                                            onSuccess: () => toast.success("Menu item deleted"),
-                                                        })
-                                                    }
-                                                    disabled={mDelete.isPending}
-                                                    aria-label="Delete menu item"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
+                                <MenuRow
+                                    key={m.id}
+                                    item={m}
+                                    canWrite={canWrite}
+                                    busy={mToggle.isPending || mPatch.isPending || mDelete.isPending}
+                                    onToggleAvailability={(v) => mToggle.mutate({ id: m.id, value: v })}
+                                    onEdit={() => { setEditing(m); setEditOpen(true); }}
+                                    onDelete={() =>
+                                        mDelete.mutate(m.id, {
+                                            onSuccess: () => toast.success("Menu item deleted"),
+                                        })
+                                    }
+                                />
                             ))}
                         </TableBody>
                     </Table>
@@ -208,6 +185,54 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
 }
 
 import { useMenuCategories as useMenuCats } from "@/domain/menu/hooks";
+
+function MenuRow({ item, canWrite, busy, onToggleAvailability, onEdit, onDelete }: {
+    item: MenuItemDto;
+    canWrite: boolean;
+    busy?: boolean;
+    onToggleAvailability: (value: boolean) => void;
+    onEdit: () => void;
+    onDelete: () => void;
+}) {
+    return (
+        <TableRow>
+            <TableCell>
+                <div className="font-medium">{item.name}</div>
+                <div className="text-xs opacity-70">{item.description || ""}</div>
+            </TableCell>
+            <TableCell>
+                <Badge variant="secondary">{item.category || "—"}</Badge>
+            </TableCell>
+            <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
+            <TableCell>
+                <div className="font-medium">{item.quantity ?? 0}</div>
+            </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <Switch disabled={!canWrite || busy} checked={item.isAvailable} onCheckedChange={onToggleAvailability} />
+                    <span className="text-sm">{item.isAvailable ? "Available" : "Hidden"}</span>
+                </div>
+            </TableCell>
+            <TableCell className="text-right space-x-2">
+                {canWrite && (
+                    <>
+                        <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="h-4 w-4 mr-1"/>Edit</Button>
+                        <Button
+                            size="icon"
+                            variant="outline"
+                            className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={onDelete}
+                            disabled={busy}
+                            aria-label="Delete menu item"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </>
+                )}
+            </TableCell>
+        </TableRow>
+    );
+}
 
 function CreateDialog({ open, onOpenChange, onCreate, disabled }: {
     open: boolean; onOpenChange: (v: boolean) => void; onCreate: (dto: CreateMenuItemDto) => void; disabled: boolean;
@@ -292,6 +317,7 @@ function EditDialog({ open, onOpenChange, item, onSave, saving, disabled }: {
     const [description, setDescription] = useState("");
     const [price, setPrice] = useState("0.00");
     const [category, setCategory] = useState<string>("");
+    const [quantity, setQuantity] = useState("0");
 
     // Populate the form when the edit dialog opens for an item.
     const [prevOpen, setPrevOpen] = useState(open);
@@ -304,6 +330,7 @@ function EditDialog({ open, onOpenChange, item, onSave, saving, disabled }: {
             setDescription(item.description ?? "");
             setPrice(String(item.price ?? 0));
             setCategory(item.category ?? "");
+            setQuantity(String(item.quantity ?? 0));
         }
     }
 
@@ -345,11 +372,61 @@ function EditDialog({ open, onOpenChange, item, onSave, saving, disabled }: {
                                 </Select>
                             </div>
                         </div>
+                        <div className="grid gap-2">
+                            <Label>Stock</Label>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    onClick={() => setQuantity((q) => String(Math.max(0, Number(q) - 1)))}
+                                    aria-label="Decrease stock"
+                                >
+                                    −
+                                </Button>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    className="text-right"
+                                    value={quantity}
+                                    onChange={(e) => setQuantity(e.target.value)}
+                                />
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    onClick={() => setQuantity((q) => String(Math.max(0, Number(q) + 1)))}
+                                    aria-label="Increase stock"
+                                >
+                                    +
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button disabled={!canSubmit || disabled || !!saving} onClick={() => item && onSave(item.id, { name: name.trim(), description: description.trim() || undefined, price: Number(price), category: category.trim() })}>Save</Button>
+                    <Button
+                        disabled={!canSubmit || disabled || !!saving}
+                        onClick={() => {
+                            if (!item) return;
+                            const nextQuantity = Math.max(0, Number(quantity));
+                            onSave(item.id, {
+                                name: name.trim(),
+                                description: description.trim() || undefined,
+                                price: Number(price),
+                                category: category.trim(),
+                                // Only sent when Stock actually changed — otherwise the backend
+                                // treats any provided Quantity as a change and re-derives
+                                // IsAvailable from it, silently undoing a manual Available/Hidden
+                                // toggle on an edit that never touched stock.
+                                quantity: nextQuantity !== (item.quantity ?? 0) ? nextQuantity : undefined,
+                            });
+                        }}
+                    >
+                        Save
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -15,6 +15,9 @@ public class MenuItem : IEntity, ITenantEntity
     public bool IsAvailable { get; set; } = false;
     public DateTimeOffset CreatedAt { get; init; } = DateTime.UtcNow;
 
+    public int Quantity { get; set; }
+    public DateTimeOffset AcquiredDate { get; init; } = DateTimeOffset.UtcNow;
+
     // tenancy
     public string RestaurantId { get; set; } = default!;
     public string LocationId { get; set; } = default!;

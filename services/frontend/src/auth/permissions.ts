@@ -62,12 +62,6 @@ export const can = {
     // UI gating by roles; server enforces scope + role on mutation.
     hasRole(roles, ["Admin", "Manager", "Server"]),
 
-  // Inventory
-  inventoryRead: (_roles: string[], scopes: string[]) => hasScope(scopes, "catalog.inventory.read"),
-  inventoryWrite: (roles: string[]) =>
-    // UI gating by roles; server enforces scope + role on mutation.
-    hasRole(roles, ["Admin", "Manager"]),
-
   // Payments
   paymentCharge: (roles: string[], scopes: string[]) =>
     hasScope(scopes, "payment.charge") && hasRole(roles, ["Admin", "Manager"]),
