@@ -55,7 +55,7 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                 ]}
             />
 
-            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8 items-start">
+            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8 items-stretch md:items-start">
                 <Tabs
                     value={activeTab}
                     onValueChange={(v) => go(`/management/${v}`)}
