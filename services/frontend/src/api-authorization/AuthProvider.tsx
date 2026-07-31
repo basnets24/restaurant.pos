@@ -80,6 +80,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 const u = await userManager.getUser();
                 if (!mounted) return;
                 setFromUser(u ?? undefined);
+                // getUser() doesn't purge an expired record - left in place, oidc-client-ts's
+                // own expiry timer fires shortly after load and drives a doomed signinSilent()
+                // (see onExpired below), repeating the same login_required warning on every
+                // visit until an actual sign-in overwrites it. Purge it now instead.
+                if (u?.expired) {
+                    try { await userManager.removeUser(); } catch (e) { console.warn("AuthProvider: failed to remove expired user on load", e); }
+                }
             } finally {
                 if (mounted) setReady(true);
             }
@@ -100,6 +107,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 console.warn("AuthProvider: silent renew failed after token expiry", e);
                 setFromUser(undefined);
                 clearSessionLocalState();
+                // Purge the dead record so it stops triggering this same doomed
+                // renewal attempt (and warning) on every subsequent page load.
+                try { await userManager.removeUser(); } catch (e2) { console.warn("AuthProvider: failed to remove user after failed renew", e2); }
             }
         };
 
