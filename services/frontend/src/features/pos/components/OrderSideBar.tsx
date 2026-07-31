@@ -36,9 +36,20 @@ export type SidebarOrderItem = {
     menuItem: { name: string; price: number };
 };
 
+export type SidebarOrderEstimate = {
+    subtotal: number;
+    discountTotal: number;
+    serviceChargeTotal: number;
+    taxTotal: number;
+    grandTotal: number;
+};
+
 export type SidebarOrder = {
     id: string;
     items: SidebarOrderItem[];
+    // Server-computed via the real PricingService config (tax rate, service
+    // charges, discounts) - absent only while the cart is still empty.
+    estimate?: SidebarOrderEstimate | null;
 };
 
 export type SidebarTable = {
@@ -185,16 +196,18 @@ function OrderSidebarContent({
     const kitchen = useKitchen();
     if (!table) return null;
 
-    // compute money safely from order items
+    // Prefer the server-computed estimate (real configured tax rate + any
+    // service charges/discounts from PricingService) over a client-side
+    // guess - only falls back to a subtotal-only figure for the brief moment
+    // before the cart's first estimate has loaded.
     const subtotal =
-        order?.items.reduce(
-            (sum, it) => sum + it.menuItem.price * it.quantity,
-            0,
-        ) ?? 0;
-
-    const TAX_RATE = 0.08; // 8% (adjust if needed)
-    const tax = +(subtotal * TAX_RATE).toFixed(2);
-    const total = +(subtotal + tax).toFixed(2);
+        order?.estimate?.subtotal ??
+        order?.items.reduce((sum, it) => sum + it.menuItem.price * it.quantity, 0) ??
+        0;
+    const discount = order?.estimate?.discountTotal ?? 0;
+    const serviceCharge = order?.estimate?.serviceChargeTotal ?? 0;
+    const tax = order?.estimate?.taxTotal ?? 0;
+    const total = order?.estimate?.grandTotal ?? subtotal;
 
     const itemCount = order?.items.reduce((n, it) => n + it.quantity, 0) ?? 0;
     const isFired = order ? kitchen.isFired(order.id) : false;
@@ -284,8 +297,20 @@ function OrderSidebarContent({
                             <span>Subtotal</span>
                             <span className="font-numeric">${subtotal.toFixed(2)}</span>
                         </div>
+                        {discount > 0 && (
+                            <div className="flex justify-between text-[13px] text-muted-foreground">
+                                <span>Discount</span>
+                                <span className="font-numeric">-${discount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {serviceCharge > 0 && (
+                            <div className="flex justify-between text-[13px] text-muted-foreground">
+                                <span>Service charge</span>
+                                <span className="font-numeric">${serviceCharge.toFixed(2)}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-[13px] text-muted-foreground">
-                            <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
+                            <span>Tax</span>
                             <span className="font-numeric">${tax.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-baseline pt-1 font-semibold text-[17px] text-foreground">
