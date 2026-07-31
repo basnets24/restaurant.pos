@@ -3,10 +3,25 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import type { User } from 'oidc-client-ts';
 import { userManager } from './oidc';
 import { clearApiTokenCache } from "@/auth/getApiToken";
+import { clearTenant } from "@/auth/tenant";
+import { clearKitchenState } from "@/features/pos/kitchen/kitchenStore";
+import { clearAllTableSessions } from "@/stores";
 import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 import { bindAuthAccessors } from "@/auth/runtime";
 import type { AppProfile, SignInState } from "@/auth/types";
+
+// Local caches to wipe whenever a session ends (sign-out or an unexpected
+// unload, e.g. silent renew failing) - a shared device switching tenants
+// must not carry the previous tenant's id or POS-local state into the next
+// login. Centralized here since AuthProvider is the one place that observes
+// every way a session can end.
+function clearSessionLocalState() {
+    clearTenant();
+    clearKitchenState();
+    clearAllTableSessions();
+    try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed", e); }
+}
 
 
 type AuthState = {
@@ -74,8 +89,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const onLoaded = (u: User) => setFromUser(u);
         const onUnloaded = () => {
             setFromUser(undefined);
-            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch (e) { console.warn("AuthProvider: failed to clear tenant localStorage on unload", e); }
-            try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on unload", e); }
+            clearSessionLocalState();
         };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
@@ -85,7 +99,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             } catch (e) {
                 console.warn("AuthProvider: silent renew failed after token expiry", e);
                 setFromUser(undefined);
-                try { clearApiTokenCache(); } catch (e2) { console.warn("AuthProvider: clearApiTokenCache failed after expired renew", e2); }
+                clearSessionLocalState();
             }
         };
 
@@ -130,11 +144,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 return;
             }
             sessionStorage.removeItem("auth.skipSilentOnce");
-            // Fall through to interactive login
+            // Fall through to interactive login. redirectMethod: "replace" swaps
+            // out the internal /authentication/login entry instead of stacking
+            // the IdP page on top of it - otherwise browser Back from the IdP
+            // page lands back on /authentication/login, which just redirects
+            // away again instead of returning to where the user came from.
             await userManager.signinRedirect({
                 state: { returnUrl },
                 prompt: "login",
                 redirect_uri: `${window.location.origin}${AuthorizationPaths.LoginCallback}`,
+                redirectMethod: "replace",
             });
         } catch {
             // Fall back to redirect; carry returnUrl in `state`
@@ -142,6 +161,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                 state: { returnUrl },
                 prompt: "login",
                 redirect_uri: `${window.location.origin}${AuthorizationPaths.LoginCallback}`,
+                redirectMethod: "replace",
             });
         }
     };
@@ -194,12 +214,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const res = await userManager.signoutCallback(window.location.href);
         // clear local session + tenant
         setFromUser(undefined);
-        try {
-            localStorage.removeItem('token');
-            localStorage.removeItem('rid');
-            localStorage.removeItem('lid');
-        } catch (e) { console.warn("AuthProvider: failed to clear localStorage on sign-out", e); }
-        try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on sign-out", e); }
+        clearSessionLocalState();
 
 
         const to =

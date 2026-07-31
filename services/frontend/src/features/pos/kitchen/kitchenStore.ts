@@ -57,6 +57,13 @@ function subscribe(cb: () => void) {
   return () => subs.delete(cb);
 }
 
+// Plain (non-hook) reset for callers outside React, e.g. AuthProvider clearing
+// tenant-local caches on sign-out - useKitchen()'s clearAll requires being
+// inside a component.
+export function clearKitchenState() {
+  setState({ tickets: [], selectedCartId: null });
+}
+
 export function useKitchen() {
   // Only client-side; server snapshot not needed
   const current = useSyncExternalStore(subscribe, () => state);

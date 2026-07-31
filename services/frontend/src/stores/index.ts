@@ -50,6 +50,13 @@ function clear(tableId: string) {
   writeAll(all);
 }
 
+// Reset for callers outside React, e.g. AuthProvider clearing tenant-local
+// caches on sign-out, so a previous tenant's table sessions don't leak into
+// the next login on a shared device.
+export function clearAllTableSessions() {
+  writeAll({});
+}
+
 // Expose a simple hook returning stable helpers
 export function useStore() {
   const getTableSession = useCallback((tableId: string) => get(tableId), []);
