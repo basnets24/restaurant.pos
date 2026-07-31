@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { Copy } from "lucide-react";
+import { toast } from "sonner";
+import { Building2, Clock, Percent, Palette, Copy, MapPin, KeyRound, type LucideIcon } from "lucide-react";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useTenant } from "@/auth/tenant";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2 } from "lucide-react";
 
 type OrgProfile = {
   restaurantName: string;
@@ -39,22 +39,21 @@ function read(): OrgProfile {
 }
 function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch (e) { console.warn("OrganizationPage: failed to persist profile to localStorage", e); } }
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "R";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function OrganizationPage() {
   const { restaurantName: nameFromTenant, locations } = useTenantInfo();
   const { rid, lid } = useTenant();
-  const [tab, setTab] = useState("general");
   const [model, setModel] = useState<OrgProfile>(() => read());
   const [draft, setDraft] = useState<OrgProfile>(model);
 
   const rp = useRestaurantUserProfile();
   const { data: joinCode } = rp.useMyJoinCode({ rid: rid ?? undefined, lid: lid ?? undefined }, { enabled: !!rid });
-
-  // Reset the draft to the saved model whenever the active tab changes.
-  const [prevTab, setPrevTab] = useState(tab);
-  if (tab !== prevTab) {
-    setPrevTab(tab);
-    setDraft(model);
-  }
 
   // If tenant name is known and current model is default/demo, hydrate it for display convenience.
   // Hydrating from async tenant-info data as it resolves, not a derived-state reset.
@@ -67,138 +66,152 @@ export default function OrganizationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nameFromTenant]);
 
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(model);
   const onCancel = () => setDraft(model);
-  const onSave = () => { setModel(draft); write(draft); };
+  const onSave = () => { setModel(draft); write(draft); toast.success("Organization settings saved"); };
+
+  const copyJoinLink = () => {
+    try {
+      navigator.clipboard.writeText(joinCode?.joinUrl ?? "");
+      toast.success("Join link copied");
+    } catch (e) {
+      console.warn("OrganizationPage: failed to copy join link to clipboard", e);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center"><Building2 className="h-4 w-4 text-primary" /></div>
-        <div>
-          <h2 className="text-xl font-semibold">Organization</h2>
-          <p className="text-sm text-muted-foreground">{nameFromTenant ?? "Manage your restaurant profile and policies"}</p>
-        </div>
-      </header>
+      <h2 className="text-xl font-semibold">Organization</h2>
 
-      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+      {/* Profile (all org settings — one entity, one save) */}
+      <Card className="overflow-hidden py-0">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 space-y-0 bg-brand-soft/40 py-5 border-b">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="h-14 w-14 shrink-0 rounded-full bg-brand-soft text-brand-strong grid place-items-center text-lg font-semibold ring-1 ring-brand/20">
+              {getInitials(draft.restaurantName)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-semibold text-foreground truncate">{draft.restaurantName || "Your Restaurant"}</div>
+              <div className="text-sm text-muted-foreground truncate">Restaurant profile & policies</div>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={onCancel} disabled={!isDirty}>Cancel</Button>
+            <Button size="sm" onClick={onSave} disabled={!isDirty}>Save Changes</Button>
+          </div>
+        </CardHeader>
 
-        {/* Join code card */}
-        {joinCode && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Team join code</CardTitle>
-              <CardDescription>Share with staff to self-join this restaurant</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                  <div className="text-xs text-muted-foreground">Restaurant ID</div>
-                  <div className="font-mono text-sm">{joinCode.restaurantId}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Slug</div>
-                  <div className="font-mono text-sm">{joinCode.slug ?? <span className="text-muted-foreground">(none)</span>}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Join link</div>
-                  <div className="flex items-center gap-2">
-                    <Input readOnly value={joinCode.joinUrl ?? "(configure CORS origins)"} />
-                    <button
-                      className="btn"
-                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch (e) { console.warn("OrganizationPage: failed to copy join link to clipboard", e); } }}
-                      title="Copy link"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        <TabsList className="grid grid-cols-4 gap-2 rounded-2xl p-2 w-full max-w-lg">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="hours">Hours</TabsTrigger>
-          <TabsTrigger value="taxes">Taxes & Fees</TabsTrigger>
-          <TabsTrigger value="branding">Branding</TabsTrigger>
-        </TabsList>
-
-        {/* General */}
-        {tab === "general" && (
-          <TwoColCard title="Restaurant Profile" desc="Basic contact and identity info">
+        <CardContent className="space-y-5 pt-5">
+          <SectionHeading icon={Building2} label="General" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Restaurant Name"><Input value={draft.restaurantName} onChange={(e) => setDraft({ ...draft, restaurantName: e.target.value })} /></Field>
             <Field label="Legal Name"><Input value={draft.legalName} onChange={(e) => setDraft({ ...draft, legalName: e.target.value })} /></Field>
             <Field label="Address"><Input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} /></Field>
             <Field label="Phone"><Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
             <Field label="Email"><Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></Field>
-          </TwoColCard>
-        )}
+          </div>
 
-        {/* Locations (read-only from tenant info for now) */}
-        {locations && locations.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Locations</CardTitle>
-              <CardDescription>Locations from your tenant</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {locations.map(l => (
-                  <div key={l.id} className="rounded-lg border p-3">
-                    <div className="font-medium">{l.name}</div>
-                    <div className="text-xs text-muted-foreground">{l.id}</div>
-                    <div className="text-xs mt-1">{l.isActive ? "Active" : "Inactive"}</div>
-                    <div className="text-xs text-muted-foreground">{l.timeZoneId ?? "(no time zone)"}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <Separator />
 
-        {/* Hours */}
-        {tab === "hours" && (
-          <TwoColCard title="Operating Hours" desc="Shown to staff and used for reports">
-            <Field label="Hours"><Input value={draft.hours} onChange={(e) => setDraft({ ...draft, hours: e.target.value })} /></Field>
-          </TwoColCard>
-        )}
+          <SectionHeading icon={Clock} label="Hours" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Operating Hours"><Input value={draft.hours} onChange={(e) => setDraft({ ...draft, hours: e.target.value })} /></Field>
+          </div>
 
-        {/* Taxes & Fees */}
-        {tab === "taxes" && (
-          <TwoColCard title="Taxes & Fees" desc="Defaults used for pricing/checkout">
+          <Separator />
+
+          <SectionHeading icon={Percent} label="Taxes & Fees" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Tax Rate (%)"><Input type="number" step="0.01" value={draft.taxRatePct} onChange={(e) => setDraft({ ...draft, taxRatePct: Number(e.target.value) })} /></Field>
             <Field label="Service Fee (%)"><Input type="number" step="0.1" value={draft.serviceFeePct} onChange={(e) => setDraft({ ...draft, serviceFeePct: Number(e.target.value) })} /></Field>
-          </TwoColCard>
-        )}
+          </div>
 
-        {/* Branding */}
-        {tab === "branding" && (
-          <TwoColCard title="Branding" desc="Customize look & feel">
-            <Field label="Brand Color"><Input type="color" value={draft.brandColor} onChange={(e) => setDraft({ ...draft, brandColor: e.target.value })} /></Field>
-          </TwoColCard>
-        )}
+          <Separator />
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button onClick={onSave}>Save Changes</Button>
-        </div>
-      </Tabs>
+          <SectionHeading icon={Palette} label="Branding" />
+          <div className="flex items-center gap-3">
+            <div
+              className="h-9 w-9 shrink-0 rounded-lg border ring-1 ring-black/5"
+              style={{ backgroundColor: draft.brandColor }}
+            />
+            <Input
+              type="color"
+              value={draft.brandColor}
+              onChange={(e) => setDraft({ ...draft, brandColor: e.target.value })}
+              className="h-9 w-24 p-1"
+            />
+            <span className="text-sm font-mono text-muted-foreground">{draft.brandColor}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Join code */}
+      {joinCode && (
+        <Card className="overflow-hidden py-0">
+          <CardHeader className="flex-row items-center gap-3 space-y-0 py-5 border-b">
+            <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 grid place-items-center">
+              <KeyRound className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Team join code</CardTitle>
+              <CardDescription>Share with staff to self-join this restaurant</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Field label="Restaurant ID"><div className="font-mono text-sm truncate">{joinCode.restaurantId}</div></Field>
+              <Field label="Slug"><div className="font-mono text-sm">{joinCode.slug ?? <span className="text-muted-foreground">(none)</span>}</div></Field>
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">Join link</div>
+                <div className="flex items-center gap-2">
+                  <Input readOnly value={joinCode.joinUrl ?? "(configure CORS origins)"} />
+                  <Button variant="outline" size="icon" onClick={copyJoinLink} disabled={!joinCode.joinUrl} title="Copy link">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Locations (read-only from tenant info for now) */}
+      {locations && locations.length > 0 && (
+        <Card className="overflow-hidden py-0">
+          <CardHeader className="flex-row items-center gap-3 space-y-0 py-5 border-b">
+            <div className="h-9 w-9 shrink-0 rounded-lg bg-primary/10 grid place-items-center">
+              <MapPin className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Locations</CardTitle>
+              <CardDescription>Locations from your tenant</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {locations.map(l => (
+                <div key={l.id} className="rounded-lg border p-3 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${l.isActive ? "bg-status-available" : "bg-muted-foreground"}`} />
+                    <span className="font-medium truncate">{l.name}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">{l.isActive ? "Active" : "Inactive"}</div>
+                  <div className="text-xs text-muted-foreground">{l.timeZoneId ?? "(no time zone)"}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-function TwoColCard({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+function SectionHeading({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        {desc && <CardDescription>{desc}</CardDescription>}
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+      <Icon className="h-3.5 w-3.5" /> {label}
+    </div>
   );
 }
 
