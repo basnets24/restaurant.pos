@@ -6,7 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Receipt, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader2, Receipt, CheckCircle2, AlertTriangle, MoreVertical, Ban } from "lucide-react";
 
 import { useOrder, useRequestPayment, useCancelOrder } from "@/domain/orders/hooks";
 import { pollForClientSecret } from "@/domain/payments/api";
@@ -63,10 +69,10 @@ export default function OrderPage() {
     try {
       await cancelOrder.mutateAsync(orderId);
       await refetch();
-      toast.success("Order cancelled.");
+      toast.success("Order voided.");
       setCancelDialogOpen(false);
     } catch (e: unknown) {
-      toast.error(errorMessage(e) || "Could not cancel order.");
+      toast.error(errorMessage(e) || "Could not void order.");
     } finally {
       setCancelling(false);
     }
@@ -98,11 +104,30 @@ export default function OrderPage() {
           <CardTitle className="text-base">
             {orderId ? `Order ${orderId.slice(0, 8)}` : "Order"}
           </CardTitle>
-          {order && (
-            <Badge variant={isPaid ? "secondary" : (isRejected || order.status === "Cancelled") ? "destructive" : "outline"}>
-              {isPaid ? "Paid" : order.status}
-            </Badge>
-          )}
+          <div className="flex items-center gap-1">
+            {order && (
+              <Badge variant={isPaid ? "secondary" : (isRejected || order.status === "Cancelled") ? "destructive" : "outline"}>
+                {isPaid ? "Paid" : order.status === "Cancelled" ? "Voided" : order.status}
+              </Badge>
+            )}
+            {isCancellable && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setCancelDialogOpen(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Ban className="h-4 w-4 mr-2" /> Void Order
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </CardHeader>
         <Separator />
         <CardContent className="space-y-4 pt-4">
@@ -140,7 +165,7 @@ export default function OrderPage() {
               )}
               {order.status === "Cancelled" && (
                 <div className="text-sm text-destructive flex items-center gap-1">
-                  <AlertTriangle className="h-4 w-4" /> This order was cancelled.
+                  <AlertTriangle className="h-4 w-4" /> This order was voided.
                 </div>
               )}
               {order.lastPaymentError && !isPaid && (
@@ -160,15 +185,6 @@ export default function OrderPage() {
                 {!isPaid && !isRejected && (
                   <Button onClick={handlePayNow} disabled={paying} className="flex-1">
                     {paying ? "Starting payment…" : "Pay Now"}
-                  </Button>
-                )}
-                {isCancellable && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setCancelDialogOpen(true)}
-                    disabled={cancelling}
-                  >
-                    Cancel Order
                   </Button>
                 )}
                 <Button variant="ghost" onClick={() => navigate(`/pos/table/${tableId}/menu`)}>
@@ -194,7 +210,7 @@ export default function OrderPage() {
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel this order?</DialogTitle>
+            <DialogTitle>Void this order?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             This releases any reserved inventory back to stock and cannot be undone.
@@ -204,7 +220,7 @@ export default function OrderPage() {
               Keep Order
             </Button>
             <Button variant="destructive" onClick={() => { void handleCancelOrder(); }} disabled={cancelling}>
-              {cancelling ? "Cancelling…" : "Cancel Order"}
+              {cancelling ? "Voiding…" : "Void Order"}
             </Button>
           </DialogFooter>
         </DialogContent>
