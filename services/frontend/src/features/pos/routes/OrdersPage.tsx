@@ -42,7 +42,12 @@ export default function OrdersPage() {
     );
 
     const { data, isLoading } = useOrders(tenant);
-    const orders = useMemo(() => (data?.items ?? []) as OrderDto[], [data]);
+    const orders = useMemo(() => {
+        const items = (data?.items ?? []) as OrderDto[];
+        return [...items].sort(
+            (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime(),
+        );
+    }, [data]);
 
     // Resolve tableId → friendly number/section
     const { data: tablesData } = useTables();
