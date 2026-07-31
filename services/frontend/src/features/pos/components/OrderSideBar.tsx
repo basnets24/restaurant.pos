@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Flame, Check, Loader2 } from "lucide-react";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
-import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props — deliberately narrower than the canonical domain Order/Table (types/pos):
@@ -49,9 +48,10 @@ interface OrderSidebarProps {
     onUpdateItem: (itemId: string, quantity: number) => void;
     onRemoveItem: (itemId: string) => void;
     // Matches POSShell usage: no argument needed
-    onCheckout: () => void;
+    onFire: () => void | Promise<void>;
+    onPay: () => void;
     isMobile?: boolean;
-    checkoutLoading?: boolean;
+    firing?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,11 +62,13 @@ function Stepper({
                      onChange,
                      min = 0,
                      max = 99,
+                     disabled = false,
                  }: {
     value: number;
     onChange: (v: number) => void;
     min?: number;
     max?: number;
+    disabled?: boolean;
 }) {
     const btn =
         "h-[26px] w-[26px] rounded-[7px] border border-border bg-background text-foreground " +
@@ -77,7 +79,7 @@ function Stepper({
                 type="button"
                 aria-label="Decrease quantity"
                 onClick={() => onChange(value - 1)}
-                disabled={value <= min}
+                disabled={disabled || value <= min}
                 className={btn}
             >
                 <Minus className="h-3.5 w-3.5" />
@@ -89,7 +91,7 @@ function Stepper({
                 type="button"
                 aria-label="Increase quantity"
                 onClick={() => onChange(value + 1)}
-                disabled={value >= max}
+                disabled={disabled || value >= max}
                 className={btn}
             >
                 <Plus className="h-3.5 w-3.5" />
@@ -105,10 +107,12 @@ function OrderItemRow({
                           item,
                           onUpdateQuantity,
                           onRemove,
+                          disabled,
                       }: {
     item: SidebarOrderItem;
     onUpdateQuantity: (quantity: number) => void;
     onRemove: () => void;
+    disabled?: boolean;
 }) {
     return (
         <div className="flex items-start justify-between gap-3">
@@ -131,6 +135,7 @@ function OrderItemRow({
                         value={item.quantity}
                         min={1}
                         onChange={onUpdateQuantity}
+                        disabled={disabled}
                     />
                 </div>
             </div>
@@ -143,7 +148,8 @@ function OrderItemRow({
                     type="button"
                     aria-label={`Remove ${item.menuItem.name}`}
                     onClick={onRemove}
-                    className="text-muted-foreground/70 hover:text-destructive transition-colors"
+                    disabled={disabled}
+                    className="text-muted-foreground/70 hover:text-destructive transition-colors disabled:opacity-40 disabled:pointer-events-none"
                 >
                     <Trash2 className="h-4 w-4" />
                 </button>
@@ -161,8 +167,9 @@ function OrderSidebarContent({
                                  onClose,
                                  onUpdateItem,
                                  onRemoveItem,
-                                 onCheckout,
-                                 checkoutLoading,
+                                 onFire,
+                                 onPay,
+                                 firing,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
     const kitchen = useKitchen();
     if (!table) return null;
@@ -232,6 +239,7 @@ function OrderSidebarContent({
                                     onUpdateItem(item.id, quantity)
                                 }
                                 onRemove={() => onRemoveItem(item.id)}
+                                disabled={isFired}
                             />
                         ))}
                     </div>
@@ -256,27 +264,22 @@ function OrderSidebarContent({
                         </div>
                     </div>
 
-                    {/* Fire to Kitchen (local kitchen board) */}
+                    {/* Fire to Kitchen — this is what actually creates the order and
+                        reserves inventory; payment happens later, separately, below. */}
                     <Button
                         type="button"
                         variant={isFired ? "outline" : "default"}
-                        disabled={isFired || order.items.length === 0}
-                        onClick={() => {
-                            if (!table || !order) return;
-                            kitchen.fire({
-                                id: order.id,
-                                tableId: table.id ?? String(table.number ?? ""),
-                                tableNumber: String(table.number ?? ""),
-                                items: order.items.map(i => ({ name: i.menuItem.name, quantity: i.quantity })),
-                                firedAt: Date.now(),
-                            });
-                            toast.success("Fired to kitchen");
-                        }}
+                        disabled={isFired || firing || order.items.length === 0}
+                        onClick={onFire}
                         className="w-full mb-2"
                     >
                         {isFired ? (
                             <>
                                 <Check className="h-4 w-4 mr-2" /> Fired ✓
+                            </>
+                        ) : firing ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Firing…
                             </>
                         ) : (
                             <>
@@ -286,23 +289,14 @@ function OrderSidebarContent({
                     </Button>
 
                     <Button
-                        onClick={onCheckout}
+                        onClick={onPay}
                         variant="outline"
                         className="w-full"
-                        disabled={!!checkoutLoading || !isFired}
-                        title={!isFired ? "Fire the order to the kitchen before checking out" : undefined}
+                        disabled={!isFired}
+                        title={!isFired ? "Fire the order to the kitchen before paying" : undefined}
                     >
-                        {checkoutLoading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Preparing Payment…
-                            </>
-                        ) : (
-                            <>
-                                <CreditCard className="h-4 w-4 mr-2" />
-                                Checkout – ${total.toFixed(2)}
-                            </>
-                        )}
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay – ${total.toFixed(2)}
                     </Button>
                 </div>
             )}

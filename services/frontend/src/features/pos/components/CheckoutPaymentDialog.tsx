@@ -78,10 +78,10 @@ export function CheckoutPaymentDialog({
             <p className="text-sm text-muted-foreground mb-6">
               {total != null ? (
                 <>
-                  <span className="font-numeric">${total.toFixed(2)}</span> paid · order sent to the kitchen
+                  <span className="font-numeric">${total.toFixed(2)}</span> paid
                 </>
               ) : (
-                "Payment received · order sent to the kitchen"
+                "Payment received"
               )}
             </p>
             <Button className="w-full" size="lg" onClick={() => onOpenChange(false)}>

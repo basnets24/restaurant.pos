@@ -27,14 +27,17 @@ test("place an order from the POS floor plan through to order placed", async ({ 
   // the stable signal that the add-to-cart call actually succeeded.
   await expect(page.getByRole("heading", { name: menuItemName, level: 4 })).toBeVisible({ timeout: 15000 });
 
-  // Checkout is gated behind firing the order to the kitchen — the sidebar
-  // disables it until "Fire to Kitchen" has been pressed, so fire first.
+  // "Fire to Kitchen" is what actually creates the order and reserves
+  // inventory (MenuPage.handleFireToKitchen -> POST /carts/{id}/checkout).
+  // Paying is a separate, later step — the sidebar's Pay button stays
+  // disabled until firing completes.
   await page.getByRole("button", { name: /Fire to Kitchen/ }).click();
+  await expect(page.getByRole("button", { name: /Fired/ })).toBeVisible({ timeout: 15000 });
 
-  // OrderSideBar's checkout button (bound to MenuPage.handleCheckout) creates the
-  // order and opens the inline payment dialog — the dialog's "Pay Now" button
-  // appearing is the "order placed" boundary. Actually paying (the Stripe
-  // PaymentElement step) is covered separately by payment.spec.ts.
-  await page.getByRole("button", { name: /^Checkout/ }).click();
+  // OrderSideBar's Pay button opens the inline payment dialog against the
+  // already-created order — the dialog's "Pay Now" button appearing is the
+  // "order placed" boundary. Actually paying (the Stripe PaymentElement step)
+  // is covered separately by payment.spec.ts.
+  await page.getByRole("button", { name: /^Pay/ }).click();
   await expect(page.getByRole("button", { name: /Pay Now/i })).toBeVisible({ timeout: 15000 });
 });

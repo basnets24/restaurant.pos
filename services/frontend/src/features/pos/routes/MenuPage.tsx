@@ -19,6 +19,7 @@ import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
 import { OrderSidebar, type SidebarOrder, type SidebarTable } from "@/features/pos/components/OrderSideBar";
 import { CheckoutPaymentDialog } from "@/features/pos/components/CheckoutPaymentDialog";
+import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import {
   useCreateCart,
   useCart,
@@ -57,6 +58,7 @@ const toPOS = (m: MenuItemDto): POSMenuItem => ({
   price: m.price,
   description: m.description,
   category: m.category,
+  isAvailable: m.isAvailable,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,10 +96,11 @@ export default function MenuPage() {
 
   // Sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [checkingOut, setCheckingOut] = useState(false);
+  const [firing, setFiring] = useState(false);
   // Once checked out, the placed order id drives the inline payment dialog.
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const kitchen = useKitchen();
 
   // Selected category + category rail / search state
   const [category, setCategory] = useState<string>("All");
@@ -109,6 +112,9 @@ export default function MenuPage() {
   const [cartId, setCartId] = useState<string | null>(
     location.state?.cartId ?? cartIdFromQuery ?? initialSession?.cartId ?? null
   );
+  // Once fired, the backend order is a snapshot of the cart at that moment —
+  // further cart edits wouldn't reach it, so they're blocked below.
+  const isFired = kitchen.isFired(cartId);
   const createCart = useCreateCart();
   const linkOrder = useLinkOrder(tableId);
   const setTableStatus = useSetTableStatus(tableId);
@@ -215,6 +221,10 @@ export default function MenuPage() {
 
   // Add to cart from a card
   async function handleAddToOrder(item: POSMenuItem, quantity = 1, notes?: string) {
+    if (isFired) {
+      toast.error("Order already fired to kitchen — further changes won't be included");
+      return;
+    }
     // ensure we have a cart first
     let id = cartId;
     if (!id) {
@@ -248,6 +258,10 @@ export default function MenuPage() {
   // Update item quantity from sidebar
   async function handleUpdateItem(menuItemId: string, newQty: number) {
     if (!cartId) return;
+    if (isFired) {
+      toast.error("Order already fired to kitchen — further changes won't be included");
+      return;
+    }
     const curr = cart?.items.find((i) => i.menuItemId === menuItemId)?.quantity ?? 0;
     try {
       if (newQty <= 0) {
@@ -268,27 +282,50 @@ export default function MenuPage() {
 
   async function handleRemoveItem(menuItemId: string) {
     if (!cartId) return;
+    if (isFired) {
+      toast.error("Order already fired to kitchen — further changes won't be included");
+      return;
+    }
     await cartApi.removeCartItem(cartId, menuItemId);
     await qc.invalidateQueries({ queryKey: cartKeys.byId(cartId) });
   }
 
-  // Checkout creates the order, then opens the inline payment dialog (Pay Now)
-  // right here instead of routing out to the success/order pages to pay.
-  async function handleCheckout() {
-    if (!cartId) return;
-    setCheckingOut(true);
+  // Fire to Kitchen commits the cart into a real order — this is what actually
+  // reserves inventory (POST /carts/{id}/checkout -> OrderSubmitted -> saga).
+  // Payment happens later, as a separate step (handlePay below), once the
+  // guest is ready to leave — not bundled into this click.
+  async function handleFireToKitchen() {
+    if (!cartId || !cart) return;
+    setFiring(true);
     try {
       const res = await cartApi.checkoutCart(cartId);
       const orderId = res?.orderId as string | undefined;
       if (!orderId) {
-        toast.error("Could not create order for checkout.");
+        toast.error("Could not fire order to kitchen.");
         return;
       }
+      kitchen.fire({
+        id: orderId,
+        tableId: tableId,
+        tableNumber: String(table?.number ?? ""),
+        items: cart.items.map((i) => ({ name: i.menuItemName, quantity: i.quantity })),
+        firedAt: Date.now(),
+      });
       setOrderPlaced(true);
-      setPaymentOrderId(orderId);
+      toast.success("Fired to kitchen");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Could not fire order to kitchen.");
     } finally {
-      setCheckingOut(false);
+      setFiring(false);
     }
+  }
+
+  // Pay is only reachable once fired — the order already exists (id === cartId,
+  // see FinalOrderService.FinalizeOrderAsync's idempotencyKey), so this just
+  // opens the inline payment dialog instead of hitting checkout again.
+  function handlePay() {
+    if (!cartId || !isFired) return;
+    setPaymentOrderId(cartId);
   }
 
   // Guest has paid and is done → free the table (mirrors OrderPage), then
@@ -443,8 +480,9 @@ export default function MenuPage() {
         onClose={() => setSidebarOpen(false)}
         onUpdateItem={handleUpdateItem}
         onRemoveItem={handleRemoveItem}
-        onCheckout={handleCheckout}
-        checkoutLoading={checkingOut}
+        onFire={handleFireToKitchen}
+        onPay={handlePay}
+        firing={firing}
       />
 
       {/* Floating order button to reopen sidebar when hidden */}
