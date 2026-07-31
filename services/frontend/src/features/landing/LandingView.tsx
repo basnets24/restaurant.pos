@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImageWithFallback } from "@/figma/ImageWithFallback";
 import {
     Star, ArrowRight, CheckCircle2, Zap, Users, Menu as MenuIcon,
-    ShoppingCart, CreditCard, BarChart3, Code2, Clock,
+    ShoppingCart, CreditCard, BarChart3, Code2, Clock, PlayCircle,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
+import { AppFooter } from "@/components/AppFooter";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
@@ -47,6 +50,7 @@ const EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
 export default function LandingView() {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
+    const [demoOpen, setDemoOpen] = useState(false);
 
     const register = () => {
         const returnUrl = `${window.location.origin}/join`;
@@ -102,7 +106,7 @@ export default function LandingView() {
                                     <span className="block italic text-brand-strong">Without the Chaos</span>
                                 </h1>
                                 <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
-                                    One system for orders, kitchen, staff, and sales — built for how independent restaurants actually run.
+                                    One system for orders, kitchen, staff, and sales.
                                 </p>
                             </div>
 
@@ -111,7 +115,12 @@ export default function LandingView() {
                                     Start Free Trial
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
-                                <Button variant="outline" size="lg" className="text-lg px-8 py-4 border-2 hover:bg-accent">
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    className="text-lg px-8 py-4 border-2 hover:bg-accent"
+                                    onClick={() => setDemoOpen(true)}
+                                >
                                     Watch Demo
                                 </Button>
                             </div>
@@ -146,7 +155,7 @@ export default function LandingView() {
                                             <div className="rounded-lg border border-border p-4 flex flex-col gap-2">
                                                 <span className="text-sm font-medium text-foreground">Business View</span>
                                                 <span className="text-xs text-muted-foreground">Staff POS — floor plan, ordering, kitchen, payments</span>
-                                                <Button size="sm" className="mt-1 shadow-md" onClick={go}>Start Demo</Button>
+                                                <Button size="sm" className="mt-1 shadow-md" onClick={go}>Admin Demo</Button>
                                             </div>
                                             <div className="rounded-lg border border-border p-4 flex flex-col gap-2 opacity-70">
                                                 <div className="flex items-center justify-between gap-2">
@@ -154,7 +163,7 @@ export default function LandingView() {
                                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">Coming Soon</Badge>
                                                 </div>
                                                 <span className="text-xs text-muted-foreground">Browse the menu &amp; order as a guest</span>
-                                                <Button size="sm" variant="outline" className="mt-1" disabled>Start Demo</Button>
+                                                <Button size="sm" variant="outline" className="mt-1" disabled>Customer Demo</Button>
                                             </div>
                                         </div>
                                     </div>
@@ -267,12 +276,10 @@ export default function LandingView() {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                            <Button size="lg" onClick={go} className="text-lg px-10 py-4 shadow-md hover:shadow-lg transition-all duration-200">
-                                Access Full Demo
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Button>
-                            <Button variant="outline" size="lg" className="text-lg px-10 py-4 border-2 hover:bg-accent">
-                                Schedule Walkthrough
+                            <Button size="lg" asChild className="text-lg px-10 py-4 shadow-md hover:shadow-lg transition-all duration-200">
+                                <a href="mailto:snehabasnet224@gmail.com?subject=Schedule%20a%20Walkthrough">
+                                    Schedule Walkthrough
+                                </a>
                             </Button>
                         </div>
                         <p className="text-sm text-muted-foreground">Free 14-day trial &middot; No credit card required</p>
@@ -297,29 +304,20 @@ export default function LandingView() {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="bg-card border-t border-border py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                                <span className="text-primary-foreground font-bold">RMS</span>
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-foreground">Restaurant Management</h3>
-                                <p className="text-sm text-muted-foreground">Complete business solution</p>
-                            </div>
-                        </div>
-                        <Button variant="outline" onClick={go} className="hidden sm:flex">
-                            Try Demo
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
+            <AppFooter onCta={go} />
+
+            {/* Watch Demo — video placeholder */}
+            <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Product Demo</DialogTitle>
+                    </DialogHeader>
+                    <div className="aspect-video rounded-lg bg-muted/50 border border-border flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <PlayCircle className="w-12 h-12" />
+                        <p className="text-sm font-medium">Demo video coming soon</p>
                     </div>
-                    <p className="text-xs text-muted-foreground text-center border-t border-border mt-8 pt-6">
-                        This is a portfolio demo project built by Sneha Basnet — not an active commercial product.
-                    </p>
-                </div>
-            </footer>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

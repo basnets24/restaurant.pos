@@ -7,6 +7,7 @@ import {
     Workflow, ShieldCheck, Database, Activity, CheckCircle2, XCircle,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
+import { AppFooter } from "@/components/AppFooter";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
@@ -252,11 +253,7 @@ export default function EngineeringView() {
                 </Card>
             </section>
 
-            <footer className="border-t border-border py-6">
-                <p className="text-xs text-muted-foreground text-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    This is a portfolio demo project built by Sneha Basnet — not an active commercial product.
-                </p>
-            </footer>
+            <AppFooter onCta={go} />
         </div>
     );
 }
