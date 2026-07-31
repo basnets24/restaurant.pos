@@ -188,11 +188,10 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
   };
 
   const onSaveDraft = () => {
-    // Persist to localStorage only
-    const payload = { draft, ts: Date.now() };
-    localStorage.setItem("floorplan_draft", JSON.stringify(payload));
+    // In-session only - arms the Publish button. Nothing here survives a
+    // refresh or navigating away; Discard/Exit both drop it for good.
     setSavedDraft(true);
-    toast.success("Draft saved");
+    toast.success("Draft ready to publish");
   };
 
   const changedLayouts = (): BulkLayoutItemDto[] => {
@@ -222,7 +221,6 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
         await bulk.mutateAsync({ items });
       }
 
-      localStorage.removeItem("floorplan_draft");
       setSavedDraft(false);
       toast.success("Layout published");
       qc.invalidateQueries({ queryKey: tableKeys.all });
@@ -556,7 +554,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
 
       {/* Footer bar */}
       <div className="flex items-center justify-between border rounded-md p-2">
-        <div className="text-xs text-muted-foreground">Draft mode. Changes are local until Publish.</div>
+        <div className="text-xs text-muted-foreground">Draft mode. Changes exist only in this session — Publish before leaving, or they're lost.</div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={onDiscard}>Discard</Button>
           <Button variant="outline" onClick={onSaveDraft}><Save className="h-4 w-4 mr-1" />Save Draft</Button>
