@@ -105,7 +105,7 @@ export function AppHeader({
           {nav && nav.length > 0 && (
             <nav className="hidden md:flex items-center gap-1">
               {nav.map((item) => (
-                <NavButton key={item.to} {...item} />
+                <NavButton key={item.label} {...item} />
               ))}
             </nav>
           )}
@@ -144,7 +144,7 @@ export function AppHeader({
         {nav && nav.length > 0 && (
           <div className="md:hidden pt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
             {nav.map((item) => (
-              <NavChip key={item.to} {...item} />
+              <NavChip key={item.label} {...item} />
             ))}
           </div>
         )}
