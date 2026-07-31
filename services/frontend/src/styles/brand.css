@@ -106,15 +106,12 @@
     /* accent = soft hover surface + on-brand ink (shadcn hover semantics) */
     --accent: var(--brand-soft);
     --accent-foreground: var(--brand-strong);
-    --destructive: var(--destructive);
     --destructive-foreground: var(--destructive-ink);
-    --border: var(--border);
     --input: var(--border);
     --input-background: var(--surface);
     --switch-background: var(--border-strong);
     --font-weight-medium: 500;
     --font-weight-normal: 400;
-    --ring: var(--ring);
 
     /* Earthy categorical charts */
     --chart-1: var(--olive-500);
