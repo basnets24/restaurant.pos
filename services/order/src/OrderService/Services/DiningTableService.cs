@@ -19,6 +19,7 @@ public class DiningTableService : IDiningTableService
     private readonly INotificationService _notifications;
     private readonly ICartService _cartService;
     private readonly IOrderService _orders;
+    private readonly IRepository<Order> _orderRepo;
 
     public DiningTableService(
         IRepository<DiningTable> repo,
@@ -26,7 +27,8 @@ public class DiningTableService : IDiningTableService
         IHubContext<FloorHub> hub,
         INotificationService notifications,
         ICartService cartService,
-        IOrderService orders)
+        IOrderService orders,
+        IRepository<Order> orderRepo)
     {
         _repo   = repo;
         _tenant = tenant;
@@ -34,6 +36,22 @@ public class DiningTableService : IDiningTableService
         _notifications = notifications;
         _cartService = cartService;
         _orders = orders;
+        _orderRepo = orderRepo;
+    }
+
+    // The safety-relevant state once a cart is checked out is the Order it became
+    // (Order.Id == cart id, see CartService.CheckoutAsync's idempotency key), not
+    // the Cart itself - the Cart is just the historical source snapshot and is
+    // never cleared on checkout. A cart that was never checked out has no Order
+    // row at all, which is fine to release. Returns null when there's nothing
+    // left worth protecting: no order, or one already in a terminal state.
+    private async Task<Order?> GetLiveOrderAsync(Guid? activeCartId)
+    {
+        if (activeCartId is not { } orderId) return null;
+        var order = await _orderRepo.GetAsync(orderId);
+        if (order is null) return null;
+        var terminal = order.Status is OrderStatus.Paid or OrderStatus.Cancelled or OrderStatus.Rejected;
+        return terminal ? null : order;
     }
 
     // A checked-out cart's id doubles as its order's id (see CartService.CheckoutAsync's
@@ -147,18 +165,14 @@ public class DiningTableService : IDiningTableService
 
         // Any move away from Occupied detaches the table's order, whichever
         // status it's headed to (Available, Reserved, or Dirty) - so guard all
-        // of them the same way, not just Available: if the linked cart already
-        // has items, refuse rather than silently orphaning an open check. An
-        // empty cart has nothing worth protecting and falls through.
-        if (normalized != DiningTableStatus.Occupied && t.ActiveCartId is { } activeCartId)
+        // of them the same way, not just Available: if there's a live, unpaid
+        // order still attached, refuse rather than silently abandoning it. A
+        // cart that was never fired (no Order row) has nothing worth protecting
+        // and falls through.
+        if (normalized != DiningTableStatus.Occupied && await GetLiveOrderAsync(t.ActiveCartId) is not null)
         {
-            Cart? activeCart = null;
-            try { activeCart = await _cartService.GetAsync(activeCartId); }
-            catch (KeyNotFoundException) { /* stale/phantom link - nothing to protect */ }
-
-            if (activeCart is not null && activeCart.Items.Count > 0)
-                throw new ConflictException(
-                    $"Table {t.Number} still has items on its order - clear the table before changing its status.");
+            throw new ConflictException(
+                $"Table {t.Number} has an unpaid order - clear the table before changing its status.");
         }
 
         var newPartySize = normalized == DiningTableStatus.Available ? null : dto.PartySize;
@@ -190,6 +204,18 @@ public class DiningTableService : IDiningTableService
     public async Task LinkOrderAsync(Guid id, Guid cartId, CancellationToken ct = default)
     {
         var t = await _repo.GetAsync(id) ?? throw new KeyNotFoundException("Table not found.");
+
+        // Relinking to a different cart has the same effect as unlinking, just
+        // via overwrite instead of null - it silently orphans whatever live,
+        // unpaid order the table was previously pointing at. Re-asserting the
+        // same cart id is a no-op some callers do defensively, so that stays
+        // allowed.
+        if (t.ActiveCartId is { } existing && existing != cartId && await GetLiveOrderAsync(existing) is not null)
+        {
+            throw new ConflictException(
+                $"Table {t.Number} already has an unpaid order - clear the table before linking a different one.");
+        }
+
         t.ActiveCartId = cartId;
         await _repo.UpdateAsync(t);
 
@@ -200,6 +226,18 @@ public class DiningTableService : IDiningTableService
     public async Task UnlinkOrderAsync(Guid id, Guid cartId, CancellationToken ct = default)
     {
         var t = await _repo.GetAsync(id) ?? throw new KeyNotFoundException("Table not found.");
+
+        // Same protection as SetStatusAsync, and enforced here too rather than
+        // relying solely on that guard - this is the operation that actually
+        // severs the table's link to its order, so a caller that unlinks first
+        // (e.g. a two-step "unlink then set available" flow) can't route around
+        // the status-change guard by clearing the thing it inspects.
+        if (t.ActiveCartId == cartId && await GetLiveOrderAsync(cartId) is not null)
+        {
+            throw new ConflictException(
+                $"Table {t.Number} has an unpaid order - clear the table before unlinking it.");
+        }
+
         var wasLinked = t.ActiveCartId == cartId;
         if (wasLinked) t.ActiveCartId = null;
         await _repo.UpdateAsync(t);

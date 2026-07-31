@@ -17,7 +17,12 @@ export default function TablesPage() {
   const tables: TableViewDto[] = useMemo(() => data ?? [], [data]);
 
   const counts = useMemo(() => countByStatus(tables), [tables]);
-  const [active, setActive] = useState<TableViewDto | null>(null);
+  // Store just the id, not the table snapshot - resolving it fresh from
+  // `tables` each render means the open dialog picks up the optimistic
+  // status update from useSetTableStatus instead of showing stale data
+  // until it's closed and reopened.
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const active = useMemo(() => tables.find(t => t.id === activeId) ?? null, [tables, activeId]);
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
@@ -109,7 +114,7 @@ export default function TablesPage() {
           <div className="absolute inset-0" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`, transformOrigin: "0 0" }}>
             <SectionSigns tables={tables} />
             {tables.map(t => (
-              <TableMark key={t.id} t={t} onOpen={() => setActive(t)} />
+              <TableMark key={t.id} t={t} onOpen={() => setActiveId(t.id)} />
             ))}
           </div>
         )}
@@ -131,7 +136,7 @@ export default function TablesPage() {
         <StatusLegend counts={counts} />
       </div>
 
-      <TableActionDialog table={active} onClose={() => setActive(null)} />
+      <TableActionDialog table={active} onClose={() => setActiveId(null)} />
     </div>
   );
 }
@@ -169,7 +174,10 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
 
   if (!table) return null;
   const s = STATUS_STYLE[table.status] ?? STATUS_STYLE.available;
-  const otherStatuses = (Object.entries(STATUS_STYLE) as [TableStatus, typeof s][]).filter(([key]) => key !== table.status);
+  // "Occupied" isn't a valid target here - it requires a party size, which only
+  // the "Seat Party" flow collects. Offering it as a status pill always fails
+  // with a raw backend validation error (see DiningTableService.SetStatusAsync).
+  const otherStatuses = (Object.entries(STATUS_STYLE) as [TableStatus, typeof s][]).filter(([key]) => key !== table.status && key !== "occupied");
 
   const onSeatParty = async () => {
     const size = Math.max(1, Math.min(table.seats, parseInt(party || "1")));
@@ -188,14 +196,6 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
   const onOpenOrder = () => {
     onClose();
     navigate(`/pos/table/${table.id}`);
-  };
-
-  const onClear = () => {
-    if (table.activeCartId) {
-      if (!confirm("Clear table with open check?")) return;
-    }
-    clear.mutate();
-    onClose();
   };
 
   // Same clear action, but reached from the "can't change status" dialog below,
@@ -222,10 +222,33 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
           </div>
         </DialogHeader>
 
-        <span className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${s.bg}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-          {s.label}
-        </span>
+        <div className="space-y-2">
+          <span className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${s.bg}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+            {s.label}
+          </span>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Change status</span>
+            {otherStatuses.map(([key, style]) => (
+              <button
+                key={key}
+                type="button"
+                disabled={setStatus.isPending}
+                onClick={() => setStatus.mutate({ status: key }, {
+                  onError: (e: unknown) => {
+                    const detail = isAxiosError<{ detail?: string }>(e) ? e.response?.data?.detail : undefined;
+                    setBlockedReason(detail || "This table has an open order that needs to be cleared first.");
+                  },
+                })}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
+              >
+                <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+                {style.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="h-px bg-border" />
 
@@ -252,37 +275,11 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
           </div>
         )}
 
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Change status</div>
-          <div className="flex flex-wrap gap-2">
-            {otherStatuses.map(([key, style]) => (
-              <button
-                key={key}
-                type="button"
-                disabled={setStatus.isPending}
-                onClick={() => setStatus.mutate({ status: key }, {
-                  onError: (e: unknown) => {
-                    const detail = isAxiosError<{ detail?: string }>(e) ? e.response?.data?.detail : undefined;
-                    setBlockedReason(detail || "This table has an open order that needs to be cleared first.");
-                  },
-                })}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
-              >
-                <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                {style.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <DialogFooter className="flex-col gap-2 sm:flex-col">
+        <DialogFooter className="flex-row gap-2 mb-2">
           {table.status !== "occupied" ? (
-            <Button className="w-full" disabled={seat.isPending} onClick={onSeatParty}>Seat Party</Button>
+            <Button size="lg" className="flex-1" disabled={seat.isPending} onClick={onSeatParty}>Seat Party</Button>
           ) : (
-            <>
-              <Button className="w-full" onClick={onOpenOrder}>Open Order</Button>
-              <Button variant="outline" className="w-full" disabled={clear.isPending} onClick={onClear}>Clear Table</Button>
-            </>
+            <Button size="lg" className="flex-1" onClick={onOpenOrder}>Open Order</Button>
           )}
         </DialogFooter>
       </DialogContent>
@@ -295,12 +292,12 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
             <DialogTitle>Can't change status</DialogTitle>
           </DialogHeader>
           <div className="text-sm text-muted-foreground">{blockedReason}</div>
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button className="w-full" disabled={clear.isPending} onClick={onClearFromBlockedDialog}>
-              Clear Table
-            </Button>
-            <Button variant="outline" className="w-full" onClick={() => setBlockedReason(null)}>
+          <DialogFooter className="flex-row gap-2 mb-2">
+            <Button size="lg" variant="outline" className="flex-1" onClick={() => setBlockedReason(null)}>
               Cancel
+            </Button>
+            <Button size="lg" className="flex-1" disabled={clear.isPending} onClick={onClearFromBlockedDialog}>
+              Clear Table
             </Button>
           </DialogFooter>
         </DialogContent>
