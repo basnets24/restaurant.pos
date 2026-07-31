@@ -35,7 +35,6 @@ public class FloorHub : Hub
         {
             var group = FloorGroups.TenantGroup(rid!, lid!);
             await Groups.AddToGroupAsync(Context.ConnectionId, group);
-            await Clients.Caller.SendAsync("ConnectedToGroup", new { group });
         }
 
 

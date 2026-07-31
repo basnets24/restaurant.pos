@@ -1,5 +1,5 @@
 // src/auth/ProtectedRoute.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthorizationPaths, QueryParameterNames } from './ApiAuthorizationConstants';
 import { useAuth } from './AuthProvider';
@@ -24,6 +24,18 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
       { retry: 1, enabled: isReady && isAuthenticated && loc.pathname !== "/join" }
     );
 
+    // Sync TenantContext from onboarding status after render, not during it -
+    // calling setRid/setLid in the render body updates the useSyncExternalStore
+    // snapshot this same component is subscribed to via useTenant(), which React
+    // flags as "setState while rendering a different component".
+    useEffect(() => {
+        if (loc.pathname === "/join") return;
+        if (status?.hasMembership) {
+            if (status.restaurantId && status.restaurantId !== rid) setRid(status.restaurantId);
+            if (status.locationId && status.locationId !== lid) setLid(status.locationId);
+        }
+    }, [loc.pathname, status, rid, lid, setRid, setLid]);
+
     // Now branch based on state
     if (!isReady) return null;
     // signOut() clears the local user (isAuthenticated -> false) before the browser actually
@@ -46,11 +58,7 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
                 return <Navigate to={loginUrl} replace />;
             }
         }
-        if (status?.hasMembership) {
-            // ensure TenantContext is hydrated
-            if (status.restaurantId && status.restaurantId !== rid) setRid(status.restaurantId);
-            if (status.locationId && status.locationId !== lid) setLid(status.locationId);
-        } else {
+        if (!status?.hasMembership) {
             return <Navigate to="/join" replace />;
         }
     }

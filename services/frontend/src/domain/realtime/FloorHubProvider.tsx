@@ -34,6 +34,10 @@ export function FloorHubProvider({ children }: { children: ReactNode }) {
         withCredentials: true,
       })
       .withAutomaticReconnect()
+      // Default (Information) logs the full connection URL, which includes
+      // the access_token query param SignalR appends for WebSocket auth -
+      // that's a live JWT leaking into the browser console on every connect.
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     hub.start().catch(console.error);
