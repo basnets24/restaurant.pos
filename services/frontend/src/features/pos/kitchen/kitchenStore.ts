@@ -71,8 +71,13 @@ export function useKitchen() {
   const actions = useMemo(() => {
     return {
       fire: (ticket: Omit<KitchenTicket, "status">) => {
-        // If already present, no-op
-        if (state.tickets.some((t) => t.id === ticket.id && t.status === "fired")) return;
+        // If a live ticket already exists for this cart (fired or already
+        // served), no-op - only a voided ticket frees the id up to be fired
+        // again. Matching on "fired" alone let a served-but-unpaid order get
+        // re-fired as a brand new duplicate ticket once it dropped out of the
+        // "fired" bucket, showing the kitchen more items than the guest's
+        // order/bill actually has.
+        if (state.tickets.some((t) => t.id === ticket.id && t.status !== "voided")) return;
         setState({ tickets: [...state.tickets, { ...ticket, status: "fired" }] });
       },
       void: (cartId: string) => {
@@ -92,8 +97,12 @@ export function useKitchen() {
       remove: (cartId: string) => {
         setState({ tickets: state.tickets.filter((t) => t.id !== cartId) });
       },
+      // "served" means the kitchen delivered the food, not that the guest paid -
+      // the cart must stay locked (no more adding items / re-firing) until the
+      // order reaches a terminal state. Only "voided" - which also releases the
+      // table - actually reopens the cart.
       isFired: (cartId?: string | null) =>
-        !!cartId && state.tickets.some((t) => t.id === cartId && t.status === "fired"),
+        !!cartId && state.tickets.some((t) => t.id === cartId && t.status !== "voided"),
       active: () => state.tickets.filter((t) => t.status === "fired"),
       all: () => state.tickets.slice(),
       setSelected: (cartId: string | null) => setState({ selectedCartId: cartId }),

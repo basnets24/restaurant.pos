@@ -13,16 +13,35 @@ public class CartService : ICartService
     private readonly IRepository<DiningTable> _tableRepo;
     private readonly IOrderService _orderService;
     private readonly IRepository<PosCatalogItem> _posCatalog;
+    private readonly IRepository<Order> _orderRepo;
 
-    public CartService(IRepository<Cart> cartRepo, 
-        IRepository<DiningTable> tableRepo, 
-        IOrderService orderService, 
-        IRepository<PosCatalogItem> posCatalog)
+    public CartService(IRepository<Cart> cartRepo,
+        IRepository<DiningTable> tableRepo,
+        IOrderService orderService,
+        IRepository<PosCatalogItem> posCatalog,
+        IRepository<Order> orderRepo)
     {
         _cartRepo = cartRepo;
         _tableRepo = tableRepo;
         _orderService = orderService;
         _posCatalog = posCatalog;
+        _orderRepo = orderRepo;
+    }
+
+    // A cart's id doubles as its order's id once checked out (see CheckoutAsync's
+    // idempotency key). Mutating the cart after that point is invisible to the
+    // guest's bill: checkout is idempotent and won't re-price a changed cart, but
+    // nothing stops the kitchen from being fired again for the inflated item list
+    // (relying on the frontend's local "already fired" flag isn't enough - it's
+    // reset by unrelated kitchen-workflow actions like marking an order served).
+    // So refuse the mutation at the source instead of trusting the caller.
+    private async Task GuardNotCheckedOutAsync(Guid cartId)
+    {
+        var order = await _orderRepo.GetAsync(cartId);
+        if (order is null) return;
+        var terminal = order.Status is OrderStatus.Paid or OrderStatus.Cancelled or OrderStatus.Rejected;
+        if (!terminal)
+            throw new ConflictException("This order has already been fired to the kitchen and can no longer be changed.");
     }
 
     public async Task<Cart> GetAsync(Guid id)
@@ -69,6 +88,7 @@ public class CartService : ICartService
 
     public async Task AddItemAsync(Guid cartId, AddCartItemDto itemDto)
     {
+        await GuardNotCheckedOutAsync(cartId);
         var cart = await _cartRepo.GetAsync(cartId)
             ?? throw new KeyNotFoundException("Cart not found.");
         var posItem = await _posCatalog.GetAsync(itemDto.MenuItemId);
@@ -109,6 +129,7 @@ public class CartService : ICartService
 
     public async Task RemoveItemAsync(Guid cartId, Guid menuItemId)
     {
+        await GuardNotCheckedOutAsync(cartId);
         var cart = await _cartRepo.GetAsync(cartId)
             ?? throw new KeyNotFoundException("Cart not found.");
         cart.Items.RemoveAll(i => i.MenuItemId == menuItemId);
