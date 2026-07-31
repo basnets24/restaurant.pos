@@ -62,7 +62,7 @@ export default function OrdersPage() {
             window.open(o.receiptUrl, "_blank", "noopener,noreferrer");
             return;
         }
-        if (o.tableId) navigate(`/pos/table/${o.tableId}/order`);
+        if (o.tableId) navigate(`/pos/table/${o.tableId}/order?order=${encodeURIComponent(o.id)}`);
     };
 
     return (
