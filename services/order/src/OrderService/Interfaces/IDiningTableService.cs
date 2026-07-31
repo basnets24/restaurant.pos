@@ -10,6 +10,7 @@ public interface IDiningTableService
 
 
 // Runtime ops
+    Task<Guid> SeatAsync(Guid id, SeatPartyDto dto, CancellationToken ct);
     Task SetStatusAsync(Guid id, SetTableStatusDto dto, CancellationToken ct);
     Task LinkOrderAsync(Guid id, Guid cartId, CancellationToken ct = default);
     Task UnlinkOrderAsync(Guid id, Guid cartId, CancellationToken ct = default);

@@ -22,6 +22,7 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
     public DbSet<DiningTable> DiningTables => Set<DiningTable>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<PosCatalogItem> PosCatalogItems => Set<PosCatalogItem>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +43,12 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
         {
             b.HasKey(t => t.Id);
             b.HasIndex(t => new { t.RestaurantId, t.LocationId });
+        });
+
+        modelBuilder.Entity<Notification>(b =>
+        {
+            b.HasKey(n => n.Id);
+            b.HasIndex(n => new { n.RestaurantId, n.LocationId, n.CreatedAt });
         });
 
         modelBuilder.Entity<PosCatalogItem>(b =>

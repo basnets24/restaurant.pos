@@ -118,7 +118,10 @@ export default function MenuPage() {
   const tableQuery = useTable(tableId);
   const table = tableQuery.data;
 
-  const linkedOnce = useRef(false);
+  // Seat Party (TablesPage) already opened+linked the cart and set status
+  // atomically server-side when it navigated here with a cartId - nothing
+  // left for this page to link.
+  const linkedOnce = useRef(location.state?.cartId != null);
   // Seed guest count to store if passed via navigation state
   useEffect(() => {
     if (location.state?.partySize != null) {
@@ -164,20 +167,29 @@ export default function MenuPage() {
         }
       }
 
-      // We have a cart id: link to table and set party size (once)
+      // We have a cart id but haven't linked it yet (e.g. resuming an existing
+      // cart, or the fallback create-path above). Claim the guard synchronously,
+      // before any await, so two overlapping invocations of this effect (React
+      // StrictMode's dev-mode double-invoke) can't both pass the check and fire
+      // these mutations twice.
       if (cartId && !linkedOnce.current) {
+        linkedOnce.current = true;
         try {
           await linkOrder.mutateAsync(cartId);
         } catch (e) { console.warn("MenuPage: failed to link cart to table", e); }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
           if (guestCount != null) {
-            await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
+            // Seat Party (TablesPage) may have already set this exact status/party
+            // size before navigating here - skip the redundant write when so.
+            const alreadyOccupied = table?.status === "occupied" && table?.partySize === guestCount;
+            if (!alreadyOccupied) {
+              await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
+            }
             store.setTableSession(tableId, { guestCount });
           }
         } catch (e) { console.warn("MenuPage: failed to mark table occupied", e); }
         store.setTableSession(tableId, { cartId });
-        linkedOnce.current = true;
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,7 +226,8 @@ export default function MenuPage() {
         try { await linkOrder.mutateAsync(res.id); } catch (e) { console.warn("MenuPage: failed to link cart to table", e); }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
-          if (guestCount != null) await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
+          const alreadyOccupied = table?.status === "occupied" && table?.partySize === guestCount;
+          if (guestCount != null && !alreadyOccupied) await setTableStatus.mutateAsync({ status: "occupied", partySize: guestCount });
         } catch (e) { console.warn("MenuPage: failed to mark table occupied", e); }
       } catch {
         toast.error("Could not start an order");

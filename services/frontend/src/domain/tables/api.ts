@@ -7,6 +7,7 @@ import {
   type CreateTableDto,
   type JoinTablesDto,
   type LinkOrderDto,
+  type SeatResultDto,
   type SetTableStatusDto,
   type SplitTablesDto,
   type TableViewDto,
@@ -58,9 +59,10 @@ export const TablesApi = {
     const token = await getApiToken('Order', ['order.write']);
     await api.patch(`${base}/${id}/status`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
-  async seat(id: string, party: number): Promise<void> {
+  async seat(id: string, party: number): Promise<SeatResultDto> {
     const token = await getApiToken('Order', ['order.write']);
-    await api.post(`${base}/${id}/seat`, { partySize: party }, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
+    const { data } = await api.post<SeatResultDto>(`${base}/${id}/seat`, { partySize: party }, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
+    return data;
   },
   async clear(id: string): Promise<void> {
     const token = await getApiToken('Order', ['order.write']);

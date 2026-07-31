@@ -45,6 +45,8 @@ builder.Services.AddTenantEfRepository<Cart, OrderDbContext>();
 builder.Services.AddTenantEfRepository<DiningTable, OrderDbContext>();
 builder.Services.AddTenantEfRepository<PosCatalogItem, OrderDbContext>();
 builder.Services.AddTenantEfRepository<Order, OrderDbContext>();
+builder.Services.AddTenantEfRepository<Notification, OrderDbContext>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddTablesModule();
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(

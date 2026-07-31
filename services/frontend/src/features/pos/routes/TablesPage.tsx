@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { TableViewDto, TableStatus } from "@/domain/tables/types";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { SectionSigns, shapeRadiusClass, STATUS_STYLE, StatusLegend, countByStatus } from "@/components/floor-plan/floorVisuals";
+import { isAxiosError } from "@/lib/apiErrors";
 
 const GRID = 20;
 
@@ -166,6 +167,7 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
   const setStatus = useSetTableStatus(table?.id ?? "");
   const clear = useClear(table?.id ?? "");
   const [party, setParty] = useState("2");
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   // Reset party size whenever the selected table changes.
   const [prevTableKey, setPrevTableKey] = useState(`${table?.id}:${table?.seats}`);
@@ -181,9 +183,16 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
 
   const onSeatParty = async () => {
     const size = Math.max(1, Math.min(table.seats, parseInt(party || "1")));
-    try { await seat.mutateAsync(size); } catch (e) { console.warn("TablesPage: failed to seat party", e); }
+    let cartId: string | undefined;
+    try {
+      cartId = (await seat.mutateAsync(size)).cartId;
+    } catch (e) {
+      console.warn("TablesPage: failed to seat party", e);
+    }
     onClose();
-    navigate(`/pos/table/${table.id}/menu`, { state: { partySize: size } });
+    // Seat already opened+linked a cart server-side; hand its id along so
+    // MenuPage just loads it instead of creating/linking one of its own.
+    navigate(`/pos/table/${table.id}/menu`, { state: { partySize: size, cartId } });
   };
 
   const onOpenOrder = () => {
@@ -196,6 +205,15 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
       if (!confirm("Clear table with open check?")) return;
     }
     clear.mutate();
+    onClose();
+  };
+
+  // Same clear action, but reached from the "can't change status" dialog below,
+  // where the open-check warning would be redundant - that dialog already told
+  // them why, so skip straight to clearing.
+  const onClearFromBlockedDialog = () => {
+    clear.mutate();
+    setBlockedReason(null);
     onClose();
   };
 
@@ -251,8 +269,14 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
               <button
                 key={key}
                 type="button"
-                onClick={() => setStatus.mutate({ status: key })}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                disabled={setStatus.isPending}
+                onClick={() => setStatus.mutate({ status: key }, {
+                  onError: (e: unknown) => {
+                    const detail = isAxiosError<{ detail?: string }>(e) ? e.response?.data?.detail : undefined;
+                    setBlockedReason(detail || "This table has an open order that needs to be cleared first.");
+                  },
+                })}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
               >
                 <span className={`h-2 w-2 rounded-full ${style.dot}`} />
                 {style.label}
@@ -263,15 +287,34 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           {table.status !== "occupied" ? (
-            <Button className="w-full" onClick={onSeatParty}>Seat Party</Button>
+            <Button className="w-full" disabled={seat.isPending} onClick={onSeatParty}>Seat Party</Button>
           ) : (
             <>
               <Button className="w-full" onClick={onOpenOrder}>Open Order</Button>
-              <Button variant="outline" className="w-full" onClick={onClear}>Clear Table</Button>
+              <Button variant="outline" className="w-full" disabled={clear.isPending} onClick={onClear}>Clear Table</Button>
             </>
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Why the status change above didn't take effect - a toast was too easy to
+          miss since it fires while this dialog is still open on top of it. */}
+      <Dialog open={blockedReason !== null} onOpenChange={(v) => !v && setBlockedReason(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Can't change status</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">{blockedReason}</div>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button className="w-full" disabled={clear.isPending} onClick={onClearFromBlockedDialog}>
+              Clear Table
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setBlockedReason(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

@@ -11,6 +11,17 @@ type FloorHubOpts = {
   accessTokenFactory?: () => string | Promise<string>;
 };
 
+// Every event DiningTableService actually broadcasts to the tenant group.
+const TABLE_EVENTS = [
+  "TableStatusChanged",
+  "OrderLinked",
+  "OrderUnlinked",
+  "TableLayoutChanged",
+  "TableRemoved",
+  "TablesJoined",
+  "TablesSplit",
+] as const;
+
 export function useFloorHub({ baseUrl = ENV.ORDER_URL, restaurantId, locationId, accessTokenFactory }: FloorHubOpts) {
   const qc = useQueryClient();
   const connRef = useRef<signalR.HubConnection | null>(null);
@@ -24,12 +35,16 @@ export function useFloorHub({ baseUrl = ENV.ORDER_URL, restaurantId, locationId,
       .build();
 
     const onUpdated = () => qc.invalidateQueries({ queryKey: tableKeys.all });
-    conn.on("TableUpdated", onUpdated);
+    TABLE_EVENTS.forEach((event) => conn.on(event, onUpdated));
     conn.start().catch(console.error);
     connRef.current = conn;
 
     return () => {
-      try { conn.off("TableUpdated", onUpdated); } finally { conn.stop().catch(() => { }); }
+      try {
+        TABLE_EVENTS.forEach((event) => conn.off(event, onUpdated));
+      } finally {
+        conn.stop().catch(() => { });
+      }
     };
   }, [baseUrl, restaurantId, locationId, accessTokenFactory, qc]);
 }

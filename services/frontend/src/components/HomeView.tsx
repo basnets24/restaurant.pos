@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../api-authorization/AuthProvider";
 
@@ -23,6 +23,8 @@ import { useTenant } from "@/auth/tenant";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
+import { useNotifications, useMarkNotificationRead, useNotificationHub } from "@/domain/notifications";
+import type { NotificationType as ApiNotificationType } from "@/domain/notifications";
 
 export default function Home() {
     const { isAuthenticated } = useAuth();
@@ -47,13 +49,6 @@ interface DashboardProps {
 }
 
 type NotificationVariant = "warning" | "danger" | "neutral";
-interface Notification {
-    id: number;
-    icon: LucideIcon;
-    text: string;
-    variant: NotificationVariant;
-    time: string;
-}
 
 const NOTIFICATION_ROW_BG: Record<NotificationVariant, string> = {
     warning: "bg-status-reserved-soft",
@@ -66,12 +61,61 @@ const NOTIFICATION_ICON_COLOR: Record<NotificationVariant, string> = {
     neutral: "text-muted-foreground",
 };
 
+const NOTIFICATION_ICON: Record<ApiNotificationType, LucideIcon> = {
+    TableSeated: UserPlus,
+    TableAvailable: CheckCircle2,
+    TableReserved: CalendarClock,
+    TableDirty: AlertTriangle,
+    TableCleared: CheckCircle2,
+    OrderUnlinked: CreditCard,
+    TablesJoined: Package,
+    TablesSplit: Package,
+    TableRemoved: AlertTriangle,
+};
+const NOTIFICATION_VARIANT: Record<ApiNotificationType, NotificationVariant> = {
+    TableSeated: "neutral",
+    TableAvailable: "neutral",
+    TableReserved: "warning",
+    TableDirty: "warning",
+    TableCleared: "neutral",
+    OrderUnlinked: "neutral",
+    TablesJoined: "neutral",
+    TablesSplit: "neutral",
+    TableRemoved: "danger",
+};
+
+function formatRelativeTime(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const minutes = Math.floor(diffMs / 60_000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hr ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return "Yesterday";
+    return `${days} days ago`;
+}
+
 export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const navigate = useNavigate();
+    const { getAccessToken } = useAuth();
 
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
     hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
+
+    const { data: notificationsData } = useNotifications();
+    const markNotificationRead = useMarkNotificationRead();
+    const accessTokenFactory = useCallback(async () => (await getAccessToken()) ?? "", [getAccessToken]);
+    useNotificationHub({
+        restaurantId: rid ?? undefined,
+        locationId: lid ?? undefined,
+        accessTokenFactory,
+    });
+    // Read notifications drop out of this compact widget instead of just
+    // dimming in place - marking one read (the X button) is effectively how
+    // you dismiss it now that there's no "Clear all", so the list stays short.
+    const notifications = (notificationsData ?? []).filter((n) => !n.readAt);
 
     const { restaurantName: nameFromTenant, locations } = useTenantInfo();
     const restaurantName = nameFromTenant || "Your Restaurant";
@@ -99,15 +143,6 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
         { label: "Staff On Duty", value: num(String(employees.data?.total ?? "—")), trend: "neutral" as const, onClick: () => navigate("/management") },
         { label: "Tables Occupied", value: num(`${stats.occupied}/${stats.total}`), change: stats.capacityText, trend: "neutral" as const, onClick: () => navigate("/pos/tables") },
     ];
-
-    // Static demo notifications (no notifications backend yet)
-    const [notifications, setNotifications] = useState<Notification[]>([
-        { id: 1, icon: AlertTriangle, text: "3 menu items running low on stock", variant: "warning", time: "5 min ago" },
-        { id: 2, icon: CalendarClock, text: "Reservation conflict at 7:30 PM for Table 4", variant: "danger", time: "18 min ago" },
-        { id: 3, icon: UserPlus, text: "New staff member Priya added to schedule", variant: "neutral", time: "1 hr ago" },
-        { id: 4, icon: CreditCard, text: "Payment failed for order #482", variant: "danger", time: "2 hr ago" },
-        { id: 5, icon: Package, text: "Delivery from Riverside Produce arrived", variant: "neutral", time: "Yesterday" },
-    ]);
 
     const workspaces = [
         { icon: FloorsOrdersIcon, title: "Floor & Orders", description: "Take orders, process payments, and manage your restaurant floor", onClick: onSelectPOS },
@@ -165,16 +200,8 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
 
                     {/* Notifications */}
                     <div className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[340px]">
-                        <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                        <div className="px-5 py-3.5 border-b border-border">
                             <span className="text-sm font-semibold text-foreground">Notifications</span>
-                            {notifications.length > 0 && (
-                                <button
-                                    onClick={() => setNotifications([])}
-                                    className="text-xs font-semibold text-brand hover:underline"
-                                >
-                                    Clear all
-                                </button>
-                            )}
                         </div>
 
                         {notifications.length === 0 ? (
@@ -184,25 +211,29 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                             </div>
                         ) : (
                             <div className="flex flex-col overflow-y-auto">
-                                {notifications.map((n) => (
-                                    <div
-                                        key={n.id}
-                                        className={`flex items-start gap-2.5 px-5 py-3 border-b border-border last:border-b-0 ${NOTIFICATION_ROW_BG[n.variant]}`}
-                                    >
-                                        <n.icon className={`w-4 h-4 shrink-0 mt-0.5 ${NOTIFICATION_ICON_COLOR[n.variant]}`} />
-                                        <div className="flex-1 flex flex-col gap-0.5">
-                                            <span className="text-sm text-foreground">{n.text}</span>
-                                            <span className="text-xs text-muted-foreground">{n.time}</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setNotifications((list) => list.filter((x) => x.id !== n.id))}
-                                            className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md hover:bg-secondary"
-                                            aria-label="Dismiss notification"
+                                {notifications.map((n) => {
+                                    const Icon = NOTIFICATION_ICON[n.type] ?? AlertTriangle;
+                                    const variant = NOTIFICATION_VARIANT[n.type] ?? "neutral";
+                                    return (
+                                        <div
+                                            key={n.id}
+                                            className={`flex items-start gap-2.5 px-5 py-3 border-b border-border last:border-b-0 ${NOTIFICATION_ROW_BG[variant]}`}
                                         >
-                                            <X className="w-3.5 h-3.5 text-muted-foreground" />
-                                        </button>
-                                    </div>
-                                ))}
+                                            <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${NOTIFICATION_ICON_COLOR[variant]}`} />
+                                            <div className="flex-1 flex flex-col gap-0.5">
+                                                <span className="text-sm text-foreground">{n.title}</span>
+                                                <span className="text-xs text-muted-foreground">{formatRelativeTime(n.createdAt)}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => markNotificationRead.mutate(n.id)}
+                                                className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md hover:bg-secondary"
+                                                aria-label="Dismiss"
+                                            >
+                                                <X className="w-3.5 h-3.5 text-muted-foreground" />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

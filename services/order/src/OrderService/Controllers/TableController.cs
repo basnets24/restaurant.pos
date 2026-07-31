@@ -51,11 +51,11 @@ public class TableController : ControllerBase
 
     [HttpPost("{id}/seat")]
     [Authorize(Policy = OrderPolicyExtensions.ManageTables)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(SeatResultDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Seat(Guid id, [FromBody] SeatPartyDto body, CancellationToken ct)
     {
-        await _svc.SetStatusAsync(id, new SetTableStatusDto("occupied", body.PartySize), ct);
-        return NoContent();
+        var cartId = await _svc.SeatAsync(id, body, ct);
+        return Ok(new SeatResultDto(cartId));
     }
 
 
