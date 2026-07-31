@@ -56,14 +56,15 @@ npm run lint            # eslint
 There is no `menu`, `inventory`, or `tenant` service directory anymore — if you see those names in docs (README's "Microservices" section, CI_CD_PIPELINE.md), they refer to features now living inside `catalog`/`identity`, not standalone services.
 
 ### Order saga (`OrderService/StateMachines/OrderStateMachine.cs`, MassTransit)
+The saga is deliberately kept small — it only covers inventory reservation, not payment:
 1. Cart checkout → `OrderSubmitted`
 2. Saga → `ReserveInventory` → catalog's inventory consumer
-3. On success → `PaymentRequested` + schedules a 2-min `PaymentTimeoutExpired`
-4. Payment service's `PaymentRequestedConsumer` creates a Stripe **PaymentIntent** (not a Checkout Session, despite the name) and publishes its client secret
+3. On `InventoryReserved`/`InventoryReserveFaulted` → saga transitions straight to `Confirmed`/`Rejected`. That's the end of the saga's involvement — it does **not** send `PaymentRequested` and does **not** schedule a payment timeout (an earlier design did; it was deliberately removed to keep the saga small)
+4. `OrderController.RequestPayment` publishes `PaymentRequested` directly, outside the saga. Payment service's `PaymentRequestedConsumer` creates a Stripe **PaymentIntent** (not a Checkout Session, despite the name) and publishes its client secret
 5. Frontend polls for that client secret and confirms it client-side via an embedded Stripe `PaymentElement` (`StripeCheckoutDialog`) — no redirect to a Stripe-hosted page. It then calls the backend's `POST /orders/{orderId}/payment-confirm` (`PaymentSessionController`), which server-verifies the PaymentIntent with Stripe and publishes `PaymentSucceeded`/`PaymentFailed` **synchronously — there is no webhook endpoint in the current code** (confirmed 2026-07-23; `services/payment/README.md` still documents a Checkout Session + `/webhooks/stripe` design — that doc is stale)
-6. `PaymentFailed` or timeout → saga sends compensating `ReleaseInventory`, transitions to Rejected
+6. `PaymentSucceeded`/`PaymentFailed`/`InventoryReserveFaulted` are applied to the `Order` entity via `Consumers/`, independent of saga transitions — don't assume payment state changes flow through the state machine.
 
-Payment success/failure is applied to the order entity via its own consumers, independent of saga transitions — don't assume payment state changes flow through the state machine.
+**Known gap (2026-07-30):** the `ReleaseInventory` queue/consumer pipeline is fully wired (catalog side works), but nothing in the order service publishes it — there's no order cancel/void endpoint yet, so inventory reserved for an order that's abandoned or never paid is never restored. A manual cancel endpoint is planned; this is intentionally not a saga timeout (see saga note above).
 
 ### POS read model (`OrderService/Projections/PosReadModelProjector.cs`)
 Consumes `MenuItemCreated/Updated/Deleted` + `InventoryItemUpdated/Depleted/Restocked` and maintains a Postgres projection (`OrderDbContext`) folding `IsAvailable = MenuAvailable && InventoryAvailable && Quantity > 0` at write time via raw upsert SQL — not a Mongo `SetOnInsert`/`Set` split (that pattern was retired with the Mongo→Postgres migration; see comments in the file for why the recompute logic looks the way it does).
