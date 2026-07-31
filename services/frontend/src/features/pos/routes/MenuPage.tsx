@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useBlocker } from "react-router-dom";
 
 import { useLinkOrder, useSetTableStatus, useTable, useUnlinkOrder } from "@/domain/tables/hooks";
+import { useOrder, useCancelOrder } from "@/domain/orders/hooks";
 import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/domain/menu/hooks";
 import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
@@ -100,6 +101,8 @@ export default function MenuPage() {
   // Once checked out, the placed order id drives the inline payment dialog.
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const kitchen = useKitchen();
 
   // Selected category + category rail / search state
@@ -119,6 +122,11 @@ export default function MenuPage() {
   const linkOrder = useLinkOrder(tableId);
   const setTableStatus = useSetTableStatus(tableId);
   const unlinkOrder = useUnlinkOrder(tableId);
+  // Order.Id === cartId (see FinalOrderService.FinalizeOrderAsync's idempotency
+  // key) — once fired, this is the same order OrderPage/OrdersPage show.
+  const orderQuery = useOrder(isFired ? cartId ?? undefined : undefined);
+  const cancelOrder = useCancelOrder();
+  const isCancellable = isFired && orderQuery.data?.status === "Pending";
 
   // Table details (also tells us whether the table already has an active cart)
   const tableQuery = useTable(tableId);
@@ -328,14 +336,38 @@ export default function MenuPage() {
     setPaymentOrderId(cartId);
   }
 
-  // Guest has paid and is done → free the table (mirrors OrderPage), then
-  // return to the floor.
-  async function releaseTableAfterPayment() {
+  // Guest has paid (or the order was voided) and is done with this table →
+  // free it and clear the cached cart session so the next visit starts fresh.
+  async function releaseTable() {
     if (cartId) {
       try { await unlinkOrder.mutateAsync(cartId); } catch (e) { console.warn("MenuPage: failed to unlink order from table", e); }
     }
     try { await setTableStatus.mutateAsync({ status: "available" }); } catch (e) { console.warn("MenuPage: failed to mark table available", e); }
     store.clearTableSession(tableId);
+  }
+
+  // Void a fired-but-unpaid order (backend endpoint/hook is still named
+  // "cancel" — "void" is just the staff-facing term). The backend releases
+  // any reserved inventory; the local kitchen ticket is voided (not removed)
+  // so it drops out of "fired"/isFired but stays in history. The cart used
+  // for this order is idempotency-bound to it server-side
+  // (FinalizeOrderAsync), so it can't be re-fired — free the table so staff
+  // start a new cart if needed.
+  async function handleCancelOrder() {
+    if (!cartId) return;
+    setCancelling(true);
+    try {
+      await cancelOrder.mutateAsync(cartId);
+      kitchen.void(cartId);
+      await releaseTable();
+      toast.success("Order voided.");
+      setCancelDialogOpen(false);
+      navigate("/pos/tables");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Could not cancel order.");
+    } finally {
+      setCancelling(false);
+    }
   }
 
   // (table fetched above, near cart init)
@@ -483,6 +515,8 @@ export default function MenuPage() {
         onFire={handleFireToKitchen}
         onPay={handlePay}
         firing={firing}
+        onCancel={() => setCancelDialogOpen(true)}
+        isCancellable={isCancellable}
       />
 
       {/* Floating order button to reopen sidebar when hidden */}
@@ -526,11 +560,31 @@ export default function MenuPage() {
           onPaid={async () => {
             // Payment confirmed — release the table; the dialog stays open on
             // its success card until the user dismisses it.
-            await releaseTableAfterPayment();
+            await releaseTable();
             toast.success("Payment confirmed!");
           }}
         />
       )}
+
+      {/* Void confirmation dialog for a fired-but-unpaid order */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Void this order?</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">
+            This releases any reserved inventory back to stock and frees the table. This cannot be undone.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} disabled={cancelling}>
+              Keep Order
+            </Button>
+            <Button variant="destructive" onClick={() => { void handleCancelOrder(); }} disabled={cancelling}>
+              {cancelling ? "Voiding…" : "Void Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Release confirmation dialog when navigating away with empty order */}
       <Dialog open={releaseOpen} onOpenChange={(o) => { if (!o) { blockerRef.current?.reset?.(); } setReleaseOpen(o); }}>

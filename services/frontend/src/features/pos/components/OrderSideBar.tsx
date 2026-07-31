@@ -6,6 +6,12 @@ import {
     SheetContent,
 } from "../../../components/ui/sheet";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
+import {
     X,
     ShoppingCart,
     CreditCard,
@@ -13,8 +19,9 @@ import {
     Minus,
     Trash2,
     ReceiptText,
+    MoreVertical,
 } from "lucide-react";
-import { Flame, Check, Loader2 } from "lucide-react";
+import { Flame, Check, Loader2, Ban } from "lucide-react";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +57,8 @@ interface OrderSidebarProps {
     // Matches POSShell usage: no argument needed
     onFire: () => void | Promise<void>;
     onPay: () => void;
+    onCancel?: () => void;
+    isCancellable?: boolean;
     isMobile?: boolean;
     firing?: boolean;
 }
@@ -169,6 +178,8 @@ function OrderSidebarContent({
                                  onRemoveItem,
                                  onFire,
                                  onPay,
+                                 onCancel,
+                                 isCancellable,
                                  firing,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
     const kitchen = useKitchen();
@@ -207,14 +218,33 @@ function OrderSidebarContent({
                     </div>
                 </div>
 
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClose}
-                    className="h-8 w-8 p-0 shrink-0"
-                >
-                    <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                    {isCancellable && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    onClick={onCancel}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <Ban className="h-4 w-4 mr-2" /> Void Order
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClose}
+                        className="h-8 w-8 p-0"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
 
             <Separator className="mt-4" />
