@@ -7,23 +7,36 @@ import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provide
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog as Modal, DialogContent as ModalContent, DialogHeader as ModalHeader, DialogTitle as ModalTitle, DialogFooter as ModalFooter } from "@/components/ui/dialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { errorMessage } from "@/lib/apiErrors";
+import { cn } from "@/components/ui/utils";
+import { Mail, User as UserIcon, MapPin, ShieldCheck, CheckCircle2, XCircle, PencilLine, type LucideIcon } from "lucide-react";
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 export default function AccountPage() {
   const { profile } = useAuth();
-  useTenantInfo();
   const { rid } = useTenant();
   const employee = useEmployeeDomain();
   const rp = useRestaurantUserProfile();
   const userId = profile?.sub;
   const employeeDetail = employee.useEmployee(rid ?? "", userId ?? "", { enabled: !!rid && !!userId });
-  const locs = useTenantInfo().locations ?? [];
+  const { restaurantName, locations } = useTenantInfo();
+  const locs = locations ?? [];
   const updateEmp = employee.useUpdateEmployee(rid ?? "", userId ?? "");
   const updateDefaultLoc = employee.useUpdateDefaultLocation(rid ?? "", userId ?? "");
+  const currentDefaultLocId = employeeDetail.data?.defaultLocationId ?? "";
   const [defaultLocDraft, setDefaultLocDraft] = useState<string | "">("");
+  const [defaultLocError, setDefaultLocError] = useState<string | undefined>();
+  const selectedDefaultLoc = defaultLocDraft || currentDefaultLocId;
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
   const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
@@ -32,14 +45,12 @@ export default function AccountPage() {
   // Edit employee modal state
   const [editOpen, setEditOpen] = useState(false);
   const [editUserName, setEditUserName] = useState<string>("");
-  const [editDisplayName, setEditDisplayName] = useState<string>("");
   const [editEmail, setEditEmail] = useState<string>("");
   const [editAccessCode, setEditAccessCode] = useState<string>("");
   const [editError, setEditError] = useState<string | undefined>();
   const onOpenEdit = () => {
     const d = employeeDetail.data;
     setEditUserName(d?.userName ?? "");
-    setEditDisplayName(d?.displayName ?? "");
     setEditEmail(d?.email ?? "");
     setEditAccessCode("");
     setEditError(undefined);
@@ -51,7 +62,6 @@ export default function AccountPage() {
     try {
       await updateEmp.mutateAsync({
         userName: editUserName || null,
-        displayName: editDisplayName || null,
         email: editEmail || null,
         accessCode: editAccessCode || null,
       });
@@ -64,20 +74,36 @@ export default function AccountPage() {
     const ownerName = profile?.name || [profile?.given_name, profile?.family_name].filter(Boolean).join(" ") || profile?.preferred_username || profile?.email || "User";
     return { ownerName };
   }, [profile]);
+  const headerName = employeeDetail.data?.displayName || display.ownerName;
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">My Profile</h2>
 
-      {/* Basic profile (display name) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Account</CardTitle>
-          <CardDescription>Update your basic profile</CardDescription>
+      {/* Profile (account + employee record — same underlying entity) */}
+      <Card className="overflow-hidden py-0">
+        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 bg-brand-soft/40 py-5 border-b">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="h-14 w-14 shrink-0 rounded-full bg-brand-soft text-brand-strong grid place-items-center text-lg font-semibold ring-1 ring-brand/20">
+              {getInitials(headerName)}
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-semibold text-foreground truncate">{headerName}</div>
+              <div className="text-sm text-muted-foreground truncate">
+                {restaurantName ? restaurantName : "Your account"}
+              </div>
+            </div>
+          </div>
+          {canAdmin && (
+            <Button variant="secondary" size="sm" className="shrink-0" onClick={onOpenEdit} disabled={!employeeDetail.data}>
+              <PencilLine className="h-3.5 w-3.5" /> Edit Profile
+            </Button>
+          )}
         </CardHeader>
-        <CardContent className="space-y-3">
+
+        <CardContent className="space-y-5 pt-5">
           <div className="grid gap-1.5 max-w-md">
-            <label className="text-xs">Display name</label>
+            <label className="text-xs font-medium text-muted-foreground">Display name</label>
             <DisplayNameEditor
               valueFromDetail={employeeDetail.data?.displayName ?? ""}
               onSave={async (name) => {
@@ -86,96 +112,99 @@ export default function AccountPage() {
               }}
             />
           </div>
-          <div className="text-xs text-muted-foreground">Signed in as: {display.ownerName}</div>
-        </CardContent>
-      </Card>
 
-      {/* Employee (tenant) profile */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">My Employee Profile</CardTitle>
-          <CardDescription>Tenant-specific details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
           {employeeDetail.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
           {employeeDetail.data && (
             <>
-              <div className="flex items-start gap-6">
-                <div>
-                  <div className="text-xs text-muted-foreground">UserId</div>
-                  <div className="font-mono text-xs">{employeeDetail.data.userId}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Email</div>
-                  <div className="text-sm">{employeeDetail.data.email ?? "—"}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">User Name</div>
-                  <div className="text-sm">{employeeDetail.data.userName ?? "—"}</div>
-                </div>
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <InfoTile icon={Mail} label="Email" value={employeeDetail.data.email ?? "—"} />
+                <InfoTile icon={UserIcon} label="User Name" value={employeeDetail.data.userName ?? "—"} />
+                <InfoTile
+                  icon={employeeDetail.data.emailConfirmed ? CheckCircle2 : XCircle}
+                  iconClassName={employeeDetail.data.emailConfirmed ? "text-status-available" : "text-muted-foreground"}
+                  label="Email Confirmed"
+                  value={employeeDetail.data.emailConfirmed ? "Yes" : "No"}
+                />
+                <InfoTile
+                  icon={employeeDetail.data.lockedOut ? XCircle : CheckCircle2}
+                  iconClassName={employeeDetail.data.lockedOut ? "text-status-occupied" : "text-status-available"}
+                  label="Locked Out"
+                  value={employeeDetail.data.lockedOut ? "Yes" : "No"}
+                />
               </div>
-              <div className="flex items-start gap-6">
-                <div>
-                  <div className="text-xs text-muted-foreground">Email Confirmed</div>
-                  <div className="text-sm">{employeeDetail.data.emailConfirmed ? "Yes" : "No"}</div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" /> Default Location
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Locked Out</div>
-                  <div className="text-sm">{employeeDetail.data.lockedOut ? "Yes" : "No"}</div>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <div className="text-xs text-muted-foreground">Default Location</div>
-                <div className="text-sm">
+                <div className="text-sm font-medium text-foreground">
                   {(() => {
                     const id = employeeDetail.data?.defaultLocationId ?? null;
                     if (!id) return "—";
                     const match = locs.find(l => l.id === id);
-                    return match ? `${match.name} (${id})` : id;
+                    return match?.name ?? "—";
                   })()}
                 </div>
                 {locs.length > 0 && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <Select value={defaultLocDraft} onValueChange={(v) => setDefaultLocDraft(v)}>
-                      <SelectTrigger className="w-72">
-                        <SelectValue placeholder="Change default location" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locs.map(l => (
-                          <SelectItem key={l.id} value={l.id}>{l.name} ({l.id.slice(0,8)}…)</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={async () => {
-                        if (!defaultLocDraft) return;
-                        try { await updateDefaultLoc.mutateAsync({ defaultLocationId: defaultLocDraft }); setDefaultLocDraft(""); } catch (e) { console.warn("AccountPage: failed to update default location", e); }
-                      }}
-                      disabled={updateDefaultLoc.isPending || !defaultLocDraft}
-                    >Save</Button>
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center gap-2">
+                      <Select value={selectedDefaultLoc} onValueChange={(v) => { setDefaultLocDraft(v); setDefaultLocError(undefined); }}>
+                        <SelectTrigger className="w-72">
+                          <SelectValue placeholder="Change default location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locs.map(l => (
+                            <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          if (!selectedDefaultLoc || selectedDefaultLoc === currentDefaultLocId) return;
+                          setDefaultLocError(undefined);
+                          try {
+                            await updateDefaultLoc.mutateAsync({ defaultLocationId: selectedDefaultLoc });
+                            setDefaultLocDraft("");
+                          } catch (e: unknown) {
+                            setDefaultLocError(errorMessage(e) ?? "Failed to update default location");
+                          }
+                        }}
+                        disabled={updateDefaultLoc.isPending || !selectedDefaultLoc || selectedDefaultLoc === currentDefaultLocId}
+                      >Save</Button>
+                    </div>
+                    {defaultLocError && <div className="text-xs text-destructive">{defaultLocError}</div>}
                   </div>
                 )}
               </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Tenant Roles</div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Roles
+                </div>
                 {employeeDetail.data.tenantRoles.length === 0 ? (
-                  <div className="text-sm">—</div>
+                  <div className="text-sm text-muted-foreground">—</div>
                 ) : (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {employeeDetail.data.tenantRoles.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                  <div className="flex flex-wrap gap-1.5">
+                    {employeeDetail.data.tenantRoles.map(r => (
+                      <Badge key={r} variant="secondary" className="bg-brand-soft text-brand-strong border-transparent">{r}</Badge>
+                    ))}
                   </div>
                 )}
               </div>
             </>
           )}
-
-          {canAdmin && (
-            <div className="pt-2">
-              <Button variant="secondary" onClick={onOpenEdit} disabled={!employeeDetail.data}>Edit Profile</Button>
-            </div>
-          )}
         </CardContent>
+
+        <div className="px-6 py-3 border-t bg-muted/30 text-xs text-muted-foreground">
+          Signed in as {display.ownerName}
+        </div>
       </Card>
 
       {/* Edit Employee Modal */}
@@ -188,8 +217,6 @@ export default function AccountPage() {
             {editError && <div className="text-sm text-destructive">{editError}</div>}
             <label className="text-xs">User name</label>
             <Input value={editUserName} onChange={(e) => setEditUserName(e.target.value)} />
-            <label className="text-xs">Display name</label>
-            <Input value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} />
             <label className="text-xs">Email</label>
             <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
             <label className="text-xs">Access code (4–6 digits)</label>
@@ -205,6 +232,20 @@ export default function AccountPage() {
       {/* Tenant role management removed from user account page */}
 
       {/* Removed app-wide system settings from user account page */}
+    </div>
+  );
+}
+
+function InfoTile({ icon: Icon, iconClassName, label, value }: { icon: LucideIcon; iconClassName?: string; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <div className="h-8 w-8 shrink-0 rounded-lg bg-muted grid place-items-center">
+        <Icon className={cn("h-4 w-4 text-muted-foreground", iconClassName)} />
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-sm font-medium text-foreground truncate">{value}</div>
+      </div>
     </div>
   );
 }
