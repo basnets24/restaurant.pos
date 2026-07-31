@@ -39,9 +39,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
     // small helper to sync local state from a User
     const setFromUser = (u: User | null | undefined) => {
-        setAuth(!!u);
-        setProfile(u?.profile as AppProfile | undefined);
-        setAccessToken(u?.access_token);
+        // A cached user object surviving in storage from a previous session
+        // isn't necessarily still valid - getUser() returns whatever's on
+        // disk without checking expiry, so an expired-but-present object
+        // would otherwise read as isAuthenticated=true and let consumers
+        // (e.g. TenantInfoProvider) fire authenticated calls that are bound
+        // to fail and force a login redirect. Treat expired as logged-out.
+        const authed = !!u && !u.expired;
+        setAuth(authed);
+        setProfile(authed ? (u?.profile as AppProfile | undefined) : undefined);
+        setAccessToken(authed ? u?.access_token : undefined);
         const sub = u?.profile?.sub;
         if (sub && lastSubRef.current && lastSubRef.current !== sub) {
             try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on user switch", e); }
