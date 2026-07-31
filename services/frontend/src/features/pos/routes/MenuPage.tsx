@@ -81,6 +81,13 @@ function mapCartToSidebarOrder(cart: CartDto | undefined) {
         price: it.unitPrice,
       },
     })),
+    estimate: cart.estimate && {
+      subtotal: cart.estimate.subtotal,
+      discountTotal: cart.estimate.discountTotal,
+      serviceChargeTotal: cart.estimate.serviceChargeTotal,
+      taxTotal: cart.estimate.taxTotal,
+      grandTotal: cart.estimate.grandTotal,
+    },
   };
 }
 
@@ -147,18 +154,31 @@ export default function MenuPage() {
   // Ensure we have a cart; then link table->cart and set party size
   useEffect(() => {
     (async () => {
+      // Wait until the table has loaded before doing anything below - both so
+      // we don't race ahead and create a duplicate cart for an already-linked
+      // table, and so the server-truth reconciliation right below actually has
+      // something to reconcile against before any link/create call fires.
+      if (tableQuery.isLoading || table === undefined) return;
+
+      const serverCartId =
+        table?.activeCartId && table.activeCartId !== EMPTY_GUID ? table.activeCartId : null;
+
+      // Server truth wins over whatever cartId we started with (nav state, a
+      // ?cartId query param, or a cached session value) - a locally cached
+      // cartId can go stale if the table's real active cart changed via
+      // another path since (e.g. a stale session from an earlier visit to
+      // this table), and blindly trusting it used to silently orphan fired,
+      // unpaid orders by relinking the table to the wrong cart. The table
+      // already being linked to serverCartId means it's already occupied and
+      // linked server-side, so there's nothing left to link/assert here.
+      if (serverCartId && serverCartId !== cartId) {
+        setCartId(serverCartId);
+        store.setTableSession(tableId, { cartId: serverCartId });
+        linkedOnce.current = true;
+        return;
+      }
+
       if (!cartId) {
-        // Resume the table's existing active cart if it already has a real one —
-        // creating a second cart for an occupied table 409s server-side. Ignore
-        // the empty-GUID placeholder (a stale/phantom link, not a usable cart).
-        if (table?.activeCartId && table.activeCartId !== EMPTY_GUID) {
-          setCartId(table.activeCartId);
-          store.setTableSession(tableId, { cartId: table.activeCartId });
-          return;
-        }
-        // Wait until the table has loaded before deciding to create, so we
-        // don't race ahead and create a duplicate for an already-linked table.
-        if (tableQuery.isLoading || table === undefined) return;
         try {
           const res = await createCart.mutateAsync({
             tableId,
@@ -190,7 +210,15 @@ export default function MenuPage() {
         linkedOnce.current = true;
         try {
           await linkOrder.mutateAsync(cartId);
-        } catch (e) { console.warn("MenuPage: failed to link cart to table", e); }
+        } catch (e: unknown) {
+          // The server now refuses to relink over a different table that
+          // already has a live, unpaid order - a failure here means our local
+          // cartId doesn't match reality, so stop rather than keep showing it
+          // as if it were the table's current order.
+          toast.error(errorMessage(e) || "Could not open this table's order.");
+          console.warn("MenuPage: failed to link cart to table", e);
+          return;
+        }
         try {
           const guestCount = location.state?.partySize ?? initialSession?.guestCount ?? undefined;
           if (guestCount != null) {
@@ -207,12 +235,16 @@ export default function MenuPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId, cartId, table?.activeCartId, tableQuery.isLoading]);
+  }, [tableId, cartId, table, tableQuery.isLoading]);
 
   const cartQuery = useCart(cartId ?? undefined); // enabled only when id exists
   const cart = cartQuery.data;
   const qc = useQueryClient();
-  const hasNoItems = (cart?.items?.length ?? 0) === 0;
+  // Gate on isSuccess, not just cart?.items - right after this page (re)mounts
+  // the cart query is still loading, so cart is undefined and this would
+  // otherwise read as "no items" for a moment even on a table with a real
+  // fired order, wrongly arming the "release this empty table?" prompt below.
+  const hasNoItems = cartQuery.isSuccess && (cart?.items?.length ?? 0) === 0;
 
   // Menu data
   const categories = useDomainMenuCategories();
@@ -607,12 +639,18 @@ export default function MenuPage() {
             </Button>
             <Button
               onClick={async () => {
-                if (cartId) {
-                  try { await unlinkOrder.mutateAsync(cartId); }
-                  catch (e: unknown) { toast.error(errorMessage(e) || "Failed to unlink order"); }
+                // Both calls are now server-guarded against releasing a table
+                // that still has a live, unpaid order (DiningTableService) - if
+                // either is refused, stop here rather than pretending it
+                // worked: clearing the local session and navigating away would
+                // desync the app from a table the server correctly kept intact.
+                try {
+                  if (cartId) await unlinkOrder.mutateAsync(cartId);
+                  await setTableStatus.mutateAsync({ status: "available" });
+                } catch (e: unknown) {
+                  toast.error(errorMessage(e) || "Could not release the table.");
+                  return;
                 }
-                try { await setTableStatus.mutateAsync({ status: "available" }); }
-                catch (e: unknown) { toast.error(errorMessage(e) || "Failed to set table available"); }
                 store.clearTableSession(tableId);
                 toast.success("Table released");
                 const b = blockerRef.current;
