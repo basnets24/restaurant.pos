@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../api-authorization/AuthProvider";
 
@@ -98,7 +98,6 @@ function formatRelativeTime(iso: string): string {
 
 export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const navigate = useNavigate();
-    const { getAccessToken } = useAuth();
 
     const hooks = useRestaurantUserProfile();
     const { rid, lid } = useTenant();
@@ -106,12 +105,7 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
 
     const { data: notificationsData } = useNotifications();
     const markNotificationRead = useMarkNotificationRead();
-    const accessTokenFactory = useCallback(async () => (await getAccessToken()) ?? "", [getAccessToken]);
-    useNotificationHub({
-        restaurantId: rid ?? undefined,
-        locationId: lid ?? undefined,
-        accessTokenFactory,
-    });
+    useNotificationHub();
     // Read notifications drop out of this compact widget instead of just
     // dimming in place - marking one read (the X button) is effectively how
     // you dismiss it now that there's no "Clear all", so the list stays short.

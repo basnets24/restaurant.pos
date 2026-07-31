@@ -2,6 +2,7 @@ import { Outlet, useParams } from "react-router-dom";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { PosHeader } from "@/features/pos/components/PosHeader";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
+import { useFloorHub } from "@/domain/tables/realtime";
 
 export default function PosLayout() {
   const { restaurantName: nameFromTenant } = useTenantInfo();
@@ -9,6 +10,11 @@ export default function PosLayout() {
   const { tableId } = useParams();
   const kitchen = useKitchen();
   const activeOrdersCount = kitchen.active().length;
+
+  // The connection itself is app-wide (FloorHubProvider, mounted once in
+  // main.tsx for the whole login session) — this just subscribes to table
+  // events on it for as long as PosLayout is mounted.
+  useFloorHub();
 
   const headerTo = {
     dashboard: "/home",

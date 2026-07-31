@@ -11,6 +11,7 @@ import { RestaurantUserProfileProvider } from "@/domain/restaurantUserProfile/Pr
 import { EmployeeProvider } from "@/domain/employee/Provider";
 import { TenantDomainProvider } from "@/domain/tenant/Provider";
 import { TenantInfoProvider } from "@/app/TenantInfoProvider";
+import { FloorHubProvider } from "@/domain/realtime/FloorHubProvider";
 import "./index.css";
 
 function start() {
@@ -18,15 +19,17 @@ function start() {
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <RestaurantUserProfileProvider>
-            <TenantDomainProvider>
-              <EmployeeProvider>
-                <TenantInfoProvider>
-                  <AppRouter />
-                </TenantInfoProvider>
-              </EmployeeProvider>
-            </TenantDomainProvider>
-          </RestaurantUserProfileProvider>
+          <FloorHubProvider>
+            <RestaurantUserProfileProvider>
+              <TenantDomainProvider>
+                <EmployeeProvider>
+                  <TenantInfoProvider>
+                    <AppRouter />
+                  </TenantInfoProvider>
+                </EmployeeProvider>
+              </TenantDomainProvider>
+            </RestaurantUserProfileProvider>
+          </FloorHubProvider>
         </AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

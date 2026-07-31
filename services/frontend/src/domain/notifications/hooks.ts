@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as signalR from "@microsoft/signalr";
-import { ENV } from "@/config/env";
 import { notificationKeys } from "./keys";
 import { NotificationsApi } from "./api";
 import type { NotificationViewDto } from "./types";
+import { useFloorHubConnection } from "@/domain/realtime/FloorHubProvider";
 
 // ---------- Queries ----------
 
@@ -44,36 +43,20 @@ export function useMarkNotificationRead() {
 
 // ---------- Realtime ----------
 
-type NotificationHubOpts = {
-  baseUrl?: string;
-  restaurantId?: string;
-  locationId?: string;
-  accessTokenFactory?: () => string | Promise<string>;
-};
-
 /**
- * Subscribes to the order service's floor hub for "NotificationReceived"
- * pushes. Table notifications ride the same hub connection tables.ts's
- * useFloorHub uses, just from wherever the notification list is rendered
- * (e.g. the home dashboard) rather than the floor-plan page.
+ * Subscribes to "NotificationReceived" on the shared floor-hub connection
+ * FloorHubProvider owns (mounted once in main.tsx, for the whole login
+ * session) — table updates and notifications ride the same connection
+ * object now, not two independent ones.
  */
-export function useNotificationHub({ baseUrl = ENV.ORDER_URL, restaurantId, locationId, accessTokenFactory }: NotificationHubOpts) {
+export function useNotificationHub() {
   const qc = useQueryClient();
+  const conn = useFloorHubConnection();
 
   useEffect(() => {
-    if (!restaurantId || !locationId) return;
-    const url = `${baseUrl}/hubs/floor?restaurantId=${restaurantId}&locationId=${locationId}`;
-    const conn = new signalR.HubConnectionBuilder()
-      .withUrl(url, { accessTokenFactory, withCredentials: true })
-      .withAutomaticReconnect()
-      .build();
-
+    if (!conn) return;
     const onReceived = () => qc.invalidateQueries({ queryKey: notificationKeys.list() });
     conn.on("NotificationReceived", onReceived);
-    conn.start().catch(console.error);
-
-    return () => {
-      try { conn.off("NotificationReceived", onReceived); } finally { conn.stop().catch(() => { }); }
-    };
-  }, [baseUrl, restaurantId, locationId, accessTokenFactory, qc]);
+    return () => { conn.off("NotificationReceived", onReceived); };
+  }, [conn, qc]);
 }
