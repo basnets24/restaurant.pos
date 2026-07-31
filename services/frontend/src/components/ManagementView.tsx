@@ -34,8 +34,9 @@ import StaffUsersCard from "@/features/management/components/StaffUsersCard";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import InventoryStockCard from "@/features/management/components/InventoryCard";
 import MenuItemsCard from "@/features/management/components/MenuCard";
+import type { RestaurantUserData } from "@/features/management/types";
 interface ManagementViewProps {
-    userData: any;
+    userData: RestaurantUserData;
     onBackToDashboard?: () => void;
     onBackToLanding?: () => void;
 }

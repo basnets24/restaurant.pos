@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import { useTenant } from "./TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useTenantDomain } from "@/domain/tenant/Provider";
 
 type TenantInfo = {
@@ -24,6 +24,7 @@ export const TenantInfoProvider: React.FC<React.PropsWithChildren> = ({ children
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTenantInfo() {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useTenantInfo must be used within TenantInfoProvider");

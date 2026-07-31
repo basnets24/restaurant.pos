@@ -2,7 +2,8 @@
 import { ENV } from "@/config/env";
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
-import { tenantAccessor } from "@/auth/runtime";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
+import { errorMessage, errorName, isAxiosError } from "@/lib/apiErrors";
 
 export type PaymentSessionStatus = "pending" | "succeeded" | "failed" | string;
 
@@ -18,14 +19,6 @@ export type PaymentConfirmResponse = {
   error?: string;
 };
 
-function withTenantHeaders(): Record<string, string> {
-  const t = tenantAccessor() ?? {};
-  const headers: Record<string, string> = {};
-  if (t.restaurantId) headers["x-restaurant-id"] = String(t.restaurantId);
-  if (t.locationId) headers["x-location-id"] = String(t.locationId);
-  return headers;
-}
-
 async function authHeaders() {
   const token = await getApiToken("Payment", ["payment.read"]);
   return { Accept: "application/json", Authorization: `Bearer ${token}`, ...withTenantHeaders() };
@@ -39,18 +32,18 @@ export async function getPaymentClientSecret(
   const url = `${ENV.PAYMENT_URL}/orders/${orderId}/payment-session`;
   try {
     const { data } = await http.get<PaymentSessionResponse>(url, {
-      signal: opts?.signal as any,
+      signal: opts?.signal,
       headers: await authHeaders(),
     });
     return data ?? { clientSecret: null, status: "pending" };
-  } catch (err: any) {
-    const r = err?.response;
-    const code: number | undefined = r?.status;
+  } catch (err: unknown) {
+    const r = isAxiosError<{ error?: string }>(err) ? err.response : undefined;
+    const code = r?.status;
     if (code === 404 || code === 425 || code === 409 || code === 202) {
       return { clientSecret: null, status: "pending" };
     }
-    const message: string = r?.data?.error || r?.statusText || err?.message || "Failed to fetch payment session";
-    throw new Error(message);
+    const message: string = r?.data?.error || r?.statusText || errorMessage(err) || "Failed to fetch payment session";
+    throw new Error(message, { cause: err });
   }
 }
 
@@ -68,8 +61,8 @@ export async function pollForClientSecret(
       if (clientSecret) return clientSecret;
       const s = status?.toLowerCase();
       if (s === "succeeded" || s === "failed") return null;
-    } catch (err: any) {
-      if (err?.name === "AbortError") throw err;
+    } catch (err: unknown) {
+      if (errorName(err) === "AbortError") throw err;
     }
     await sleep(step, opts?.signal);
   }
@@ -84,7 +77,7 @@ export async function confirmPayment(
 ): Promise<PaymentConfirmResponse> {
   const url = `${ENV.PAYMENT_URL}/orders/${orderId}/payment-confirm`;
   const { data } = await http.post<PaymentConfirmResponse>(url, null, {
-    signal: opts?.signal as any,
+    signal: opts?.signal,
     headers: await authHeaders(),
   });
   return data;

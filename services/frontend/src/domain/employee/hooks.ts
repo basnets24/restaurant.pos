@@ -16,17 +16,16 @@ import type {
   UserUpdateDto,
 } from "./api";
 import { employeeKeys } from "./keys";
+import { errorStatus } from "@/lib/apiErrors";
 
 // Conservative retry: don't retry 4xx; retry 2x otherwise
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  const status = (error as any)?.status ?? (error as any)?.response?.status;
+  const status = errorStatus(error);
   if (typeof status === "number" && status >= 400 && status < 500) return false; // don't retry 4xx
   return failureCount < 2; // retry up to 2 times otherwise
 }
 
 export function createEmployeeHooks(api: EmployeeApi) {
-  const qc = () => useQueryClient();
-
   // ---------- List
   function useEmployees(
     restaurantId: string,
@@ -143,14 +142,14 @@ export function createEmployeeHooks(api: EmployeeApi) {
     restaurantId: string,
     options?: UseMutationOptions<void, unknown, AddEmployeeDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, AddEmployeeDto>({
       mutationFn: (dto) => api.addEmployee(restaurantId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -160,17 +159,17 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, UserUpdateDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, UserUpdateDto>({
       mutationFn: (dto) => api.updateEmployee(restaurantId, userId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -180,17 +179,17 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, DefaultLocationUpdateDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, DefaultLocationUpdateDto>({
       mutationFn: (dto) => api.updateDefaultLocation(restaurantId, userId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.list(restaurantId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -200,17 +199,17 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, EmployeeRoleUpdateDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, EmployeeRoleUpdateDto>({
       mutationFn: (dto) => api.updateEmployeeRoles(restaurantId, userId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.roles(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -220,17 +219,17 @@ export function createEmployeeHooks(api: EmployeeApi) {
     userId: string,
     options?: UseMutationOptions<void, unknown, string, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, string>({
       mutationFn: (role: string) => api.deleteEmployeeRole(restaurantId, userId, role),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: employeeKeys.roles(restaurantId, userId) }),
           queryClient.invalidateQueries({ queryKey: employeeKeys.detail(restaurantId, userId) }),
         ]);
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }

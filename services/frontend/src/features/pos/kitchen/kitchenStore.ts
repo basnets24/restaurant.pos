@@ -24,11 +24,12 @@ function read(): KitchenState {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return { tickets: [], selectedCartId: null };
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return { tickets: [], selectedCartId: null };
-    const t = Array.isArray((parsed as any).tickets) ? (parsed as any).tickets : [];
-    const selectedCartId = (parsed as any).selectedCartId ?? null;
-    return { tickets: t, selectedCartId } as KitchenState;
+    const obj = parsed as Record<string, unknown>;
+    const tickets = Array.isArray(obj.tickets) ? (obj.tickets as KitchenTicket[]) : [];
+    const selectedCartId = typeof obj.selectedCartId === "string" ? obj.selectedCartId : null;
+    return { tickets, selectedCartId };
   } catch {
     return { tickets: [], selectedCartId: null };
   }
@@ -37,7 +38,9 @@ function read(): KitchenState {
 function write(s: KitchenState) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(s));
-  } catch {}
+  } catch (e) {
+    console.warn("kitchenStore: failed to persist state to localStorage", e);
+  }
 }
 
 let state: KitchenState = read();

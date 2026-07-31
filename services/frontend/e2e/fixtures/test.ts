@@ -8,9 +8,9 @@ import { seedTableAndMenuItem, cleanupSeeded, type SeededPosData } from "./seed"
  * teardown always runs) — see cleanupSeeded in ./seed for why that matters.
  */
 export const test = base.extend<{ seededPos: SeededPosData }>({
-  seededPos: async ({ request }, use) => {
+  seededPos: async ({ request }, provide) => {
     const data = await seedTableAndMenuItem(request);
-    await use(data);
+    await provide(data);
     await cleanupSeeded(request, data);
   },
 });

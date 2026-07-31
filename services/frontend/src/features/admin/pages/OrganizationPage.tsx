@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
-import { ENV } from "@/config/env";
-import { getToken } from "@/lib/config";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
+import { useTenant } from "@/auth/tenant";
+import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,37 +37,30 @@ const DEFAULTS: OrgProfile = {
 function read(): OrgProfile {
   try { const raw = localStorage.getItem(LS); return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS; } catch { return DEFAULTS; }
 }
-function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch { } }
+function write(p: OrgProfile) { try { localStorage.setItem(LS, JSON.stringify(p)); } catch (e) { console.warn("OrganizationPage: failed to persist profile to localStorage", e); } }
 
 export default function OrganizationPage() {
   const { restaurantName: nameFromTenant, locations } = useTenantInfo();
+  const { rid, lid } = useTenant();
   const [tab, setTab] = useState("general");
   const [model, setModel] = useState<OrgProfile>(() => read());
   const [draft, setDraft] = useState<OrgProfile>(model);
-  const [joinCode, setJoinCode] = useState<{ restaurantId: string; slug?: string; joinUrl?: string } | null>(null);
 
-  useEffect(() => setDraft(model), [tab]);
+  const rp = useRestaurantUserProfile();
+  const { data: joinCode } = rp.useMyJoinCode({ rid: rid ?? undefined, lid: lid ?? undefined }, { enabled: !!rid });
 
-  // Load join code for current restaurant (onboarding routes live on the identity service)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch(`${ENV.IDENTITY_URL}/api/onboarding/me/code`, {
-          headers: { Authorization: `Bearer ${getToken() ?? ""}` },
-          credentials: "include",
-        });
-        if (!r.ok) return;
-        const data = await r.json();
-        if (!cancelled) setJoinCode(data);
-      } catch { }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Reset the draft to the saved model whenever the active tab changes.
+  const [prevTab, setPrevTab] = useState(tab);
+  if (tab !== prevTab) {
+    setPrevTab(tab);
+    setDraft(model);
+  }
 
-  // If tenant name is known and current model is default/demo, hydrate it for display convenience
+  // If tenant name is known and current model is default/demo, hydrate it for display convenience.
+  // Hydrating from async tenant-info data as it resolves, not a derived-state reset.
   useEffect(() => {
     if (nameFromTenant) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (model.restaurantName === DEFAULTS.restaurantName) setModel((m) => ({ ...m, restaurantName: nameFromTenant }));
       if (draft.restaurantName === DEFAULTS.restaurantName) setDraft((d) => ({ ...d, restaurantName: nameFromTenant }));
     }
@@ -112,7 +105,7 @@ export default function OrganizationPage() {
                     <Input readOnly value={joinCode.joinUrl ?? "(configure CORS origins)"} />
                     <button
                       className="btn"
-                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch { } }}
+                      onClick={() => { try { navigator.clipboard.writeText(joinCode.joinUrl ?? ""); } catch (e) { console.warn("OrganizationPage: failed to copy join link to clipboard", e); } }}
                       title="Copy link"
                     >
                       <Copy className="h-4 w-4" />

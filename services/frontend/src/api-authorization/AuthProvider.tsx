@@ -6,13 +6,15 @@ import { clearApiTokenCache } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 import { bindAuthAccessors } from "@/auth/runtime";
+import type { AppProfile, SignInState } from "@/auth/types";
 
 
 type AuthState = {
     isReady: boolean;
     isAuthenticated: boolean;
+    isSigningOut: boolean;
     accessToken?: string;
-    profile?: Record<string, unknown>;
+    profile?: AppProfile;
     signIn: (returnUrl?: string) => Promise<void>;
     completeSignIn: () => Promise<void>;
     signOut: (returnUrl?: string) => Promise<void>;
@@ -25,19 +27,24 @@ const AuthCtx = createContext<AuthState | null>(null);
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
     const [isReady, setReady] = useState(false);
     const [isAuthenticated, setAuth] = useState(false);
-    const [profile, setProfile] = useState<Record<string, unknown>>();
+    const [profile, setProfile] = useState<AppProfile>();
     const [accessToken, setAccessToken] = useState<string>();
     const lastSubRef = useRef<string | undefined>(undefined);
+    // signoutRedirect() clears the local user (firing onUnloaded -> isAuthenticated=false)
+    // *before* it navigates the browser away to the IdP. Without this flag, ProtectedRoute
+    // reacts to that transient unauthenticated state while still on the page and kicks off
+    // its own auto re-login redirect, which races the real sign-out redirect and can pre-empt
+    // it - leaving the IdP session alive while the app thinks it's logged out.
+    const isSigningOutRef = useRef(false);
 
     // small helper to sync local state from a User
     const setFromUser = (u: User | null | undefined) => {
         setAuth(!!u);
-        setProfile(u?.profile as unknown as Record<string, unknown> | undefined);
+        setProfile(u?.profile as AppProfile | undefined);
         setAccessToken(u?.access_token);
-        const sub = (u?.profile as any)?.sub as string | undefined;
+        const sub = u?.profile?.sub;
         if (sub && lastSubRef.current && lastSubRef.current !== sub) {
-
-            try { clearApiTokenCache(); } catch {}
+            try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on user switch", e); }
         }
         lastSubRef.current = sub;
     };
@@ -60,18 +67,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const onLoaded = (u: User) => setFromUser(u);
         const onUnloaded = () => {
             setFromUser(undefined);
-            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch {}
-            try { clearApiTokenCache(); } catch {}
+            try { localStorage.removeItem('rid'); localStorage.removeItem('lid'); } catch (e) { console.warn("AuthProvider: failed to clear tenant localStorage on unload", e); }
+            try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on unload", e); }
         };
         const onExpired = async () => {
             // token expired — try silent renew path to refresh UI state if possible
             try {
                 const u = await userManager.signinSilent();
                 setFromUser(u);
-            } catch {
+            } catch (e) {
+                console.warn("AuthProvider: silent renew failed after token expiry", e);
                 setFromUser(undefined);
-
-                try { clearApiTokenCache(); } catch {}
+                try { clearApiTokenCache(); } catch (e2) { console.warn("AuthProvider: clearApiTokenCache failed after expired renew", e2); }
             }
         };
 
@@ -136,7 +143,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const u = await userManager.signinCallback(window.location.href);
         setFromUser(u);
         const suggested =
-            (u?.state as any)?.returnUrl ??
+            (u?.state as SignInState | undefined)?.returnUrl ??
             `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`;
 
         // After login, check onboarding status; if not onboarded, go to /join
@@ -155,16 +162,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
                     }
                 }
             }
-        } catch {
+        } catch (e) {
             // swallow and fall through to suggested URL
+            console.warn("AuthProvider: onboarding status check failed", e);
         }
 
         window.location.replace(suggested);
     };
 
     const signOut = async (returnUrl?: string) => {
+        // Set before anything else: signoutRedirect() removes the local user (and thus
+        // flips isAuthenticated to false) before it navigates away, so this must already
+        // be true by the time that happens - see isSigningOutRef's declaration comment.
+        isSigningOutRef.current = true;
         // Signal to the next login attempt to skip silent once
-        try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch { }
+        try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch (e) { console.warn("AuthProvider: failed to set skipSilentOnce flag", e); }
         await userManager.signoutRedirect({
             state: { returnUrl },
             post_logout_redirect_uri: `${window.location.origin}${AuthorizationPaths.LogOutCallback}`,
@@ -179,13 +191,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             localStorage.removeItem('token');
             localStorage.removeItem('rid');
             localStorage.removeItem('lid');
-
-        } catch {}
-        try { clearApiTokenCache(); } catch {}
+        } catch (e) { console.warn("AuthProvider: failed to clear localStorage on sign-out", e); }
+        try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on sign-out", e); }
 
 
         const to =
-            (res?.state as any)?.returnUrl ??
+            (res?.state as SignInState | undefined)?.returnUrl ??
             `${window.location.origin}${AuthorizationPaths.LoggedOut}`;
         window.location.replace(to);
     };
@@ -196,21 +207,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     };
 
     useEffect(() => {
-        bindAuthAccessors({
-            getToken: () => accessToken,
-            getTenant: () => {
-                const rid = (profile as any)?.restaurant_id ?? (profile as any)?.restaurantId;
-                const lid = (profile as any)?.location_id ?? (profile as any)?.locationId;
-                return rid ? { restaurantId: rid as string, locationId: (lid as string | undefined) } : undefined;
-            },
-        });
-    }, [accessToken, profile]);
+        bindAuthAccessors({ getToken: () => accessToken });
+    }, [accessToken]);
 
 
     const value = useMemo<AuthState>(
         () => ({
             isReady,
             isAuthenticated,
+            // Read fresh on every recompute rather than tracked as a dep: what matters is
+            // that it's already true by the time isAuthenticated flips to false on sign-out
+            // (see isSigningOutRef's declaration comment), and that recompute is triggered
+            // by the isAuthenticated dependency below.
+            isSigningOut: isSigningOutRef.current,
             accessToken,
             profile,
             signIn,
@@ -226,6 +235,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const ctx = useContext(AuthCtx);
     if (!ctx) throw new Error('useAuth must be used within AuthProvider');

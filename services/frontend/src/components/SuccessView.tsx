@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 import { getOrder } from "@/domain/orders/api";
 import type { OrderDto } from "@/domain/orders/types";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function SuccessView() {
   const { tableId = "" } = useParams();
@@ -35,9 +36,9 @@ export default function SuccessView() {
         setOrder(data);
         setLoading(false);
         toast.success("Order placed!");
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!mounted) return;
-        setError(e?.message || "Could not load order");
+        setError(errorMessage(e) || "Could not load order");
         setLoading(false);
       }
     })();

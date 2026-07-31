@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft, ArrowRight, Code2, Users, UtensilsCrossed, ShoppingCart, CreditCard,
-    Workflow, ShieldCheck, Database, Activity, Github, CheckCircle2, XCircle,
+    Workflow, ShieldCheck, Database, Activity, CheckCircle2, XCircle,
 } from "lucide-react";
+import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
@@ -95,7 +96,7 @@ export default function EngineeringView() {
                             href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
                             className="hidden sm:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                         >
-                            <Github className="w-4 h-4" />
+                            <GithubIcon className="w-4 h-4" />
                             GitHub
                         </a>
                         <Link to="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
@@ -119,7 +120,7 @@ export default function EngineeringView() {
                 <div className="flex flex-wrap gap-3 mt-6">
                     <Button asChild className="shadow-md">
                         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                            <Github className="mr-2 h-4 w-4" />
+                            <GithubIcon className="mr-2 h-4 w-4" />
                             View on GitHub
                         </a>
                     </Button>
@@ -239,7 +240,7 @@ export default function EngineeringView() {
                     <div className="flex flex-wrap gap-3">
                         <Button variant="outline" asChild>
                             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                                <Github className="mr-2 h-4 w-4" />
+                                <GithubIcon className="mr-2 h-4 w-4" />
                                 View on GitHub
                             </a>
                         </Button>

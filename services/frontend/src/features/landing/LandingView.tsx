@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { ImageWithFallback } from "@/figma/ImageWithFallback";
 import {
     Star, ArrowRight, CheckCircle2, Zap, Users, Menu as MenuIcon,
-    ShoppingCart, CreditCard, BarChart3, Code2, Clock, Github,
+    ShoppingCart, CreditCard, BarChart3, Code2, Clock,
 } from "lucide-react";
+import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 
@@ -244,7 +245,7 @@ export default function LandingView() {
                         </Button>
                         <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
                             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                                <Github className="mr-2 h-5 w-5" />
+                                <GithubIcon className="mr-2 h-5 w-5" />
                                 View on GitHub
                             </a>
                         </Button>

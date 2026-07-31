@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useAuth } from "@/api-authorization/AuthProvider";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users as UsersIcon } from "lucide-react";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function StaffUsersCard() {
   // Filters & paging
@@ -29,7 +30,7 @@ export default function StaffUsersCard() {
   const { profile } = useAuth();
   const rp = useRestaurantUserProfile();
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
-  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canManage = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
@@ -178,8 +179,8 @@ function AddEmployeeForm({ rid, roles, locations, onClose }: { rid: string; role
       });
       setUserId(""); setDefaultLocationId(""); setSelectedRoles([]);
       onClose();
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to add employee");
+    } catch (e: unknown) {
+      setError(errorMessage(e) ?? "Failed to add employee");
     }
   };
 

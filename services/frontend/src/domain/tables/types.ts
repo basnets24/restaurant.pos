@@ -69,6 +69,12 @@ export interface SeatPartyDto {
   partySize: number;
 }
 
+/** Seating a table atomically opens its cart server-side; the id comes back so the
+ * caller doesn't need to separately create/link one. */
+export interface SeatResultDto {
+  cartId: string;
+}
+
 // this is cart id
 export interface LinkOrderDto {
   cartId: string;

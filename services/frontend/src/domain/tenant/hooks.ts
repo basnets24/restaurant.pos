@@ -13,16 +13,15 @@ import type {
   UpdateLocationDto,
 } from "./api";
 import { tenantKeys } from "./keys";
+import { errorStatus } from "@/lib/apiErrors";
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
-  if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) return false;
+  const status = errorStatus(error);
+  if (typeof status === "number" && status >= 400 && status < 500) return false;
   return failureCount < 2;
 }
 
 export function createTenantHooks(api: TenantApi) {
-  const qc = () => useQueryClient();
-
   function useMyTenants(options?: UseQueryOptions<readonly TenantRestaurantDto[], unknown>) {
     return useQuery<readonly TenantRestaurantDto[], unknown>({
       queryKey: tenantKeys.mine,
@@ -58,14 +57,14 @@ export function createTenantHooks(api: TenantApi) {
     restaurantId: string,
     options?: UseMutationOptions<TenantLocationDto, unknown, CreateLocationDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<TenantLocationDto, unknown, CreateLocationDto>({
       mutationFn: (dto) => api.createLocation(restaurantId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: tenantKeys.detail(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -75,14 +74,14 @@ export function createTenantHooks(api: TenantApi) {
     locationId: string,
     options?: UseMutationOptions<void, unknown, UpdateLocationDto, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<void, unknown, UpdateLocationDto>({
       mutationFn: (dto) => api.updateLocation(restaurantId, locationId, dto),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await queryClient.invalidateQueries({ queryKey: tenantKeys.detail(restaurantId) });
-        options?.onSuccess?.(data, vars, ctx as any);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }

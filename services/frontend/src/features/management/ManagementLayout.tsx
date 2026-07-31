@@ -1,5 +1,5 @@
 // src/features/management/ManagementLayout.tsx
-import { Suspense } from "react";
+import { Suspense, type ComponentType } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Utensils, Settings } from "lucide-react";
@@ -11,10 +11,12 @@ import { GrowthChartIcon } from "@/components/brand-icons/report-icons";
 import { ChefIcon } from "@/components/brand-icons/staff-icons";
 import { StockroomShelfIcon } from "@/components/brand-icons/inventory-icons";
 import { TwoTopPlaceSettingIcon } from "@/components/brand-icons/table-icons";
+import type { RestaurantUserData } from "./types";
 
 type ManagementTab = "analytics" | "staff" | "inventory" | "menu" | "reservations" | "admin";
+type TabIcon = ComponentType<{ className?: string }>;
 
-const TAB_LIST: { value: ManagementTab; label: string; Icon: any }[] = [
+const TAB_LIST: { value: ManagementTab; label: string; Icon: TabIcon }[] = [
     { value: "analytics",    label: "Analytics",    Icon: GrowthChartIcon },
     { value: "staff",        label: "Staff",        Icon: ChefIcon },
     { value: "inventory",    label: "Inventory",    Icon: StockroomShelfIcon },
@@ -22,12 +24,12 @@ const TAB_LIST: { value: ManagementTab; label: string; Icon: any }[] = [
     { value: "reservations", label: "Reservations", Icon: TwoTopPlaceSettingIcon },
 ];
 
-const ADMIN_ITEM: { value: ManagementTab; label: string; Icon: any } = { value: "admin", label: "Admin", Icon: Settings };
+const ADMIN_ITEM: { value: ManagementTab; label: string; Icon: TabIcon } = { value: "admin", label: "Admin", Icon: Settings };
 const ALL_TABS = [...TAB_LIST, ADMIN_ITEM];
 
-export type ManagementOutletContext = { userData: any };
+export type ManagementOutletContext = { userData?: RestaurantUserData };
 
-export default function ManagementLayout({ userData }: { userData?: any }) {
+export default function ManagementLayout({ userData }: { userData?: RestaurantUserData }) {
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const { restaurantName: nameFromTenant } = useTenantInfo();

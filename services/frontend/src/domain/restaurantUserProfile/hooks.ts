@@ -15,10 +15,11 @@ import type {
   JoinRestaurantReq,
   MyJoinCodeRes,
 } from "./types";
+import { errorStatus } from "@/lib/apiErrors";
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
-  const maybeStatus = (error as any)?.status ?? (error as any)?.response?.status;
-  if (typeof maybeStatus === "number" && maybeStatus >= 400 && maybeStatus < 500) {
+  const status = errorStatus(error);
+  if (typeof status === "number" && status >= 400 && status < 500) {
     return false; // don't retry on 4xx
   }
   return failureCount < 2;
@@ -38,8 +39,6 @@ export function createRestaurantUserProfileHooks(
   api: RestaurantUserProfileApi,
   opts?: { onAuthRefresh?: () => Promise<void> }
 ) {
-  const qc = () => useQueryClient();
-
   /**
    * Onboard restaurant mutation.
    * Invalidates user profile and onboarding status on success.
@@ -47,21 +46,21 @@ export function createRestaurantUserProfileHooks(
   function useOnboardRestaurant(
     options?: UseMutationOptions<OnboardRestaurantRes, unknown, OnboardRestaurantReq, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<OnboardRestaurantRes, unknown, OnboardRestaurantReq>({
       mutationFn: (req) => api.onboardRestaurant(req),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: userProfileKey }),
           queryClient.invalidateQueries({ queryKey: onboardingKey }),
         ]);
         // After onboarding, refresh token/claims if provided
         if (opts?.onAuthRefresh) {
-          try { await opts.onAuthRefresh(); } catch {}
+          try { await opts.onAuthRefresh(); } catch (e) { console.warn("useOnboardRestaurant: onAuthRefresh failed", e); }
         }
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }
@@ -73,20 +72,20 @@ export function createRestaurantUserProfileHooks(
   function useJoinRestaurant(
     options?: UseMutationOptions<OnboardRestaurantRes, unknown, JoinRestaurantReq, unknown>
   ) {
-    const queryClient = qc();
+    const queryClient = useQueryClient();
     return useMutation<OnboardRestaurantRes, unknown, JoinRestaurantReq>({
       mutationFn: (req) => api.joinRestaurant(req),
       retry: shouldRetry,
       ...options,
-      onSuccess: async (data, vars, ctx) => {
+      onSuccess: async (data, vars, onMutateResult, ctx) => {
         await Promise.allSettled([
           queryClient.invalidateQueries({ queryKey: userProfileKey }),
           queryClient.invalidateQueries({ queryKey: onboardingKey }),
         ]);
         if (opts?.onAuthRefresh) {
-          try { await opts.onAuthRefresh(); } catch {}
+          try { await opts.onAuthRefresh(); } catch (e) { console.warn("useJoinRestaurant: onAuthRefresh failed", e); }
         }
-        options?.onSuccess?.(data, vars, ctx);
+        options?.onSuccess?.(data, vars, onMutateResult, ctx);
       },
     });
   }

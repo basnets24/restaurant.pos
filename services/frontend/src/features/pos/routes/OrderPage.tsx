@@ -12,6 +12,7 @@ import { pollForClientSecret } from "@/domain/payments/api";
 import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
 import { useSetTableStatus, useUnlinkOrder } from "@/domain/tables/hooks";
 import { useStore } from "@/stores";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function OrderPage() {
   const { tableId = "" } = useParams<{ tableId: string }>();
@@ -44,8 +45,8 @@ export default function OrderPage() {
       } else {
         toast.error("Payment session not ready yet. Please try again.");
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Could not start payment.");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Could not start payment.");
     } finally {
       setPaying(false);
     }
@@ -55,8 +56,8 @@ export default function OrderPage() {
     setPaymentDialog(null);
     // Table-freeing logic - the guest has paid and is done, so this is the
     // right moment to release the table, not at fire-time.
-    try { await unlinkOrder.mutateAsync(orderId); } catch { }
-    try { await setTableStatus.mutateAsync({ status: "available" }); } catch { }
+    try { await unlinkOrder.mutateAsync(orderId); } catch (e) { console.warn("OrderPage: failed to unlink order from table", e); }
+    try { await setTableStatus.mutateAsync({ status: "available" }); } catch (e) { console.warn("OrderPage: failed to mark table available", e); }
     store.clearTableSession(tableId);
     await refetch();
     toast.success("Payment confirmed!");

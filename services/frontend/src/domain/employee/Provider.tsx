@@ -22,6 +22,7 @@ export const EmployeeProvider: React.FC<React.PropsWithChildren> = ({ children }
   return <EmployeeCtx.Provider value={hooks}>{children}</EmployeeCtx.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useEmployeeDomain() {
   const ctx = useContext(EmployeeCtx);
   if (!ctx) throw new Error("useEmployeeDomain must be used within EmployeeProvider");

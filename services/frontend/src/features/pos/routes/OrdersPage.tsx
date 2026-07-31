@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/api-authorization/AuthProvider";
+import { useTenant } from "@/auth/tenant";
 import { useOrders } from "@/domain/orders/hooks";
 import { useTables } from "@/domain/tables/hooks";
 import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
@@ -35,13 +35,11 @@ function formatTime(iso?: string | null) {
 
 export default function OrdersPage() {
     const navigate = useNavigate();
-    const { profile } = useAuth();
-    const tenant: TenantHeaders | undefined = useMemo(() => {
-        const restaurantId = (profile as any)?.restaurantId ?? (profile as any)?.restaurant_id;
-        const locationId = (profile as any)?.locationId ?? (profile as any)?.location_id;
-        if (!restaurantId && !locationId) return undefined;
-        return { restaurantId, locationId };
-    }, [profile]);
+    const { rid, lid } = useTenant();
+    const tenant: TenantHeaders | undefined = useMemo(
+        () => (rid ? { restaurantId: rid, locationId: lid ?? undefined } : undefined),
+        [rid, lid]
+    );
 
     const { data, isLoading } = useOrders(tenant);
     const orders = useMemo(() => (data?.items ?? []) as OrderDto[], [data]);
@@ -49,9 +47,7 @@ export default function OrdersPage() {
     // Resolve tableId → friendly number/section
     const { data: tablesData } = useTables();
     const tableMap = useMemo(() => {
-        const list: TableViewDto[] = Array.isArray(tablesData)
-            ? (tablesData as TableViewDto[])
-            : ((tablesData as any)?.items ?? []);
+        const list: TableViewDto[] = tablesData ?? [];
         return new Map(list.map((t) => [t.id, t]));
     }, [tablesData]);
 

@@ -1,18 +1,8 @@
 import { http } from "@/lib/http";
 import { InventoryAPI } from "./api";
 import { getApiToken } from "@/auth/getApiToken";
-import { tenantAccessor } from "@/auth/runtime";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
 import type { InventoryItemDto, UpdateInventoryItemDto } from "./types";
-
-// See domain/menu/service.ts for why this is explicit rather than relying on
-// http.ts's interceptor-based tenant header inference.
-function withTenantHeaders(): Record<string, string> {
-  const t = tenantAccessor() ?? {};
-  const headers: Record<string, string> = {};
-  if (t.restaurantId) headers["x-restaurant-id"] = String(t.restaurantId);
-  if (t.locationId) headers["x-location-id"] = String(t.locationId);
-  return headers;
-}
 
 export const InventoryItems = {
   list: async (): Promise<InventoryItemDto[]> => {

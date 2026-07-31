@@ -22,6 +22,7 @@ export const TenantDomainProvider: React.FC<React.PropsWithChildren> = ({ childr
   return <TenantCtx.Provider value={hooks}>{children}</TenantCtx.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTenantDomain() {
   const ctx = useContext(TenantCtx);
   if (!ctx) throw new Error("useTenantDomain must be used within TenantDomainProvider");

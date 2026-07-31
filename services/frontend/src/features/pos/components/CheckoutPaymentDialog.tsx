@@ -6,6 +6,7 @@ import { Check, CreditCard, Loader2 } from "lucide-react";
 import { useOrder, useRequestPayment } from "@/domain/orders/hooks";
 import { pollForClientSecret } from "@/domain/payments/api";
 import { StripeElementsForm } from "./StripeCheckoutDialog";
+import { errorMessage } from "@/lib/apiErrors";
 
 type CheckoutPaymentDialogProps = {
   open: boolean;
@@ -53,8 +54,8 @@ export function CheckoutPaymentDialog({
       } else {
         toast.error("Payment session not ready yet. Please try again.");
       }
-    } catch (e: any) {
-      toast.error(e?.message || "Could not start payment.");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Could not start payment.");
     } finally {
       setPaying(false);
     }

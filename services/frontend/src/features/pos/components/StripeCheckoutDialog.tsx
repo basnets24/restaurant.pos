@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { confirmPayment } from "@/domain/payments/api";
 import { ENV } from "@/config/env";
+import { errorMessage } from "@/lib/apiErrors";
 
 // loadStripe should only ever be called once per publishable key
 const stripePromise = loadStripe(ENV.STRIPE_PUBLISHABLE_KEY);
@@ -110,8 +111,8 @@ function PaymentForm({
       } else {
         setError("Payment is still processing - please try again in a moment.");
       }
-    } catch (err: any) {
-      setError(err?.message ?? "Payment failed");
+    } catch (err: unknown) {
+      setError(errorMessage(err) ?? "Payment failed");
     } finally {
       setSubmitting(false);
     }

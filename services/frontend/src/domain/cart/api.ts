@@ -3,20 +3,13 @@ import type {
     CartDto,
     CheckoutResponse,
     CreateCartDto,
-    TenantHeaders,
 } from './types';
 import { ENV } from '@/config/env';
 import { http } from '@/lib/http'; // your shared axios instance
 import { getApiToken } from '@/auth/getApiToken';
+import { withTenantHeaders, type TenantHeaders } from '@/auth/tenantHeaders';
 
 const BASE = ENV.ORDER_URL; // e.g. https://localhost:7288
-
-function withTenantHeaders(tenant?: TenantHeaders) {
-    const headers: Record<string, string> = {};
-    if (tenant?.restaurantId) headers['x-restaurant-id'] = tenant.restaurantId;
-    if (tenant?.locationId) headers['x-location-id'] = tenant.locationId;
-    return headers;
-}
 
 export async function createCart(payload: CreateCartDto, tenant?: TenantHeaders) {
     const token = await getApiToken('Order', ['order.write']);

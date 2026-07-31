@@ -1,9 +1,3 @@
-import type {
-    Order as POSOrder,
-    Table as DiningTable,
-    OrderItem as POSOrderItem,
-} from "../../../types/pos";
-
 import { Card } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { Separator } from "../../../components/ui/separator";
@@ -25,11 +19,31 @@ import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Props
+// Props — deliberately narrower than the canonical domain Order/Table (types/pos):
+// this sidebar is a view built from a cart + table lookup in MenuPage, not the
+// full domain entities, and only ever renders these fields.
 // ─────────────────────────────────────────────────────────────────────────────
+export type SidebarOrderItem = {
+    id: string;
+    quantity: number;
+    notes?: string | null;
+    menuItem: { name: string; price: number };
+};
+
+export type SidebarOrder = {
+    id: string;
+    items: SidebarOrderItem[];
+};
+
+export type SidebarTable = {
+    id: string;
+    number: string | number;
+    section?: string;
+};
+
 interface OrderSidebarProps {
-    order: POSOrder | null;
-    table: DiningTable | null;
+    order: SidebarOrder | null;
+    table: SidebarTable | null;
     isOpen: boolean;
     onClose: () => void;
     onUpdateItem: (itemId: string, quantity: number) => void;
@@ -92,7 +106,7 @@ function OrderItemRow({
                           onUpdateQuantity,
                           onRemove,
                       }: {
-    item: POSOrderItem;
+    item: SidebarOrderItem;
     onUpdateQuantity: (quantity: number) => void;
     onRemove: () => void;
 }) {
@@ -150,6 +164,7 @@ function OrderSidebarContent({
                                  onCheckout,
                                  checkoutLoading,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
+    const kitchen = useKitchen();
     if (!table) return null;
 
     // compute money safely from order items
@@ -164,7 +179,6 @@ function OrderSidebarContent({
     const total = +(subtotal + tax).toFixed(2);
 
     const itemCount = order?.items.reduce((n, it) => n + it.quantity, 0) ?? 0;
-    const kitchen = useKitchen();
     const isFired = order ? kitchen.isFired(order.id) : false;
 
     return (
@@ -251,7 +265,7 @@ function OrderSidebarContent({
                             if (!table || !order) return;
                             kitchen.fire({
                                 id: order.id,
-                                tableId: (table as any).id ?? String(table.number ?? ""),
+                                tableId: table.id ?? String(table.number ?? ""),
                                 tableNumber: String(table.number ?? ""),
                                 items: order.items.map(i => ({ name: i.menuItem.name, quantity: i.quantity })),
                                 firedAt: Date.now(),

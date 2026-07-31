@@ -73,6 +73,7 @@ public record SetTableStatusDto(
 
 public record LinkOrderDto(Guid OrderId);
 public record SeatPartyDto(int PartySize, string? ServerId);
+public record SeatResultDto(Guid CartId);
 
 
 public record JoinTablesDto(IReadOnlyList<Guid> TableIds, string? GroupLabel);

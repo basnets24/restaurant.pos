@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Dialog as Modal, DialogContent as ModalContent, DialogHeader as ModalHe
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function AccountPage() {
   const { profile } = useAuth();
@@ -17,14 +18,14 @@ export default function AccountPage() {
   const { rid } = useTenant();
   const employee = useEmployeeDomain();
   const rp = useRestaurantUserProfile();
-  const userId = (profile as any)?.sub as string | undefined;
+  const userId = profile?.sub;
   const employeeDetail = employee.useEmployee(rid ?? "", userId ?? "", { enabled: !!rid && !!userId });
   const locs = useTenantInfo().locations ?? [];
   const updateEmp = employee.useUpdateEmployee(rid ?? "", userId ?? "");
   const updateDefaultLoc = employee.useUpdateDefaultLocation(rid ?? "", userId ?? "");
   const [defaultLocDraft, setDefaultLocDraft] = useState<string | "">("");
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
-  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canAdmin = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
@@ -55,12 +56,12 @@ export default function AccountPage() {
         accessCode: editAccessCode || null,
       });
       setEditOpen(false);
-    } catch (e: any) {
-      setEditError(e?.message ?? "Failed to update profile");
+    } catch (e: unknown) {
+      setEditError(errorMessage(e) ?? "Failed to update profile");
     }
   };
   const display = useMemo(() => {
-    const ownerName = (profile as any)?.name || [ (profile as any)?.given_name, (profile as any)?.family_name ].filter(Boolean).join(" ") || (profile as any)?.preferred_username || (profile as any)?.email || "User";
+    const ownerName = profile?.name || [profile?.given_name, profile?.family_name].filter(Boolean).join(" ") || profile?.preferred_username || profile?.email || "User";
     return { ownerName };
   }, [profile]);
 
@@ -149,7 +150,7 @@ export default function AccountPage() {
                       size="sm"
                       onClick={async () => {
                         if (!defaultLocDraft) return;
-                        try { await updateDefaultLoc.mutateAsync({ defaultLocationId: defaultLocDraft }); setDefaultLocDraft(""); } catch {}
+                        try { await updateDefaultLoc.mutateAsync({ defaultLocationId: defaultLocDraft }); setDefaultLocDraft(""); } catch (e) { console.warn("AccountPage: failed to update default location", e); }
                       }}
                       disabled={updateDefaultLoc.isPending || !defaultLocDraft}
                     >Save</Button>
@@ -212,11 +213,15 @@ function DisplayNameEditor({ valueFromDetail, onSave }: { valueFromDetail: strin
   const [name, setName] = useState<string>(valueFromDetail ?? "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | undefined>();
-  useEffect(() => { setName(valueFromDetail ?? ""); }, [valueFromDetail]);
+  const [prevValueFromDetail, setPrevValueFromDetail] = useState(valueFromDetail);
+  if (valueFromDetail !== prevValueFromDetail) {
+    setPrevValueFromDetail(valueFromDetail);
+    setName(valueFromDetail ?? "");
+  }
   const submit = async () => {
     setMsg(undefined); setSaving(true);
     try { await onSave(name.trim()); setMsg("Saved."); }
-    catch (e: any) { setMsg(e?.message ?? "Failed to save"); }
+    catch (e: unknown) { setMsg(errorMessage(e) ?? "Failed to save"); }
     finally { setSaving(false); }
   };
   return (
