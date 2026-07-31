@@ -47,3 +47,10 @@ export async function requestPayment(orderId: string, tenant?: TenantHeaders) {
         headers: { ...withTenantHeaders(tenant), Authorization: `Bearer ${token}` },
     });
 }
+
+export async function cancelOrder(orderId: string, tenant?: TenantHeaders) {
+    const token = await getApiToken('Order', ['order.write']);
+    await http.post(`${BASE}/orders/${orderId}/cancel`, null, {
+        headers: { ...withTenantHeaders(tenant), Authorization: `Bearer ${token}` },
+    });
+}

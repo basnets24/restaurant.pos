@@ -35,4 +35,5 @@ public static class NotificationType
     public const string TablesJoined = "TablesJoined";
     public const string TablesSplit = "TablesSplit";
     public const string TableRemoved = "TableRemoved";
+    public const string OrderCancelled = "OrderCancelled";
 }

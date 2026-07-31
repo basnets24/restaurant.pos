@@ -18,19 +18,35 @@ public class DiningTableService : IDiningTableService
     private readonly IHubContext<FloorHub> _hub;
     private readonly INotificationService _notifications;
     private readonly ICartService _cartService;
+    private readonly IOrderService _orders;
 
     public DiningTableService(
         IRepository<DiningTable> repo,
         ITenantContext tenant,
         IHubContext<FloorHub> hub,
         INotificationService notifications,
-        ICartService cartService)
+        ICartService cartService,
+        IOrderService orders)
     {
         _repo   = repo;
         _tenant = tenant;
         _hub    = hub;
         _notifications = notifications;
         _cartService = cartService;
+        _orders = orders;
+    }
+
+    // A checked-out cart's id doubles as its order's id (see CartService.CheckoutAsync's
+    // idempotency key), so ActiveCartId is also the linked order's lookup key. Clearing a
+    // table force-detaches that link unconditionally, so try to cancel the linked order
+    // first - otherwise its reserved inventory is orphaned. Missing/already-terminal
+    // orders are expected (cart never checked out, or already Rejected) and not errors.
+    private async Task TryCancelLinkedOrderAsync(Guid? activeCartId, CancellationToken ct)
+    {
+        if (activeCartId is not { } orderId) return;
+        try { await _orders.CancelAsync(orderId, ct); }
+        catch (KeyNotFoundException) { /* cart never checked out into an order */ }
+        catch (ConflictException) { /* already Rejected (Paid already nulled the link) */ }
     }
 
     // Maps a post-update table's status to the matching notification, or null
@@ -204,6 +220,8 @@ public class DiningTableService : IDiningTableService
     {
         var t = await _repo.GetAsync(id) ?? throw new KeyNotFoundException("Table not found.");
         var alreadyClear = t.Status == DiningTableStatus.Available && t.PartySize is null && t.ActiveCartId is null;
+
+        await TryCancelLinkedOrderAsync(t.ActiveCartId, ct);
 
         t.Status      = DiningTableStatus.Available;
         t.PartySize   = null;

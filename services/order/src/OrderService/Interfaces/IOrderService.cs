@@ -6,7 +6,9 @@ namespace OrderService.Interfaces;
 public interface IOrderService
 {
     Task MarkPaidAsync(Guid orderId, CancellationToken ct = default);
-    
+
+    Task CancelAsync(Guid orderId, CancellationToken ct = default);
+
     Task<Order> FinalizeOrderAsync(
         FinalizeOrderDto dto, 
         Guid? idempotencyKey, 

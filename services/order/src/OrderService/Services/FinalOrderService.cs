@@ -1,9 +1,11 @@
 using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
+using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Order;
 using OrderService.Dtos;
 using OrderService.Entities;
+using OrderService.Exceptions;
 using OrderService.Interfaces;
 using OrderService.Mappers;
 
@@ -17,13 +19,15 @@ public class FinalOrderService : IOrderService
     private readonly IRepository<DiningTable> _tables;
     private readonly IPricingService _pricingService;
     private readonly ITenantContext _tenant;
-    
-    public FinalOrderService(IRepository<Order> orders, 
-        ILogger<FinalOrderService> logger, 
-        IPublishEndpoint publishEndpoint, 
-        IPricingService pricingService, 
-        IRepository<DiningTable> tables, 
-        ITenantContext tenant)
+    private readonly INotificationService _notifications;
+
+    public FinalOrderService(IRepository<Order> orders,
+        ILogger<FinalOrderService> logger,
+        IPublishEndpoint publishEndpoint,
+        IPricingService pricingService,
+        IRepository<DiningTable> tables,
+        ITenantContext tenant,
+        INotificationService notifications)
     {
         _orders = orders;
         _logger = logger;
@@ -31,6 +35,7 @@ public class FinalOrderService : IOrderService
         _pricingService = pricingService;
         _tables = tables;
         _tenant = tenant;
+        _notifications = notifications;
     }
 
 
@@ -89,6 +94,36 @@ public class FinalOrderService : IOrderService
                 await _tables.UpdateAsync(table);
             }
         }
+    }
+
+    public async Task CancelAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
+        if (order.Status == OrderStatus.Paid)
+            throw new ConflictException("Order is already paid and cannot be cancelled.");
+        if (order.Status == OrderStatus.Rejected)
+            throw new ConflictException("Order was never fulfilled and cannot be cancelled.");
+        if (order.Status == OrderStatus.Cancelled)
+            return; // idempotent
+
+        order.Status = OrderStatus.Cancelled;
+        order.CancelledAt = DateTimeOffset.UtcNow;
+        await _orders.UpdateAsync(order);
+
+        await _publishEndpoint.Publish(new ReleaseInventory(
+            CorrelationId: order.Id,
+            OrderId: order.Id,
+            Items: order.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
+            RestaurantId: order.RestaurantId,
+            LocationId: order.LocationId
+        ), ct);
+
+        _logger.LogInformation("Order {OrderId} cancelled", orderId);
+
+        await _notifications.NotifyAsync(
+            NotificationType.OrderCancelled,
+            "Order cancelled",
+            null, "Order", order.Id, ct);
     }
 
 }

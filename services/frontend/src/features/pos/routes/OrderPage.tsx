@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Receipt, CheckCircle2, AlertTriangle } from "lucide-react";
 
-import { useOrder, useRequestPayment } from "@/domain/orders/hooks";
+import { useOrder, useRequestPayment, useCancelOrder } from "@/domain/orders/hooks";
 import { pollForClientSecret } from "@/domain/payments/api";
 import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
 import { useSetTableStatus, useUnlinkOrder } from "@/domain/tables/hooks";
@@ -25,14 +26,18 @@ export default function OrderPage() {
 
   const { data: order, isLoading, refetch } = useOrder(orderId || undefined);
   const requestPayment = useRequestPayment();
+  const cancelOrder = useCancelOrder();
   const setTableStatus = useSetTableStatus(tableId);
   const unlinkOrder = useUnlinkOrder(tableId);
 
   const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<{ clientSecret: string } | null>(null);
 
   const isPaid = !!order?.paidAt;
   const isRejected = order?.status === "Rejected";
+  const isCancellable = order?.status === "Pending";
 
   async function handlePayNow() {
     if (!orderId) return;
@@ -49,6 +54,21 @@ export default function OrderPage() {
       toast.error(errorMessage(e) || "Could not start payment.");
     } finally {
       setPaying(false);
+    }
+  }
+
+  async function handleCancelOrder() {
+    if (!orderId) return;
+    setCancelling(true);
+    try {
+      await cancelOrder.mutateAsync(orderId);
+      await refetch();
+      toast.success("Order cancelled.");
+      setCancelDialogOpen(false);
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Could not cancel order.");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -79,7 +99,7 @@ export default function OrderPage() {
             {orderId ? `Order ${orderId.slice(0, 8)}` : "Order"}
           </CardTitle>
           {order && (
-            <Badge variant={isPaid ? "secondary" : isRejected ? "destructive" : "outline"}>
+            <Badge variant={isPaid ? "secondary" : (isRejected || order.status === "Cancelled") ? "destructive" : "outline"}>
               {isPaid ? "Paid" : order.status}
             </Badge>
           )}
@@ -118,6 +138,11 @@ export default function OrderPage() {
                   <AlertTriangle className="h-4 w-4" /> This order was never fulfilled and cannot be paid.
                 </div>
               )}
+              {order.status === "Cancelled" && (
+                <div className="text-sm text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" /> This order was cancelled.
+                </div>
+              )}
               {order.lastPaymentError && !isPaid && (
                 <div className="text-sm text-destructive flex items-center gap-1">
                   <AlertTriangle className="h-4 w-4" /> Last payment attempt failed: {order.lastPaymentError}
@@ -135,6 +160,15 @@ export default function OrderPage() {
                 {!isPaid && !isRejected && (
                   <Button onClick={handlePayNow} disabled={paying} className="flex-1">
                     {paying ? "Starting payment…" : "Pay Now"}
+                  </Button>
+                )}
+                {isCancellable && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setCancelDialogOpen(true)}
+                    disabled={cancelling}
+                  >
+                    Cancel Order
                   </Button>
                 )}
                 <Button variant="ghost" onClick={() => navigate(`/pos/table/${tableId}/menu`)}>
@@ -156,6 +190,25 @@ export default function OrderPage() {
           onFailure={handlePaymentFailure}
         />
       )}
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel this order?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This releases any reserved inventory back to stock and cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} disabled={cancelling}>
+              Keep Order
+            </Button>
+            <Button variant="destructive" onClick={() => { void handleCancelOrder(); }} disabled={cancelling}>
+              {cancelling ? "Cancelling…" : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

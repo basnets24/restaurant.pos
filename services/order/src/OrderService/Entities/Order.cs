@@ -49,6 +49,8 @@ public class Order : IEntity, ITenantEntity
     // Order stays Pending/retryable - a declined card is not an order rejection.
     public string? LastPaymentError { get; set; }
     public DateTimeOffset? LastPaymentFailedAt { get; set; }
+
+    public DateTimeOffset? CancelledAt { get; set; }
 }
 
 /// <summary>Single source of truth for Order.Status values - previously hardcoded
@@ -58,6 +60,7 @@ public static class OrderStatus
     public const string Pending = "Pending";
     public const string Paid = "Paid";
     public const string Rejected = "Rejected";
+    public const string Cancelled = "Cancelled";
 }
 
 public class OrderItem

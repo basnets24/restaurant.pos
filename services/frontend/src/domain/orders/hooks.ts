@@ -45,3 +45,14 @@ export function useRequestPayment(opts?: { tenant?: TenantHeaders }) {
         },
     });
 }
+
+export function useCancelOrder(opts?: { tenant?: TenantHeaders }) {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (orderId: string) => api.cancelOrder(orderId, opts?.tenant),
+        onSuccess: (_data, orderId) => {
+            qc.invalidateQueries({ queryKey: orderKeys.byId(orderId) });
+            qc.invalidateQueries({ queryKey: orderKeys.list() });
+        },
+    });
+}
