@@ -54,6 +54,14 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         {
             await _paymentsRepo.CreateAsync(payment);
         }
+        else
+        {
+            // Starting a new attempt on a previously failed payment - reset all
+            // attempt-scoped fields together, not just PaymentIntentId/ClientSecret below,
+            // so GetPaymentSession/ConfirmPayment don't keep seeing the old decline.
+            payment.Status = "Pending";
+            payment.ErrorMessage = null;
+        }
 
         // Create a PaymentIntent - the frontend confirms it directly with Stripe.js
         // via an embedded card form (Stripe Elements), no redirect involved.
