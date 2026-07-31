@@ -1,80 +1,137 @@
 # OrderService (Restaurant POS)
 
-Order and dining room service for the Restaurant POS platform. Manages carts, finalizes orders, tracks dining tables and emits real‑time updates. Integrates with inventory and payment via messaging. Built with .NET 8, PostgreSQL/EF Core, MassTransit, SignalR, and JWT Bearer auth.
+Cart, order, and dining-room service for the Restaurant POS platform: carts, order finalization, dining tables, pricing, notifications, and real-time table updates. Owns the order saga and a cross-service POS read model. Built with .NET 8, PostgreSQL/EF Core, MassTransit, SignalR, and JWT Bearer auth.
+
+See [`CLAUDE.md`](./CLAUDE.md) in this folder for saga/consumer gotchas and the two-DbContext layout. This README covers running it and its API.
 
 ## Features
-- Tenant‑scoped carts, orders, and dining tables in PostgreSQL
-- REST APIs for carts (add/remove items, checkout), orders, and tables (layout and runtime status)
+- Tenant-scoped carts, orders, and dining tables in PostgreSQL
+- REST APIs for carts, orders, tables, and notifications
 - Authorization via scopes and roles:
-  - Read: `order.read`
-  - Write: `order.write` + roles `Admin|Manager|Server`
-  - Policies: `orders.assign-self` (Server), `orders.manage-tables` (Server|Admin|Manager)
-- Pricing engine with configurable taxes, service charges, and discounts (appsettings)
-- Messaging orchestration (MassTransit): reserves/releases inventory, requests payment, reacts to events
-- Real‑time table updates over SignalR
+
+  | Policy | Requires |
+  |---|---|
+  | Read | `order.read` |
+  | Write | `order.write` + role `Admin`, `Manager`, or `Server` |
+  | `orders.assign-self` | Server |
+  | `orders.manage-tables` | Server, Admin, or Manager |
+
+- Pricing engine with configurable taxes, service charges, and discounts (appsettings) — cart responses carry a live `estimate` object, so the UI renders those figures rather than recomputing tax
+- Persisted notifications for order/table lifecycle events (`/api/notifications`) — distinct from the SignalR hub, which is live-only broadcast with no persistence
+- Real-time table updates over SignalR
 - Serilog + Seq logging, CORS for the frontend, Swagger in Development
 
 ## Getting Started
 
 ### Prerequisites
 - .NET SDK 8.0+
-- PostgreSQL (local or container)
-- RabbitMQ (local or container)
-- Optional: Seq for structured logs
+- PostgreSQL and RabbitMQ (both come from `infra/docker-compose.yml`)
+- The identity service running, for JWT validation
+
+Normally you don't run this by hand — `./scripts/dev.sh` from the repo root starts infra plus all four services and the frontend.
 
 ### Configuration
-Configured in `appsettings.json` and overridable via environment variables or User Secrets.
+From `appsettings.json`, overridable via environment variables or User Secrets.
 
-- ServiceSettings
-  - Authority: OIDC authority for JWT validation
-- PostgresSettings
-  - Host, Port, Database, Username, Password
-- RabbitMqSettings
-  - Host (and optional username/password when required)
-- Cors
-  - AllowedOrigins: array of allowed frontend origins
-- SeqSettings
-  - Host, Port for Seq
-- QueueSettings
-  - Queue addresses for inventory reserve/release and payment request
-- Pricing
-  - Taxes, ServiceCharges, Discounts (ids/names/percent/amount)
+- `ServiceSettings.Authority` — OIDC authority for JWT validation
+- `PostgresSettings` — Host, Port, Database, Username, Password
+- `RabbitMqSettings` — Host (plus credentials if your environment needs them)
+- `Cors.AllowedOrigins` — allowed frontend origins
+- `SeqSettings` — Seq host/port
+- `QueueSettings` — queue addresses for inventory reserve/release and payment request
+- `Pricing` — taxes, service charges, discounts (ids/names/percent/amount)
 
-Example: set local secrets
+### Run standalone
 ```bash
-# from this project directory
-dotnet user-secrets set "ServiceSettings:Authority" "https://localhost:7163"
+dotnet run --project services/order/src/OrderService  # https://localhost:7288 / http://localhost:5236
 ```
+- Swagger UI: `/swagger` (Development only)
+- SignalR: the tables hub is mapped by the tables module
 
-### Build and Run Scripts
+## API Overview
 
-#### Setup & Run
+### Carts — `/carts`
+| Method | Route | Notes |
+|---|---|---|
+| `POST` | `/carts` | Create a cart |
+| `GET` | `/carts/{id}` | Get cart with computed pricing |
+| `POST` | `/carts/{id}/items` | Add item |
+| `DELETE` | `/carts/{id}/items/{menuItemId}` | Remove item |
+| `POST` | `/carts/{id}/checkout` | Finalize cart to an order. This is **"Fire to Kitchen"** in the UI — it commits the order and reserves inventory. It does **not** take payment; that's a separate later call. |
+
+### Orders — `/orders`
+| Method | Route | Notes |
+|---|---|---|
+| `GET` | `/orders` | List orders |
+| `GET` | `/orders/{id}` | Get order |
+| `POST` | `/orders` | Create order from DTO (supports `idempotencyKey` query) |
+| `POST` | `/orders/{orderId}/request-payment` | Publishes `PaymentRequested`, outside the saga; the payment service then creates a Stripe PaymentIntent |
+| `POST` | `/orders/{orderId}/cancel` | Voids the order and publishes `ReleaseInventory` (the only place that event is published), plus an `OrderCancelled` notification. Manual operator action, not an automatic timeout. |
+
+### Notifications — `/api/notifications`
+| Method | Route | Notes |
+|---|---|---|
+| `GET` | `/api/notifications` | List notifications for the current tenant |
+| `POST` | `/api/notifications/{id}/read` | Mark one as read |
+
+### Tables — `/api/tables`
+| Method | Route | Notes |
+|---|---|---|
+| `GET` | `/api/tables` | List tables |
+| `GET` | `/api/tables/{id}` | Table details |
+| `POST` | `/api/tables` | Create table (layout) |
+| `PATCH` | `/api/tables/{id}/layout` | Update layout (optimistic versioning) |
+| `POST` | `/api/tables/layout/bulk` | Bulk layout update |
+| `PATCH` | `/api/tables/{id}/status` | Set runtime status (available/reserved/occupied/dirty) |
+| `POST` | `/api/tables/{id}/seat` | Mark occupied with party size |
+| `POST` | `/api/tables/{id}/clear` | Clear to available |
+| `POST` | `/api/tables/{id}/link-order` | Link an order/cart |
+| `POST` | `/api/tables/{id}/unlink-order` | Unlink order/cart |
+| `DELETE` | `/api/tables/{id}` | Delete table |
+
+All endpoints are tenant-aware via `Common.Library.Tenancy`.
+
+## Messaging & the saga
+
+Uses MassTransit with saga orchestration, configured in `Program.cs`; interacts with catalog and payment via queues in `QueueSettings`.
+
+**The saga is deliberately small — it covers inventory reservation only, not payment.** Checkout publishes `OrderSubmitted`; the saga sends `ReserveInventory` and, on `InventoryReserved`/`InventoryReserveFaulted`, transitions straight to `Confirmed`/`Rejected` and is done. It does not send `PaymentRequested` and has no payment timeout — both omissions are deliberate.
+
+Payment is driven outside the saga by `OrderController.RequestPayment`, and payment/inventory outcomes are applied to the `Order` entity by handlers in `Consumers/` rather than by saga transitions. If an order's status looks wrong after a payment event, check the consumer, not the state machine.
+
+Inventory is reserved at checkout and released only when someone calls `POST /orders/{orderId}/cancel`. Nothing reclaims it automatically.
+
+## Project Layout
+- `Program.cs` — DI for Postgres/EF Core, tenancy, MassTransit saga, auth, Swagger, CORS, SignalR
+- `Controllers/` — carts, orders, tables, notifications
+- `Services/` — cart management, pricing, tables, notifications
+- `Entities/` — tenant-scoped entities (`Order`, `Cart`, `DiningTable`, `Notification`)
+- `StateMachines/` — the MassTransit saga
+- `Consumers/`, `Projections/` — messaging workflows and the POS read-model projector
+- `Data/` — `OrderDbContext`, `OrderStateDbContext`, and their design-time factories
+- `Auth/` — authorization policies (`order.read`, `order.write`, etc.)
+- `Dtos/`, `Extensions/`, `Hubs/`, `Settings/` — DTOs, helpers, SignalR hubs, typed settings
+
+## Docker Build
+The build needs a GitHub PAT with `read:packages` to restore the private `Common.Library` / `Messaging.Contracts` NuGet packages.
+
 ```bash
-#!/bin/bash
-# Build and run Order Service (requires PostgreSQL, RabbitMQ, Identity Service)
-cd services/order/src/OrderService
-dotnet restore
-dotnet run  # http://localhost:5236
-```
-
-#### Docker Build
-```bash
-#!/bin/bash
-# Build Docker image
 cd services/order
 docker build --secret id=GH_OWNER --secret id=GH_PAT -t restaurant-pos/order-service:1.0.2 .
-docker run -d -p 5236:5236 \
--e PostgresSettings__Host="$postgresHost" \
--e PostgresSettings__Password="$postgresPassword" \
--e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
--e ServiceSettings__MessageBroker="SERVICEBUS" \
---network pos_pos-net \
---name order-service-v1.0.2 \
-restaurant-pos/order-service:1.0.2
 
+docker run -d -p 5236:5236 \
+  -e PostgresSettings__Host="$postgresHost" \
+  -e PostgresSettings__Password="$postgresPassword" \
+  -e ServiceBusSettings__ConnectionString="$serviceBusConnString" \
+  -e ServiceSettings__MessageBroker="SERVICEBUS" \
+  --network pos_pos-net \
+  --name order-service-v1.0.2 \
+  restaurant-pos/order-service:1.0.2
 ```
 
-### 🐳 Build & Push Docker Image (ARM64 TO AMD64 THAT IS AKS Compatible)
+### Build & push for AKS (amd64)
+
+```bash
 export version=1.0.0
 export ACR=acrpos
 
@@ -82,21 +139,19 @@ docker buildx build \
   --platform linux/amd64 \
   --secret id=GH_OWNER --secret id=GH_PAT \
   -t "$ACR.azurecr.io/pos.order:$version" \
-  --push .  
+  --push .
+```
 
-**Note**: The Docker build requires GitHub Personal Access Token with `read:packages` permission to access private NuGet packages.
+## Deployment
 
+Container images and Helm charts follow the same pattern as the other services; the shared chart lives in `infra/helm/microservice/`.
 
-## Create Kubernetes namespace 
-```bash 
-export namespace="order"
-kubectl create namespace $namespace 
-
-## Creating Azure Managed Identity and granting it access to Key Vault Store 
 ```bash
+# namespace + workload identity + Key Vault access
+export namespace="order"
+kubectl create namespace $namespace
 
-az identity create --resource-group $RG --name $namespace 
-
+az identity create --resource-group $RG --name $namespace
 export IDENTITY_CLIENT_ID=$(az identity show -g "$RG" -n "$namespace" --query clientId -o tsv)
 export SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 
@@ -105,81 +160,24 @@ az role assignment create \
   --role "Key Vault Secrets User" \
   --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.KeyVault/vaults/$KV"
 
-```
-
-## Establish the related Identity Credential
-```bash
 export AKS_OIDC_ISSUER="$(az aks show -n $AKS -g $RG --query "oidcIssuerProfile.issuerUrl" -otsv)"
-
-az identity federated-credential create --name ${namespace} --identity-name "${namespace}" --resource-group "${RG}" --issuer "${AKS_OIDC_ISSUER}" --subject system:serviceaccount:"${namespace}":"${namespace}-serviceaccount" --audience api://AzureADTokenExchange
+az identity federated-credential create \
+  --name ${namespace} --identity-name "${namespace}" --resource-group "${RG}" \
+  --issuer "${AKS_OIDC_ISSUER}" \
+  --subject system:serviceaccount:"${namespace}":"${namespace}-serviceaccount" \
+  --audience api://AzureADTokenExchange
 ```
-## install helm chart 
-```bash 
+
+```bash
+# install/upgrade the chart
 helmUser="00000000-0000-0000-0000-000000000000"
 helmPassword=$(az acr login --name $ACR --expose-token --output tsv --query accessToken)
-helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword 
+helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword
 
 chartVersion="0.1.1"
-helm upgrade pos-$namespace-service oci://$ACR.azurecr.io/helm/pos-microservice --version $chartVersion -f ./helm/values.yaml -n $namespace --install
+helm upgrade pos-$namespace-service oci://$ACR.azurecr.io/helm/pos-microservice \
+  --version $chartVersion -f ./helm/values.yaml -n $namespace --install
 ```
-
-
-### Manual Steps
-
-#### Run
-```bash
-dotnet run
-```
-- Swagger UI: `/swagger` (Development only)
-- SignalR: tables hub is mapped by the tables module
-
-## API Overview
-
-- Carts (`/carts`)
-  - `POST /carts` — create a cart
-  - `GET /carts/{id}` — get cart with computed pricing
-  - `POST /carts/{id}/items` — add item
-  - `DELETE /carts/{id}/items/{menuItemId}` — remove item
-  - `POST /carts/{id}/checkout` — finalize cart to an order
-
-- Orders (`/orders`)
-  - `GET /orders` — list orders
-  - `GET /orders/{id}` — get order
-  - `POST /orders` — create order from DTO (supports `idempotencyKey` query)
-
-- Tables (`/api/tables`)
-  - `GET /api/tables` — list tables
-  - `GET /api/tables/{id}` — table details
-  - `PATCH /api/tables/{id}/status` — set runtime status (available/reserved/occupied/dirty)
-  - `POST /api/tables/{id}/seat` — mark occupied with party size
-  - `POST /api/tables/{id}/clear` — clear to available
-  - `POST /api/tables/{id}/link-order` — link an order/cart
-  - `POST /api/tables/{id}/unlink-order` — unlink order/cart
-  - `POST /api/tables` — create table (layout)
-  - `PATCH /api/tables/{id}/layout` — update layout (optimistic versioning)
-  - `POST /api/tables/layout/bulk` — bulk layout update
-  - `DELETE /api/tables/{id}` — delete table
-
-Notes
-- Endpoints are tenant‑aware via `Common.Library.Tenancy`.
-- `Pricing` section controls automatic service charge, taxes, and discounts applied to orders.
-
-## Messaging
-
-- Uses MassTransit with saga orchestration (configured in `Program.cs`).
-- Interacts with Inventory and Payment via queues set in `QueueSettings`.
-- Publishes domain events and consumes workflow events; inventory is reserved on checkout and released on failure/cancel.
-
-## Project Layout
-- `Program.cs` — DI for Postgres/EF Core, Tenancy, MassTransit saga, auth, Swagger, CORS, SignalR
-- `Controllers/` — carts, orders, tables
-- `Services/` — cart management, pricing, tables service
-- `Dtos/` — request/response DTOs
-- `Data/` — `OrderDbContext`, `OrderStateDbContext` and their design-time factories
-- `Entities/` — tenant-scoped entities (Order, Cart, DiningTable, etc.)
-- `Auth/` — authorization policies (`order.read`, `order.write`, etc.)
-- `Consumers/`, `StateMachines/`, `Projections/` — messaging workflows and projections
-- `Extensions/`, `Hubs/`, `Settings/` — helpers, SignalR hubs, typed settings
 
 ---
 

@@ -13,9 +13,9 @@ No dedicated test project for this service (the only test project in the repo is
 Cart → order → dining-table management, the order saga, and the cross-service POS read model. It's the busiest consumer/producer in the event graph: it both drives the saga and projects events from catalog and payment into a local read model.
 
 ## Structure (`src/OrderService/`)
-- `Controllers/` — `CartController`, `OrderController`, `TableController` (thin, delegate to `Services/`)
-- `Services/` — `CartService`, `FinalOrderService` (implements `IOrderService`), `DiningTableService`, `PricingService` (singleton — stateless pricing math), `CurrentUserAccessor`
-- `Entities/` — `Cart`, `Order`, `DiningTable` (EF entities, tenant-scoped via `Common.Library`'s `TenantEfRepository<T>`, registered in `Program.cs`)
+- `Controllers/` — `CartController`, `OrderController`, `TableController`, `NotificationsController` (thin, delegate to `Services/`)
+- `Services/` — `CartService`, `FinalOrderService` (implements `IOrderService`), `DiningTableService`, `PricingService` (singleton — stateless pricing math), `NotificationService`, `CurrentUserAccessor`
+- `Entities/` — `Cart`, `Order`, `DiningTable`, `Notification` (EF entities, tenant-scoped via `Common.Library`'s `TenantEfRepository<T>`, registered in `Program.cs`)
 - `StateMachines/OrderStateMachine.cs` — the MassTransit saga (see root CLAUDE.md for the event sequence). Persisted via `OrderStateDbContext` (a `SagaDbContext`, distinct from plain `DbContext` — MassTransit's EF saga repository requires that base class)
 - `Consumers/` — `PaymentSucceededConsumer`, `PaymentFailedConsumer`, `InventoryReserveFaultedConsumer`. These update the `Order` entity directly; they are **not** saga event handlers, so don't assume saga state and order-entity state change atomically
 - `Projections/PosReadModelProjector.cs` — consumes catalog's `MenuItem*`/`InventoryItem*` events, maintains `PosCatalogItem` rows in `OrderDbContext` via raw upsert SQL (not EF change-tracking) so concurrent menu/inventory updates fold correctly into one `IsAvailable` flag
@@ -30,3 +30,5 @@ Cart → order → dining-table management, the order saga, and the cross-servic
 - Two DbContexts, one Postgres connection: adding a migration means picking the right `*DbContextFactory` (`OrderDbContextFactory` vs `OrderStateDbContextFactory`) for `dotnet ef migrations add`.
 - The saga (`OrderStateDbContext`) is deliberately **not** tenant-scoped the same way `OrderDbContext` is — don't add `UseTenantModelCache()` there without checking why it was left off.
 - Payment and inventory-reservation outcomes reach the `Order` entity through `Consumers/`, not through saga transitions — if an order's status looks wrong after a payment event, check the consumer, not the state machine.
+- `POST /orders/{orderId}/cancel` is the **only** thing that publishes `ReleaseInventory` (from `FinalOrderService`). It's an operator action, not automatic — there's no timeout that reclaims inventory from an abandoned order.
+- Cart checkout is "Fire to Kitchen" in the UI and commits the order; payment is a separate later call (`/orders/{id}/request-payment`). Checkout ≠ paid.

@@ -1,139 +1,83 @@
-# Restaurant POS Services
+# Restaurant POS
 
-A cloud-native restaurant management platform built with microservices architecture, deployed on Azure Kubernetes Service.
-
-## Technologies & Skills
-
-**Frontend**: React, TypeScript, TanStack Query, Tailwind CSS, SignalR  
-**Backend**: .NET 8 Microservices, ASP.NET Core Web API  
-**Databases**: PostgreSQL  
-**Cloud**: Azure Kubernetes Service, Service Bus, Container Registry  
-**DevOps**: Docker, Kubernetes, Helm, GitHub Actions, CI/CD  
-**Security**: OAuth 2.0/OpenID Connect, JWT Bearer tokens  
-**Patterns**: Event-driven architecture, CQRS, Multi-tenancy  
-
-## Architecture Overview
+A cloud-native, multi-tenant restaurant POS platform: four .NET microservices plus a React frontend, event-driven via MassTransit/RabbitMQ, deployed on Azure Kubernetes Service.
 
 ![Restaurant POS Architecture](./docs/images/architecture-diagram.png)
 
-### Key Design Principles
-- **Microservices**: Independent, domain-specific services
-- **Event-driven**: Services communicate via message broker
-- **Multi-tenancy**: Built for multiple restaurant operations
-- **Cloud-native**: Deployed on Azure Kubernetes Service (AKS)
-- **Containerized**: Docker-based deployment
+## Quick Start
 
-### Infrastructure Components
-- **PostgreSQL**: All service data (identity/tenant, catalog, order, payment), schema-per-service
-- **RabbitMQ**: Service-to-service messaging
-- **Seq**: Centralized structured logging
-- **Azure Kubernetes Service**: Orchestration platform
-- **Azure Container Registry**: Container image repository
+**Prerequisites**: .NET SDK 10, Node 20+, Docker, a GitHub PAT with `read:packages` (private NuGet packages live in GitHub Packages).
 
-### Network Architecture
-- Kubernetes services and ingress for external communication
-- Kubernetes namespaces for resource isolation
-- Security: Non-root containers, environment-based secrets, Azure Key Vault integration
+```bash
+cp .env.example .env
+# fill in GH_PAT, POSTGRES_PASSWORD, IdentitySettings__AdminUserPassword,
+# and a Stripe test key if you want to exercise payment flows
+```
 
-## Microservices
+```bash
+./scripts/dev.sh        # starts infra (docker compose) + all 4 services + frontend
+./scripts/dev.sh stop   # stops the services this script started; infra keeps running
+```
 
-**Frontend**: React SPA with OIDC authentication, real-time updates, and tenant-aware UI  
-**Identity**: Authentication/authorization service with Duende IdentityServer, including multi-tenant restaurant management and onboarding (merged from the former Tenant service)  
-**Menu**: Restaurant catalog with inventory integration  
-**Inventory**: Stock tracking with reservation workflows  
-**Order**: Cart, order processing, and real-time table management  
-**Payment**: Stripe integration with webhook processing
+`scripts/dev.sh` loads `.env`, waits for infra to be healthy, and trusts the local HTTPS dev cert automatically. Only infrastructure runs in Docker locally — each backend service runs directly via `dotnet run`, and the frontend via `npm run dev`.
 
-## System Design
+| | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Swagger (per service) | `<service-url>/swagger` |
+| Seq (logs) | http://localhost:5341 |
+| RabbitMQ management | http://localhost:15672 |
+| Jaeger (traces) | http://localhost:16686 |
+| Prometheus / Grafana | http://localhost:9090 / http://localhost:3000 |
 
-### Event-Driven Communication
-- Services communicate via events through message brokers
-- Order → Payment → Inventory workflows managed via event chains
-- Real-time updates via SignalR for table status
+### Troubleshooting
 
-### Multi-Tenant Architecture
-- Data isolation per restaurant
-- JWT claims for tenant context
-- Shared infrastructure with logical separation
+| Symptom | Fix |
+|---|---|
+| NuGet restore fails | `GH_PAT` isn't set in `.env`, or lacks `read:packages` |
+| Postgres auth error | `POSTGRES_PASSWORD` in `.env` doesn't match what services expect — `scripts/dev.sh` derives `PostgresSettings__Password` from it automatically, so don't set that separately |
+| A service can't reach RabbitMQ | Check `docker compose ps` in `infra/` — infra containers may not have come up healthy |
+| 401s despite a valid login | Check the JWT's tenant claims (`restaurant_id`/`location_id`) match the `X-Restaurant-Id`/`X-Location-Id` headers being sent |
 
-### Security Model
-- IdentityServer with OAuth 2.0
-- Role-based access with tenant context
-- API scopes for granular permissions
+## Architecture
 
-## Infrastructure & DevOps
+Four independent ASP.NET Core services, each owning its own Postgres schema:
 
-### Development Workflow
-- Docker Compose for local infrastructure (PostgreSQL, RabbitMQ, Seq)
-- `scripts/dev.sh` runs services + frontend locally via `dotnet run` / `npm run dev`
-- Azure Kubernetes Service for production
-- GitHub Actions pipeline for CI/CD
-- Shared NuGet packages published via GitHub Packages
+| Service | Path | Port (https/http) | Owns |
+|---|---|---|---|
+| **identity** | `services/identity` | 7163 / 5265 | Auth (Duende IdentityServer/OIDC), restaurant onboarding, location & membership management |
+| **catalog** | `services/catalog` | 7226 / 5062 | Menu items and stock levels |
+| **order** | `services/order` | 7288 / 5236 | Cart, orders, pricing, dining tables, notifications, the order saga, and a cross-service POS read model |
+| **payment** | `services/payment` | 7182 / 5238 | Stripe PaymentIntent creation and server-side confirmation |
 
-### Key Architectural Patterns
-- Service-to-service communication via message bus
-- Repository pattern for data access
-- CQRS for business operations
-- Health checks and graceful degradation
+`services/frontend` (port 5173) is the only non-.NET piece — a React SPA that talks to each service directly (no API gateway/BFF).
 
+**Event-driven, not request-chained.** Services publish/consume domain events over RabbitMQ (Azure Service Bus in prod) via MassTransit. A deliberately small saga in `order` covers inventory reservation only — checkout reserves stock, and payment is a separate step requested afterward, not part of the saga. Catalog's menu/stock events are folded into a local read model inside `order` for fast POS reads, the same pattern a `git log`/code read will show repeated for any new cross-service read.
+
+**Multi-tenant on every request.** Each request carries `X-Restaurant-Id`/`X-Location-Id`; middleware scopes that tenant through the request, across published events, and into EF Core query filters on write and read. Nothing in a service's own schema is queryable outside its tenant by default.
+
+**Auth**: OAuth 2.0/OIDC via Duende IdentityServer, JWT bearer tokens, role- and scope-based API policies layered on top of tenant scoping.
+
+### Tech stack
+- **Frontend** — React 19, TypeScript, TanStack Query, Tailwind CSS, SignalR, oidc-client-ts
+- **Backend** — ASP.NET Core Web API (.NET 10, with `order` and shared libraries on .NET 8), EF Core
+- **Data** — PostgreSQL, schema-per-service
+- **Messaging** — MassTransit + RabbitMQ (local) / Azure Service Bus (prod)
+- **Observability** — Seq, OpenTelemetry → Jaeger/Prometheus/Grafana
+- **Infra** — Docker, AKS, Helm, GitHub Actions
 
 ## Project Structure
 
-- **services/**: All microservices (frontend, identity, menu, inventory, order, payment)
-- **shared/**: Common libraries and contracts
-- **infra/**: Infrastructure configuration (Docker, Kubernetes, Helm)
-- **docs/**: Documentation and architectural diagrams
-
-## Quick Start
-
-### Local Development
-
-**First-time setup**
-```bash
-cp .env.example .env
-# fill in GH_PAT (GitHub PAT with read:packages), POSTGRES_PASSWORD,
-# IdentitySettings__AdminUserPassword, and Stripe test keys if needed
+```
+services/    frontend, identity, catalog, order, payment — see each service's own README
+shared/      Common.Library, Messaging.Contracts, Tenant.Domain — published as NuGet via GitHub Packages
+infra/       docker-compose (local), Helm charts, Azure/AKS bootstrap — see infra/README.md
+docs/        architecture diagrams and migration notes
 ```
 
-**Run everything**
-```bash
-# Start infra (postgres, rabbitmq, seq) + all services + frontend
-./scripts/dev.sh
-
-# Stop the services started by the script (infra keeps running)
-./scripts/dev.sh stop
-```
-
-Docker Compose (`infra/docker-compose.yml`) is used for infrastructure only.
-Services run directly via `dotnet run` (and the frontend via `npm run dev`),
-started and managed by `scripts/dev.sh`, which loads `.env`, waits for infra
-to be healthy, and trusts the local HTTPS dev certificate automatically.
-
-### Key Tools
-- **Seq**: Logging at http://localhost:5341
-- **RabbitMQ**: Message monitoring at http://localhost:15672
-- **Swagger**: API documentation at each service's /swagger endpoint
-
-### Common Issues
-- **Package Restore**: Check `GH_PAT` is set in `.env`
-- **Postgres auth errors**: `POSTGRES_PASSWORD` in `.env` must match what identity/tenant expect (`PostgresSettings__Password`, derived automatically by `scripts/dev.sh`)
-- **Service Communication**: Verify message broker connectivity
-- **Authentication**: Ensure correct tenant claims in JWT tokens
+Each service and the frontend has its own `README.md`/`CLAUDE.md` with service-specific commands, structure, and gotchas — start there once you're working inside one.
 
 ## Cloud Deployment
 
-### Azure Resources
-- **AKS**: Kubernetes orchestration
-- **PostgreSQL**: Identity and tenant data
-- **Cosmos DB**: Business domain data
-- **Service Bus**: Messaging infrastructure
-- **Container Registry**: Docker images
-- **Application Insights**: Monitoring
-
-### Deployment Pipeline
-- GitHub Actions for CI/CD
-- Helm charts in `/infra/helm/`
-- Azure Key Vault integration
-
-For deployment instructions, see [AZURE_DEPLOYMENT.md](./docs/AZURE_DEPLOYMENT.md).
-
+- **AKS** for orchestration, **Azure Container Registry** for images, **Azure Service Bus** for messaging, **Supabase Postgres** for data (schema-per-service), **Azure Key Vault** for secrets
+- GitHub Actions builds/publishes; Helm charts in `infra/helm/` deploy — see [`infra/README.md`](./infra/README.md) for the full bootstrap

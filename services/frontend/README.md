@@ -1,145 +1,86 @@
 # Restaurant POS Frontend
 
-Single-page web app for restaurant operations (tables, orders, payments, management). Built with React, TypeScript, and Vite. Served as static assets behind Nginx.
+Single-page app for restaurant operations — floor plan, ordering, payments, management — built with React, TypeScript, and Vite. Served as static assets behind Nginx in production.
 
-## Features
+See [`CLAUDE.md`](./CLAUDE.md) in this folder for the frontend's internal structure and conventions (domain/feature folders, auth layers, testing). This README covers running and building it.
 
-- Tables and floor plan: view active tables and seats
-- Ordering workflow: browse menu, add to cart, place orders
-- Payments: client flow to initiate payment sessions
-- Management dashboard: inventory, menu, staff, and analytics views
-- Admin area: organization profile and basic tenant info
-- Authentication: OIDC login/logout with silent renew
-- Multi-tenant: implicit headers and tenant-aware data fetching
+## Quick Start
 
-## Tech Overview
-
-- Framework: React 18 + TypeScript, Vite build tool
-- State/Data: TanStack Query for server cache, lightweight local state
-- HTTP: axios with centralized interceptors (auth + tenant headers)
-- Auth: oidc-client-ts (Authorization Code + PKCE), silent renew
-- Realtime: @microsoft/signalr for live table updates
-- UI: Tailwind CSS + component primitives (buttons, cards, tabs, etc.)
-- Config: runtime `public/config.js` (no build-time secrets in bundle)
-
-## Build and Run Scripts
-
-#### Setup & Run
 ```bash
-# Build and run Frontend (requires backend services)
 cd services/frontend
 npm install
-npm run dev  # http://localhost:5173
+npm run dev   # http://localhost:5173
 ```
 
-#### Production Build
+The backend services need to be running for the app to do anything useful — normally you don't run the frontend standalone; `./scripts/dev.sh` from the repo root starts everything together, frontend included.
+
 ```bash
-# Build for production
-cd services/frontend
-npm install
-npm run build  # Output to dist/
+npm run build     # tsc -b && vite build — also how you typecheck; output to dist/
+npm run preview   # serve dist/ at http://localhost:4173
+npm run lint       # eslint .
+npm run test:e2e   # Playwright — needs the full local stack running first, see ./CLAUDE.md
 ```
 
-#### Docker Build
+## Configuration
+
+Service URLs are **not** baked into the build — they're read at runtime from `window.*` globals, set by `public/config.js`, with `.env.development`'s `VITE_*` values as a Vite dev-server fallback (`src/config/env.ts`).
+
+| Global | Local dev value |
+|---|---|
+| `window.IDENTITY_SERVICE_URL` | `http://localhost:5265` |
+| `window.CATALOG_SERVICE_URL` | `http://localhost:5062` |
+| `window.ORDER_SERVICE_URL` | `http://localhost:5236` |
+| `window.PAYMENT_SERVICE_URL` | `http://localhost:5238` |
+| `window.RABBITMQ_URL` | `http://localhost:15672` |
+
+- **Local dev**: these come from `public/config.js` (checked in with the defaults above) — edit it if you're running a service on a different port.
+- **Other environments**: mount a different `config.js` at `/usr/share/nginx/html/config.js` in the container rather than rebuilding the image.
+- Adding a call to a new backend? Extend `ENV` and the `Window` interface in `src/config/env.ts`, and add the matching entry to `config.js` — don't hardcode a URL inline.
+
+## Architecture
+
+- `src/app/` — router (`createBrowserRouter`, all routes lazy-loaded) and top-level providers
+- `src/api-authorization/` + `src/auth/` — OIDC login/logout (Authorization Code + PKCE, real cross-origin redirect to Duende's hosted login page), silent renew, tenant/scope accessors
+- `src/lib/http.ts` — shared axios instance; injects the bearer token and tenant headers on every request
+- `src/domain/<resource>/` — one folder per backend resource (`menu`, `orders`, `cart`, `tables`, `payments`, `notifications`, `identity`, `tenant`, …), each with `api.ts`/`types.ts`/`hooks.ts`
+- `src/features/<area>/` — route-level pages per top-level app area (`pos`, `management`, `admin`, `settings`, `home`, `landing`, `join`)
+- `src/components/ui/` — generic shadcn-style primitives; domain-aware components live under `features/`
+- Real-time table updates over SignalR (`@microsoft/signalr`)
+
+## Docker
+
 ```bash
-# Build Docker image
-cd services/frontend
 docker build -t restaurant-pos/frontend:1.0.0 .
 docker run -d -p 5173:80 restaurant-pos/frontend:1.0.0
 ```
 
-
-## Build the docker image
-```bash
-# Build the docker image in Bash
-version="1.0.0"
-ACR="acrpos"
-
-docker build -t "$ACR.azurecr.io/play.frontend:$version" .
-
-## amd 64 version
-docker buildx build --platform linux/amd64 \
-  -t "$ACR.azurecr.io/pos.frontend:$version" \
-  --push .
-```
-
-## Install the Helm chart
-```powershell
-namespace="frontend"
-helm install frontend-client ./helm --create-namespace -n $namespace
-```
-
-
-
-## Quick Start (Dev)
-
-```bash
-npm install
-npm run dev
-```
-
-App runs on http://localhost:5173/ by default.
-
-## Configuration
-
-Service URLs are provided via `public/config.js`. This file is loaded before the app and defines globals like:
-
-```js
-window.IDENTITY_SERVICE_URL = 'http://localhost:5200';
-window.CATALOG_SERVICE_URL = 'http://localhost:5220';
-window.INVENTORY_SERVICE_URL = 'http://localhost:5230';
-window.ORDER_SERVICE_URL = 'http://localhost:5240';
-window.PAYMENT_SERVICE_URL = 'http://localhost:5250';
-window.RABBITMQ_URL = 'amqp://localhost:5672';
-```
-
-- Local development: adjust `public/config.js` as needed.
-- Other environments: swap or mount a different `config.js` at `/usr/share/nginx/html/config.js`.
-
-## Architecture
-
-- Routing: client-side routes with SPA fallback in Nginx
-- Runtime config: `config.js` defines `window.*` service URLs consumed via `src/config/env.ts`
-- Auth accessors: token/tenant surfaced via module accessors bound in `AuthProvider`
-- HTTP layer: `src/lib/http.ts` injects Authorization and tenant headers; robust JWT parsing
-- Data patterns: paginated responses via `PageResult<T>` (e.g., Menu, Orders)
-- Code-splitting: route-level chunks produced by Vite for faster loads
-
-## Build & Preview
-
-```bash
-npm run build
-npm run preview  # serves dist/ on http://localhost:4173/
-```
-
-## Docker
-
-Build and run the static image served by Nginx:
-
-```bash
-docker build -t pos-frontend:dev .
-docker run --rm -p 5173:80 pos-frontend:dev
-```
-
-Override config per environment by mounting a different `config.js`:
+Nginx serves the static build with an `index.html` SPA fallback for client-side routing. Override config per environment by mounting a different `config.js`:
 
 ```bash
 docker run --rm -p 8080:80 \
   -v $(pwd)/ops/prod/config.js:/usr/share/nginx/html/config.js:ro \
-  pos-frontend:dev
+  restaurant-pos/frontend:1.0.0
 ```
 
-## Notes
+### Build & push for AKS (amd64)
 
-- SPA routing: Nginx is configured with a fallback to `index.html`.
-- Ports: dev (5173), preview (4173), Docker example (8080). Adjust mappings as needed.
+```bash
+export version=1.0.0
+export ACR=acrpos
 
-## Project Layout Highlights
+docker buildx build \
+  --platform linux/amd64 \
+  -t "$ACR.azurecr.io/pos.frontend:$version" \
+  --push .
+```
 
-- `src/app` — router and top-level providers
-- `src/api-authorization` — OIDC wiring and auth provider
-- `src/config/env.ts` — typed runtime config from `window.*` globals
-- `src/lib` — axios/http, react-query client, shared helpers
-- `src/domain/*` — feature domains (menu, orders, inventory, etc.) with api/hooks/types
-- `src/components/` — UI components
+### Install the Helm chart
 
+```bash
+namespace="frontend"
+helm install frontend-client ./helm --create-namespace -n $namespace
+```
+
+---
+
+License: Proprietary (internal project).

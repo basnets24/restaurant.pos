@@ -1,22 +1,10 @@
-# Play.Common (Common.Library)
+# Common.Library
 
-Reusable .NET 8 building blocks for Restaurant POS microservices. This library provides focused extensions for:
-
-- Logging (Serilog + Seq)
-- PostgreSQL/EF Core repositories (tenant‑aware)
-- MassTransit + RabbitMQ wiring with tenant context propagation
-- JWT Bearer + scope authorization helpers
-- Tenancy middleware and abstractions
-- Strongly‑typed settings bindings
-
-It is consumed by the services in this repo and can be published as a package for external reuse.
+Reusable .NET 8 building blocks for Restaurant POS microservices: logging, tenant-aware EF Core repositories, MassTransit/RabbitMQ wiring, JWT auth, tenancy middleware, and strongly-typed settings. Every backend service in this repo references it as a NuGet package; see [Modules](#modules) below for what's in it.
 
 ## Installation
 
-From GitHub Packages (example):
-
-1) Add your GitHub NuGet source and credentials to `NuGet.config` or via CLI (dotnet add package Play.Common).
-2) Reference the package in your `.csproj`:
+Add your GitHub NuGet source/credentials (see [`shared/docs/SHARED_PACKAGES.md`](../docs/SHARED_PACKAGES.md) if you haven't set that up), then reference the package:
 
 ```xml
 <ItemGroup>
@@ -24,17 +12,11 @@ From GitHub Packages (example):
 </ItemGroup>
 ```
 
+## Publishing
 
-## Creating a package
+`.github/workflows/publish-common-library.yml` packs and pushes on any push to `dev` or `main` that touches `shared/Common.Library/**` (also triggerable manually via `gh workflow run publish-common-library.yml`). **It does not bump the version for you** — `--skip-duplicate` means pushing without bumping `<Version>` in the `.csproj` first just silently no-ops rather than publishing. Bump it yourself before you push.
 
-Publish (CI, `.github/workflows/publish-common-library.yml`): triggers
-automatically on any push to `dev` or `main` that touches
-`shared/Common.Library/**`, bumping `<Version>` in `Common.Library.csproj`
-first. Can also be triggered manually via `workflow_dispatch`
-(`gh workflow run publish-common-library.yml`) from any branch.
-
-Local dry run (no publish):
-
+Local dry run, no publish:
 ```bash
 dotnet pack shared/Common.Library/Common.Library.csproj -c Release -p:PackageVersion=1.0.21 -o ./packages
 ```
@@ -94,28 +76,14 @@ App settings (illustrative):
 
 ## Modules
 
-- Logging (`Common.Library.Logging`)
-  - `AddSeqLogging(IConfiguration)`: Registers Serilog with console + Seq sinks. Reads `SeqSettings`.
-
-- PostgreSQL (`Common.Library.PostgreSQL`)
-  - `AddTenantEfRepository<T, TContext>()`: Adds a tenant‑aware EF Core repository for `T : IEntity, ITenantEntity`, backed by `TContext`.
-  - `UseTenantModelCache()`: `DbContextOptionsBuilder` extension — required on every tenant-scoped `DbContext` so EF's compiled-model cache varies per tenant instead of freezing to whichever tenant built the model first.
-  - `ITenantScopedDbContext`: marker interface a `DbContext` implements so the model cache key factory can read the current tenant.
-  - `IRepository<T>`: Minimal CRUD abstraction used across services.
-
-- MassTransit (`Common.Library.MassTransit`)
-  - `AddMassTransitWithRabbitMq(Action<IRetryConfigurator>?)`: Registers bus; calls `AddTenantBusTenancy()` to copy tenant headers.
-
-- Identity (`Common.Library.Identity`)
-  - `AddPosJwtBearer()`: Configures JWT Bearer using `ServiceSettings:Authority`.
-  - `ScopeRequirement` + `ScopeHandler`: Require OAuth scopes in policies.
-
-- Tenancy (`Common.Library.Tenancy`)
-  - `AddTenancy()`, `UseTenancy()`: Middleware + services exposing `ITenantContext`.
-  - Interfaces: `ITenantEntity` for storing `RestaurantId`/`LocationId` on documents.
-
-- Settings (`Common.Library.Settings`)
-  - `ServiceSettings`, `PostgresSettings`, `RabbitMqSettings`, `SeqSettings` bound from configuration.
+| Namespace | Provides |
+|---|---|
+| `Common.Library.Logging` | `AddSeqLogging(IConfiguration)` — Serilog with console + Seq sinks, reads `SeqSettings` |
+| `Common.Library.PostgreSQL` | `AddTenantEfRepository<T, TContext>()` — tenant-aware EF Core repository for `T : IEntity, ITenantEntity` · `UseTenantModelCache()` — required on every tenant-scoped `DbContext` so EF's compiled-model cache varies per tenant instead of freezing to whichever tenant built the model first · `ITenantScopedDbContext` — marker interface so the model cache key factory can read the current tenant · `IRepository<T>` — minimal CRUD abstraction |
+| `Common.Library.MassTransit` | `AddMassTransitWithRabbitMq(Action<IRetryConfigurator>?)` — registers the bus and calls `AddTenantBusTenancy()` to copy tenant headers across events |
+| `Common.Library.Identity` | `AddPosJwtBearer()` — JWT Bearer configured from `ServiceSettings:Authority` · `ScopeRequirement` + `ScopeHandler` — require OAuth scopes in policies |
+| `Common.Library.Tenancy` | `AddTenancy()` / `UseTenancy()` — middleware + `ITenantContext` · `ITenantEntity` — interface for storing `RestaurantId`/`LocationId` on an entity |
+| `Common.Library.Settings` | `ServiceSettings`, `PostgresSettings`, `RabbitMqSettings`, `SeqSettings` — bound from configuration |
 
 ## Usage Tips
 

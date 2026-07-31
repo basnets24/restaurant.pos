@@ -1,7 +1,59 @@
-# Play.Infra 
-Restaurant Pos Infrastructure components
+# Infrastructure
+
+Infrastructure for the Restaurant POS platform — local Docker Compose stack for development, and the Azure/AKS bootstrap for deployment.
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `docker-compose.yml` | The local dev stack (see below) |
+| `prometheus/`, `grafana/`, `jaeger/` | Observability config consumed by that stack |
+| `helm/microservice/` | Shared Helm chart; each service's own `helm/values.yaml` feeds it |
+| `emissary-ingress/` | `listener.yaml`, `mappings.yaml`, `host.yaml`, `tls-certificate.yaml` |
+| `cert-manager/` | `cluster-issuer.yaml`, `acme-challenge.yaml` |
+| `terraform/` | **Empty** — only a `.gitignore` is tracked. The Azure CLI bootstrap below is the current path. |
+
+Note that **Postgres is not provisioned here**. Deployed environments use Supabase (schema-per-service, Supavisor transaction pooling); locally it's the compose container.
+
+---
+
+## Local development
+
+This is what you use day to day. From the **repo root**:
+
 ```bash
-export owner=[GIHHUB-PERSONAL-OR-ORG-NAME]
+./scripts/dev.sh
+```
+
+That brings up the compose stack, waits for it to be healthy, then runs all four .NET services and the frontend directly via `dotnet run` / `npm run dev`. Only infrastructure is containerized locally — don't try to `docker compose up` the services themselves.
+
+To start just the infrastructure:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+Six containers, all defined in `docker-compose.yml`:
+
+| Container | URL | Purpose |
+|---|---|---|
+| postgres | `localhost:5432` | All service data, schema-per-service |
+| rabbitmq | http://localhost:15672 | Message broker + management UI |
+| seq | http://localhost:5341 | Structured logs |
+| jaeger | http://localhost:16686 | Distributed traces |
+| prometheus | http://localhost:9090 | Metrics scraping |
+| grafana | http://localhost:3000 | Dashboards |
+
+`scripts/dev.sh` only health-waits on postgres, rabbitmq, and seq — the observability three come up alongside but aren't gated on. `./scripts/dev.sh stop` stops the services the script started and leaves these containers running.
+
+---
+
+## Azure / AKS bootstrap
+
+One-time setup for a deployed environment. Set these first:
+
+```bash
+export owner=[GITHUB-PERSONAL-OR-ORG-NAME]
 export gh_pat=[YOUR_PERSONAL_ACCESS_TOKEN]
 export RG=[RESOURCE-GROUP-NAME-HERE]
 export SB=[SERVICE-BUS-HERE]
@@ -10,49 +62,40 @@ export AKS=[AKS-NAME-HERE]
 export KV=[KEY-VAULT-NAME]
 ```
 
-## Add GitHub Package source 
+### Add the GitHub Packages NuGet source
 
-```bash 
+Needed to restore the private `Common.Library`, `Messaging.Contracts`, and `Tenant.Domain` packages. The PAT needs `read:packages`.
+
+```bash
 dotnet nuget add source \
   --username "$owner" \
   --password "$gh_pat" \
   --store-password-in-clear-text \
   --name github \
   "https://nuget.pkg.github.com/$owner/index.json"
-``` 
+```
 
-## Creating Azure Resource Group 
+### Create the Azure resources
+
 ```bash
 az group create --name $RG --location westus
-```
-## Creating the Service Bus Namespace 
-```bash 
+
 az servicebus namespace create --name $SB --resource-group $RG --sku Standard
-```
 
-## Creating Container Registry 
-```bash
 az acr create --name $ACR --resource-group $RG --sku Basic
-```
 
-## Creating AKS cluster
-```bash 
 az aks create -n $AKS -g $RG --node-vm-size Standard_B2s --node-count 2 --attach-acr $ACR \
    --enable-oidc-issuer --enable-workload-identity --generate-ssh-keys
 
 az aks get-credentials --name $AKS --resource-group $RG
+
+az keyvault create -n $KV -g $RG
 ```
 
-## Creating Azure Key Vault 
-```bash 
-az keyvault create -n $KV -g $RG 
-```
-## Installing Emissary Ingress
+### Install Emissary Ingress
+
 ```bash
-# Add the Helm repository for Ambassador (Datawire)
 helm repo add datawire https://app.getambassador.io
-
-# Update your local Helm chart repository cache
 helm repo update
 
 kubectl create namespace emissary && \
@@ -62,20 +105,24 @@ kubectl wait --timeout=90s --for=condition=available deployment emissary-apiext 
 
 export appname=spoontab
 export namespace=emissary
-helm install emissary-ingress datawire/emissary-ingress --set service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$appname --namespace $namespace && \
+helm install emissary-ingress datawire/emissary-ingress \
+  --set service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$appname \
+  --namespace $namespace && \
 kubectl -n $namespace wait --for condition=available --timeout=90s deploy -lapp.kubernetes.io/instance=emissary-ingress
 
 kubectl rollout status deployment/emissary-ingress -n $namespace -w
-kubectl get svc -w  --namespace emissary emissary-ingress
+kubectl get svc -w --namespace emissary emissary-ingress
 ```
 
-## Configuring Emissary-ingress routing
-```bash 
+### Configure routing
+
+```bash
 kubectl apply -f ./emissary-ingress/listener.yaml -n $namespace
 kubectl apply -f ./emissary-ingress/mappings.yaml -n $namespace
 ```
 
-## Installing Cert Manager 
+### Install cert-manager
+
 ```bash
 helm repo add jetstack https://charts.jetstack.io --force-update
 
@@ -86,28 +133,34 @@ helm install \
   --set crds.enabled=true
 ```
 
-## Creating Cluster Issure
+### Create the cluster issuer
+
 ```bash
 kubectl apply -f ./cert-manager/cluster-issuer.yaml -n "$namespace"
 kubectl apply -f ./cert-manager/acme-challenge.yaml -n "$namespace"
 ```
-## Creating TLS certificate 
-```bash 
-kubectl apply -f ./emissary-ingress/tls-certificate.yaml -n "$namespace"
 
-## Enabling TLS and HTTPS 
+### Enable TLS and HTTPS
+
 ```bash
+kubectl apply -f ./emissary-ingress/tls-certificate.yaml -n "$namespace"
 kubectl apply -f ./emissary-ingress/host.yaml -n "$namespace"
 ```
 
-## Packaging and publishing microservice helm chart 
-```bash 
+### Package and publish the shared microservice chart
+
+Each service's `helm/values.yaml` is applied against this one shared chart.
+
+```bash
 helm package ./helm/microservice
 
 helmUser="00000000-0000-0000-0000-000000000000"
 helmPassword=$(az acr login --name $ACR --expose-token --output tsv --query accessToken)
-helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword 
+helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword
+
 version=0.1.1
 helmchart=pos-microservice
 helm push $helmchart-$version.tgz oci://$ACR.azurecr.io/helm
+```
 
+Per-service install steps (namespace, managed identity, federated credential, `helm upgrade --install`) live in each service's own README — see `services/payment/README.md` for the pattern.

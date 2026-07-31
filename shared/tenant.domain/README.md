@@ -1,15 +1,8 @@
 # Tenant.Domain
 
-Shared EF Core domain for multi-tenant data used across Restaurant POS services. Provides DbContext, entities, and schema conventions for restaurants, locations, memberships, and tenant roles. This library ensures consistent tenant data modeling across all microservices in the system.
-
-This library is consumed by services that need tenant-aware data access and can be published as a package for external reuse.
+Shared EF Core domain for multi-tenant data: `DbContext`, entities, and schema conventions for restaurants, locations, memberships, and tenant roles. Currently consumed by **identity** only — it's the service that owns tenant/membership data directly (no separate tenant service).
 
 ## Installation
-
-From GitHub Packages:
-
-1) Add your GitHub NuGet source and credentials to `NuGet.config` or via CLI.
-2) Reference the package in your `.csproj`:
 
 ```xml
 <ItemGroup>
@@ -17,7 +10,7 @@ From GitHub Packages:
 </ItemGroup>
 ```
 
-Or reference directly as a project (for development):
+Or as a project reference for local development:
 
 ```xml
 <ItemGroup>
@@ -27,20 +20,16 @@ Or reference directly as a project (for development):
 
 ## Contents
 
-### DbContext
-- **`Tenant.Domain.Data.TenantDbContext`**
-  - Default schema: `tenant`
-  - Entities: `Restaurant`, `Location`, `RestaurantMembership`, `RestaurantUserRole`
-  - Indexes and relationships configured in `OnModelCreating`
+**`Tenant.Domain.Data.TenantDbContext`** — default schema `tenant`; indexes and relationships configured in `OnModelCreating`.
 
-### Entities (under `Tenant.Domain.Entities`)
-- **`Restaurant`** → stored as `tenant.Tenants`
-- **`Location`** → stored as `tenant.TenantLocations`  
-- **`RestaurantMembership`** → user-restaurant associations
-- **`RestaurantUserRole`** → role assignments per tenant
+| Entity (`Tenant.Domain.Entities`) | Table | What it is |
+|---|---|---|
+| `Restaurant` | `tenant.Tenants` | The tenant itself |
+| `Location` | `tenant.TenantLocations` | A restaurant's physical locations |
+| `RestaurantMembership` | — | User ↔ restaurant associations |
+| `RestaurantUserRole` | — | Role assignments per tenant |
 
-### Constants
-- **`TenantRoles`** → predefined role constants for authorization
+`TenantRoles` (`Tenant.Domain.Constants`) — predefined role constants for authorization.
 
 ## Usage
 
@@ -87,29 +76,20 @@ public class RestaurantService
 }
 ```
 
-## Creating a Package
+## Publishing
 
-Tag-driven publish (CI):
+`.github/workflows/publish-tenant-domain.yml` packs and pushes on any push to `dev` or `main` that touches `shared/tenant.domain/**` (also triggerable manually via `gh workflow run publish-tenant-domain.yml`). **It does not bump the version for you** — `--skip-duplicate` means pushing without bumping `<Version>` in the `.csproj` first just silently no-ops rather than publishing. Bump it yourself before you push.
 
-```bash
-git tag tenant.domain-v1.0.1
-git push origin tenant.domain-v1.0.1
-```
-
-Local dry run pack:
-
+Local dry run, no publish:
 ```bash
 dotnet pack shared/tenant.domain/Tenant.Domain.csproj -c Release -p:PackageVersion=1.0.1 -o ./packages
 ```
 
-## Data Model Features
-
-- **Unique Constraints**: 
-  - One membership per user/restaurant combination
-  - One role assignment per (user, restaurant, roleName) combination
-- **String IDs**: Restaurant and location use 32-char strings for simple slugs/IDs
-- **Schema Separation**: All tables use `tenant` schema for clear organization
-- **No Seeding**: Role seeding is intentionally left to consuming services
+## Data Model Notes
+- **Unique constraints**: one membership per user/restaurant; one role assignment per (user, restaurant, roleName)
+- **String IDs**: restaurant and location use 32-char strings for simple slugs/IDs
+- **Schema separation**: every table lives in the `tenant` schema
+- **No seeding**: role seeding is intentionally left to consuming services
 
 ## Versioning
 
