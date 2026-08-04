@@ -7,6 +7,7 @@ using IdentityService.Common.Extensions;
 using IdentityService.Common.Settings;
 using IdentityService.Data;
 using IdentityService.Entities;
+using IdentityService.Features.Discovery.Services;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Identity.Services;
 using IdentityService.Features.Tenancy.Repositories;
@@ -56,6 +57,9 @@ builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<ILocationRepository, LocationRepository>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+
+// Discovery Feature Services (anonymous, cross-tenant - see DiscoveryService)
+builder.Services.AddScoped<IDiscoveryService, DiscoveryService>();
 
 // Existing services
 builder.Services.AddScoped<RestaurantOnboardingService>();

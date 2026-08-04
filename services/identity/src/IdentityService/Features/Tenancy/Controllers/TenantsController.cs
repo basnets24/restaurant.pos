@@ -63,6 +63,59 @@ public class TenantsController : ControllerBase
         }
     }
 
+    [HttpPut("{restaurantId}/discovery")]
+    public async Task<IActionResult> UpdateRestaurantDiscovery(
+        string restaurantId,
+        [FromBody] UpdateRestaurantDiscoveryDto dto,
+        CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var userId))
+            return Unauthorized();
+
+        try
+        {
+            await _tenantService.UpdateRestaurantDiscoveryAsync(userId, restaurantId, dto, ct);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("Restaurant not found.");
+        }
+    }
+
+    [HttpPut("{restaurantId}/locations/{locationId}/discovery")]
+    public async Task<IActionResult> UpdateLocationDiscovery(
+        string restaurantId,
+        string locationId,
+        [FromBody] UpdateLocationDiscoveryDto dto,
+        CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var userId))
+            return Unauthorized();
+
+        try
+        {
+            await _tenantService.UpdateLocationDiscoveryAsync(userId, restaurantId, locationId, dto, ct);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("Location not found.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPut("{restaurantId}/locations/{locationId}")]
     public async Task<IActionResult> UpdateLocation(string restaurantId, string locationId, [FromBody] UpdateLocationDto dto, CancellationToken ct)
     {
