@@ -52,20 +52,25 @@ public class CartService : ICartService
     }
 
     public async Task<Cart> CreateAsync(
-        Guid? tableId, 
-        Guid? customerId, 
+        Guid? tableId,
+        Guid? customerId,
         Guid? serverId,
         string? serverName,
-        int? guestCount)
+        int? guestCount,
+        string orderType = OrderTypes.DineIn,
+        DateTimeOffset? pickupTime = null,
+        Guid? cartId = null)
     {
         var cart = new Cart
         {
-            Id = Guid.NewGuid(),
+            Id = cartId ?? Guid.NewGuid(),
             TableId = tableId,
             CustomerId = customerId,
             ServerId = serverId,
             ServerName = serverName,
             GuestCount = guestCount ?? 1,
+            OrderType = orderType,
+            PickupTime = pickupTime,
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _cartRepo.CreateAsync(cart);
@@ -127,6 +132,63 @@ public class CartService : ICartService
         await _cartRepo.UpdateAsync(cart);
     }
 
+    /// <summary>
+    /// Overwrites a cart's lines in one shot. Used only by the diner path, where the cart is
+    /// built entirely client-side and submitted whole - there is no incremental add/remove, so
+    /// there is also no line-merging question: the client already collapsed identical
+    /// configurations before sending.
+    ///
+    /// The caller supplies modifier selections it has already resolved against catalog; this
+    /// method still owns the base price and the stock check, so a request cannot price its own
+    /// line no matter what it puts on the wire.
+    /// </summary>
+    public async Task ReplaceItemsAsync(Guid cartId, IReadOnlyList<CartLineRequest> lines)
+    {
+        await GuardNotCheckedOutAsync(cartId);
+        var cart = await _cartRepo.GetAsync(cartId)
+            ?? throw new KeyNotFoundException("Cart not found.");
+
+        if (lines.Count == 0) throw new BusinessRuleException("Cannot submit an empty cart.");
+        if (lines.Any(l => l.Quantity <= 0)) throw new BusinessRuleException("Quantity must be at least 1.");
+
+        var items = new List<CartItem>(lines.Count);
+
+        // Stock is per menu item, but a single item can span several lines here (same burger,
+        // different modifiers). Checking each line on its own would let two lines of five pass
+        // against a stock of six, so aggregate first and check once per item.
+        foreach (var group in lines.GroupBy(l => l.MenuItemId))
+        {
+            var posItem = await _posCatalog.GetAsync(group.Key)
+                ?? throw new KeyNotFoundException("Menu item not found in catalog.");
+
+            if (!posItem.MenuAvailable || !posItem.InventoryAvailable)
+                throw new BusinessRuleException($"{posItem.Name} is no longer available.");
+
+            var requested = group.Sum(l => l.Quantity);
+            if (posItem.Quantity < requested)
+                throw new BusinessRuleException(
+                    $"Insufficient stock for {posItem.Name}: only {posItem.Quantity} available.");
+
+            foreach (var line in group)
+            {
+                items.Add(new CartItem
+                {
+                    LineId = Guid.NewGuid(),
+                    MenuItemId = posItem.Id,
+                    MenuItemName = posItem.Name,
+                    Quantity = line.Quantity,
+                    // Base price comes from the read model, deltas from catalog - never the request.
+                    UnitPrice = posItem.BasePrice + line.Modifiers.Sum(m => m.PriceDelta),
+                    Notes = string.IsNullOrWhiteSpace(line.Notes) ? null : line.Notes.Trim(),
+                    SelectedModifiers = line.Modifiers.ToList()
+                });
+            }
+        }
+
+        cart.Items = items;
+        await _cartRepo.UpdateAsync(cart);
+    }
+
     public async Task RemoveItemAsync(Guid cartId, Guid menuItemId)
     {
         await GuardNotCheckedOutAsync(cartId);
@@ -149,17 +211,22 @@ public class CartService : ICartService
         {
             Items = cart.Items.Select(i => new OrderItem
             {
+                LineId = i.LineId,
                 MenuItemId = i.MenuItemId,
                 MenuItemName = i.MenuItemName,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
-                Notes = i.Notes
+                Notes = i.Notes,
+                SelectedModifiers = i.SelectedModifiers
             }).ToList(),
             Subtotal = subtotal,
             TableId = cart.TableId,
             ServerId = cart.ServerId,
             ServerName = cart.ServerName,
+            CustomerId = cart.CustomerId,
             GuestCount = cart.GuestCount,
+            OrderType = cart.OrderType,
+            PickupTime = cart.PickupTime,
         };
         
         // Using cartId as an idempotency key, so repeated checkouts don’t duplicate orders

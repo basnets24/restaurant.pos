@@ -150,6 +150,35 @@ FROM g CROSS JOIN (VALUES
 ) AS o(name, delta, ord, is_default);
 SQL
 
+# --- POS read model ---------------------------------------------------------
+# The order service prices and stock-checks against its own projection of the catalog
+# (order."PosCatalogItems"), maintained by PosReadModelProjector from MenuItem* events.
+# Inserting menu items with raw SQL above fires no events, so without this the seeded
+# items are invisible to both the diner checkout and the staff POS - the menu renders
+# and then every add fails with "Menu item not found in catalog".
+#
+# This mirrors the projector rather than replacing it: same key (Id == MenuItemId), same
+# IsAvailable fold. Nothing in production writes this table directly.
+run_sql <<'SQL'
+INSERT INTO "order"."PosCatalogItems"
+  ("Id","RestaurantId","LocationId","Name","Category","BasePrice","Quantity",
+   "MenuAvailable","InventoryAvailable","IsAvailable","MenuVersion","InventoryVersion","UpdatedAt")
+SELECT m."Id", m."RestaurantId", m."LocationId", m."Name", m."Category", m."Price", m."Quantity",
+       m."IsAvailable", m."Quantity" > 0, m."IsAvailable" AND m."Quantity" > 0, 0, 0, now()
+FROM catalog."MenuItems" m
+JOIN tenant."TenantLocations" l ON l."Id" = m."LocationId" AND l."RestaurantId" = m."RestaurantId"
+WHERE l."IsDiscoverable"
+ON CONFLICT ("Id") DO UPDATE SET
+  "Name"               = EXCLUDED."Name",
+  "Category"           = EXCLUDED."Category",
+  "BasePrice"          = EXCLUDED."BasePrice",
+  "Quantity"           = EXCLUDED."Quantity",
+  "MenuAvailable"      = EXCLUDED."MenuAvailable",
+  "InventoryAvailable" = EXCLUDED."InventoryAvailable",
+  "IsAvailable"        = EXCLUDED."IsAvailable",
+  "UpdatedAt"          = now();
+SQL
+
 docker exec -i "$CONTAINER" psql -U "$USER" -d "$DB" -c \
   'SELECT t."Name" AS restaurant, t."Cuisine", l."Name" AS location, l."DisplayDistanceMiles" AS miles, l."EstimatedPickupMinutes" AS pickup
    FROM tenant."TenantLocations" l JOIN tenant."Tenants" t ON t."Id" = l."RestaurantId"

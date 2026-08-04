@@ -33,6 +33,9 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
         {
             b.HasKey(c => c.Id);
             b.HasIndex(c => new { c.RestaurantId, c.LocationId });
+            // Explicit default so rows that predate the column read as DineIn rather than "",
+            // which is what EF would otherwise backfill a non-nullable string column with.
+            b.Property(c => c.OrderType).HasDefaultValue(OrderTypes.DineIn);
             b.Property(c => c.Items)
                 .HasConversion(JsonConverters.ListConverter<CartItem>())
                 .Metadata.SetValueComparer(JsonConverters.ListComparer<CartItem>());
@@ -63,6 +66,13 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
         {
             b.HasKey(o => o.Id);
             b.HasIndex(o => new { o.RestaurantId, o.LocationId });
+
+            // A diner only ever queries their own orders, so every read on that path
+            // carries a CustomerId predicate on top of the tenant filter.
+            b.HasIndex(o => new { o.RestaurantId, o.LocationId, o.CustomerId });
+
+            // See the matching comment on Cart.OrderType.
+            b.Property(o => o.OrderType).HasDefaultValue(OrderTypes.DineIn);
 
             b.Property(o => o.Items)
                 .HasConversion(JsonConverters.ListConverter<OrderItem>())

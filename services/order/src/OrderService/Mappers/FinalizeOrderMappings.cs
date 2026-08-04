@@ -19,7 +19,11 @@ public static class FinalizeOrderMappings
         TableId = dto.TableId,
         ServerId = dto.ServerId,
         ServerName = dto.ServerName,
+        // Previously dropped here, so Order.CustomerId was never populated by any path.
+        CustomerId = dto.CustomerId,
         GuestCount = dto.GuestCount,
+        OrderType = dto.OrderType,
+        PickupTime = dto.PickupTime,
 
         // order-level itemized lines (all are Scope="Order")
         AppliedDiscounts = p.AppliedDiscounts.ToList(),

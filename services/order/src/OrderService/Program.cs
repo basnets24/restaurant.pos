@@ -15,6 +15,7 @@ using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
 using OrderService.Projections;
+using OrderService.Services.Catalog;
 using Serilog;
 using Common.Library.Configuration;
 using Common.Library.HealthChecks;
@@ -55,8 +56,19 @@ builder.Services.Configure<PricingSettings>(
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
+builder.Services.AddScoped<IDinerOrderService, DinerOrderService>();
 builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
+
+var catalogSettings = builder.Configuration.GetSection(nameof(CatalogSettings)).Get<CatalogSettings>()
+    ?? throw new InvalidOperationException("CatalogSettings is not configured.");
+builder.Services.AddHttpClient<ICatalogMenuClient, CatalogMenuClient>(c =>
+{
+    c.BaseAddress = new Uri(catalogSettings.BaseUrl.TrimEnd('/') + "/");
+    // Checkout is a person waiting on a button. Better to fail fast and let them retry than
+    // to hold the request open while catalog is wedged.
+    c.Timeout = TimeSpan.FromSeconds(5);
+});
 
 
 
