@@ -22,7 +22,15 @@
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-        <PackageReference Include="Tenant.Domain" Version="2.0.0" />
+    </ItemGroup>
+
+    <!-- TODO(diner-ordering): flip back to <PackageReference Include="Tenant.Domain" Version="2.1.0" />
+         at merge. Tenant.Domain 2.1.0 (Location discovery fields + Restaurant.Cuisine) only
+         publishes on a push to dev/main, so this branch consumes it as a project reference.
+         Do not merge without reverting this and confirming 2.1.0 is actually on the feed -
+         the publish workflow does not bump versions and skip-duplicate fails silently. -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\shared\tenant.domain\Tenant.Domain.csproj" />
     </ItemGroup>
 
   

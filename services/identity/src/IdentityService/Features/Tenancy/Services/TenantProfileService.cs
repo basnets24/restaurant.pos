@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
+using IdentityService.Features.Shared.Constants;
 using IdentityService.Features.Tenancy.Services.Claims;
 
 namespace IdentityService.Features.Tenancy.Services;
@@ -39,7 +40,16 @@ public class TenantProfileService : IProfileService
         var claims = await _claims.GetAsync(userId, cancellationToken);
         if (claims is null)
         {
-            _logger.LogWarning("No tenant membership/claims resolved for user {UserId}; issuing no tenant/location/role claims", userId);
+            // Diners have no RestaurantMembership by design - they are ordinary users
+            // distinguished only by the absence of one. Warning-level here would fire on
+            // every diner token and bury the staff case, where a missing membership is a
+            // real problem worth seeing.
+            // Duende 8 exposes the requesting client as Application (IConnectedApplication,
+            // which Client implements); the client id is Identifier, not ClientId.
+            if (context.Application?.Identifier == OidcClients.Diner)
+                _logger.LogDebug("No tenant claims for diner {UserId}; expected for the diner client", userId);
+            else
+                _logger.LogWarning("No tenant membership/claims resolved for user {UserId}; issuing no tenant/location/role claims", userId);
             return;
         }
 
