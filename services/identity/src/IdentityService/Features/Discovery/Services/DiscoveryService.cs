@@ -26,40 +26,40 @@ public class DiscoveryService : IDiscoveryService
         DiscoveryQuery query,
         CancellationToken ct = default)
     {
-        var listings = BaseQuery();
+        var rows = DiscoverableRows();
 
         if (!string.IsNullOrWhiteSpace(query.Cuisine))
         {
-            var cuisine = query.Cuisine.Trim();
-            listings = listings.Where(x => x.Cuisine != null && x.Cuisine.ToLower() == cuisine.ToLower());
+            var cuisine = query.Cuisine.Trim().ToLower();
+            rows = rows.Where(x => x.Restaurant.Cuisine != null && x.Restaurant.Cuisine.ToLower() == cuisine);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Q))
         {
             var q = query.Q.Trim().ToLower();
-            listings = listings.Where(x =>
-                x.RestaurantName.ToLower().Contains(q) ||
-                (x.Cuisine != null && x.Cuisine.ToLower().Contains(q)));
+            rows = rows.Where(x =>
+                x.Restaurant.Name.ToLower().Contains(q) ||
+                (x.Restaurant.Cuisine != null && x.Restaurant.Cuisine.ToLower().Contains(q)));
         }
 
         // Nulls sort last on every ordered field: a listing with no distance or pickup
         // estimate is unranked, not nearest/fastest.
-        listings = query.Sort switch
+        rows = query.Sort switch
         {
-            DiscoverySort.Distance => listings
-                .OrderBy(x => x.DistanceMiles == null)
-                .ThenBy(x => x.DistanceMiles)
-                .ThenBy(x => x.RestaurantName),
-            DiscoverySort.Pickup => listings
-                .OrderBy(x => x.EstimatedPickupMinutes == null)
-                .ThenBy(x => x.EstimatedPickupMinutes)
-                .ThenBy(x => x.RestaurantName),
-            _ => listings
-                .OrderBy(x => x.RestaurantName)
-                .ThenBy(x => x.LocationName)
+            DiscoverySort.Distance => rows
+                .OrderBy(x => x.Location.DisplayDistanceMiles == null)
+                .ThenBy(x => x.Location.DisplayDistanceMiles)
+                .ThenBy(x => x.Restaurant.Name),
+            DiscoverySort.Pickup => rows
+                .OrderBy(x => x.Location.EstimatedPickupMinutes == null)
+                .ThenBy(x => x.Location.EstimatedPickupMinutes)
+                .ThenBy(x => x.Restaurant.Name),
+            _ => rows
+                .OrderBy(x => x.Restaurant.Name)
+                .ThenBy(x => x.Location.Name)
         };
 
-        return await listings.ToListAsync(ct);
+        return await Project(rows).ToListAsync(ct);
     }
 
     public async Task<DiscoveryListingDto?> GetAsync(
@@ -70,33 +70,52 @@ public class DiscoveryService : IDiscoveryService
         ArgumentException.ThrowIfNullOrWhiteSpace(restaurantId);
         ArgumentException.ThrowIfNullOrWhiteSpace(locationId);
 
-        return await BaseQuery()
-            .FirstOrDefaultAsync(x => x.RestaurantId == restaurantId && x.LocationId == locationId, ct);
+        var rows = DiscoverableRows()
+            .Where(x => x.Restaurant.Id == restaurantId && x.Location.Id == locationId);
+
+        return await Project(rows).FirstOrDefaultAsync(ct);
     }
 
     public async Task<IReadOnlyList<string>> GetCuisinesAsync(CancellationToken ct = default)
-        => await BaseQuery()
-            .Where(x => x.Cuisine != null)
-            .Select(x => x.Cuisine!)
+        => await DiscoverableRows()
+            .Where(x => x.Restaurant.Cuisine != null)
+            .Select(x => x.Restaurant.Cuisine!)
             .Distinct()
             .OrderBy(c => c)
             .ToListAsync(ct);
 
-    /// <summary>Every discoverable location joined to its restaurant. The join is explicit
-    /// rather than a navigation property because <c>Location</c> has no <c>Restaurant</c>
-    /// navigation - the FK is configured without one.</summary>
-    private IQueryable<DiscoveryListingDto> BaseQuery() =>
+    /// <summary>
+    /// Every discoverable location paired with its restaurant. The join is explicit because
+    /// <c>Location</c> has no <c>Restaurant</c> navigation - the FK is configured without one.
+    ///
+    /// This yields entity pairs rather than DTOs on purpose. EF cannot compose <c>Where</c> or
+    /// <c>OrderBy</c> over a projection into a positional record: it inlines the constructor
+    /// call and then fails to reduce a member access on it ("could not be translated"). Filter
+    /// and sort on the entities here, and project once at the end via <see cref="Project"/>.
+    /// </summary>
+    private IQueryable<LocationRow> DiscoverableRows() =>
         from location in _db.Locations.AsNoTracking()
         join restaurant in _db.Restaurants.AsNoTracking()
             on location.RestaurantId equals restaurant.Id
         where location.IsDiscoverable && location.IsActive && restaurant.IsActive
-        select new DiscoveryListingDto(
-            restaurant.Id,
-            restaurant.Name,
-            restaurant.Cuisine,
-            location.Id,
-            location.Name,
-            location.Address,
-            location.DisplayDistanceMiles,
-            location.EstimatedPickupMinutes);
+        select new LocationRow { Location = location, Restaurant = restaurant };
+
+    private static IQueryable<DiscoveryListingDto> Project(IQueryable<LocationRow> rows) =>
+        rows.Select(x => new DiscoveryListingDto(
+            x.Restaurant.Id,
+            x.Restaurant.Name,
+            x.Restaurant.Cuisine,
+            x.Location.Id,
+            x.Location.Name,
+            x.Location.Address,
+            x.Location.DisplayDistanceMiles,
+            x.Location.EstimatedPickupMinutes));
+
+    /// <summary>Intermediate join shape. A named type rather than an anonymous one only so it
+    /// can cross the method boundaries above; EF composes over it either way.</summary>
+    private sealed class LocationRow
+    {
+        public Tenant.Domain.Entities.Location Location { get; set; } = null!;
+        public Tenant.Domain.Entities.Restaurant Restaurant { get; set; } = null!;
+    }
 }
