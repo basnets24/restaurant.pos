@@ -195,7 +195,7 @@ export default function RestaurantMenuPage() {
       <DinerCartSheet
         open={cartOpen}
         onOpenChange={setCartOpen}
-        onCheckout={() => toast.info("Checkout lands in the next phase")}
+        onCheckout={() => navigate("/order/checkout")}
       />
 
       <Dialog open={conflict !== null} onOpenChange={(o) => !o && setConflict(null)}>

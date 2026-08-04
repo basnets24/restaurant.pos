@@ -58,6 +58,8 @@ const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 const DinerLayout    = lazy(() => import("@/features/diner/DinerLayout"));
 const DiscoveryPage  = lazy(() => import("@/features/diner/routes/DiscoveryPage"));
 const RestaurantMenuPage = lazy(() => import("@/features/diner/routes/RestaurantMenuPage"));
+const DinerCheckoutPage  = lazy(() => import("@/features/diner/routes/CheckoutPage"));
+const DinerOrderStatusPage = lazy(() => import("@/features/diner/routes/OrderStatusPage"));
 
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
@@ -84,6 +86,10 @@ export const router = createBrowserRouter([
     element: <Suspense fallback={<Fallback />}><DinerLayout /></Suspense>,
     children: [
       { index: true, element: <Suspense fallback={<Fallback />}><DiscoveryPage /></Suspense> },
+      // Static segments before the :restaurantId/:locationId pattern, or "checkout" would
+      // match as a restaurant id.
+      { path: "checkout", element: <Suspense fallback={<Fallback />}><DinerCheckoutPage /></Suspense> },
+      { path: "orders/:orderId", element: <Suspense fallback={<Fallback />}><DinerOrderStatusPage /></Suspense> },
       { path: ":restaurantId/:locationId", element: <Suspense fallback={<Fallback />}><RestaurantMenuPage /></Suspense> },
     ],
   },

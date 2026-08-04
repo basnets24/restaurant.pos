@@ -38,7 +38,11 @@ const DinerCartContext = createContext<DinerCartContextValue | null>(null);
 function load(): DinerCart | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as DinerCart) : null;
+    if (!raw) return null;
+    const cart = JSON.parse(raw) as DinerCart;
+    // Carts saved before cartId existed would otherwise check out as `undefined` and lose
+    // their idempotency guarantee.
+    return cart.cartId ? cart : { ...cart, cartId: crypto.randomUUID() };
   } catch {
     // A corrupt or half-written cart should cost the diner their cart, not the whole page.
     return null;
@@ -79,6 +83,7 @@ export function DinerCartProvider({ children }: { children: ReactNode }) {
   const mergeInto = (existing: DinerCart | null, args: AddArgs): DinerCart => {
     const line = buildLine(args);
     const base: DinerCart = existing ?? {
+      cartId: crypto.randomUUID(),
       restaurantId: args.restaurantId,
       locationId: args.locationId,
       restaurantName: args.restaurantName,
@@ -118,6 +123,9 @@ export function DinerCartProvider({ children }: { children: ReactNode }) {
     setCart(
       mergeInto(
         {
+          // A new cart, so a new id: reusing the old one would collide with the order the
+          // previous restaurant's cart may already have placed.
+          cartId: crypto.randomUUID(),
           restaurantId: args.restaurantId,
           locationId: args.locationId,
           restaurantName: args.restaurantName,

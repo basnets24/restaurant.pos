@@ -1,4 +1,5 @@
 import type { PublicMenuItemDto, PublicModifierGroupDto, PublicModifierOptionDto } from "@/domain/publicMenu";
+import type { DinerCheckoutRequest } from "@/domain/dinerOrders";
 
 export interface DinerCartSelection {
   groupId: string;
@@ -25,10 +26,29 @@ export interface DinerCartLine {
 }
 
 export interface DinerCart {
+  /** Stable for the life of this cart, including across edits, and sent as the checkout's
+   *  idempotency key - a double-tapped Place Order returns the same order rather than firing
+   *  the kitchen twice. Regenerated only when the cart is cleared or switches restaurant. */
+  cartId: string;
   restaurantId: string;
   locationId: string;
   restaurantName: string;
   lines: DinerCartLine[];
+}
+
+export function toCheckoutRequest(cart: DinerCart, pickupTime?: string | null): DinerCheckoutRequest {
+  return {
+    cartId: cart.cartId,
+    pickupTime: pickupTime ?? null,
+    items: cart.lines.map((line) => ({
+      menuItemId: line.menuItemId,
+      quantity: line.quantity,
+      notes: line.notes,
+      // Ids only - the server resolves the names and prices. Sending our own prices would let
+      // anyone with devtools set their own.
+      optionIds: line.selections.map((s) => s.optionId),
+    })),
+  };
 }
 
 /**
