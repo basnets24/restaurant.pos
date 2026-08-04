@@ -54,6 +54,10 @@ const OrderPage     = lazy(() => import("@/features/pos/routes/OrderPage"));
 const ActiveOrdersPage = lazy(() => import("@/features/pos/routes/ActiveOrdersPage"));
 const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 
+// ---- Diner ordering (public, customer-facing) ----
+const DinerLayout    = lazy(() => import("@/features/diner/DinerLayout"));
+const DiscoveryPage  = lazy(() => import("@/features/diner/routes/DiscoveryPage"));
+
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
 const JoinPage      = lazy(() => import("@/features/join/JoinPage"));
@@ -71,6 +75,16 @@ export const router = createBrowserRouter([
   { path: AuthorizationPaths.LogOut,          element: <LogoutPage /> },
   { path: AuthorizationPaths.LogOutCallback,  element: <LogoutCallbackPage /> },
   { path: AuthorizationPaths.LoggedOut,       element: <LoggedOutPage /> },
+
+  // Diner ordering — public by design. Browsing restaurants and menus must work
+  // signed out; only placing an order requires an account, gated further in.
+  {
+    path: "/order",
+    element: <Suspense fallback={<Fallback />}><DinerLayout /></Suspense>,
+    children: [
+      { index: true, element: <Suspense fallback={<Fallback />}><DiscoveryPage /></Suspense> },
+    ],
+  },
 
   // ========= PROTECTED (everything from /home onward) =========
   { path: "/join",
