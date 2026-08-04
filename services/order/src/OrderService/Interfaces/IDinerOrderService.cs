@@ -5,6 +5,9 @@ namespace OrderService.Interfaces;
 
 public interface IDinerOrderService
 {
+    /// <summary>Prices a cart without committing it, for the checkout screen.</summary>
+    Task<CartEstimateDto> QuoteAsync(DinerCheckoutDto dto, CancellationToken ct = default);
+
     /// <summary>Prices, commits and fires a diner's cart in one call.</summary>
     Task<DinerCheckoutResultDto> CheckoutAsync(DinerCheckoutDto dto, CancellationToken ct = default);
 

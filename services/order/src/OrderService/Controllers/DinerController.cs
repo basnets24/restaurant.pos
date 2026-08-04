@@ -21,6 +21,13 @@ public class DinerController : ControllerBase
 
     public DinerController(IDinerOrderService diner) => _diner = diner;
 
+    /// <summary>What this cart would cost, without placing it. Lets the checkout screen show a
+    /// server-computed total instead of guessing at tax client-side.</summary>
+    [HttpPost("quote")]
+    [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
+    public async Task<ActionResult<CartEstimateDto>> Quote(DinerCheckoutDto dto, CancellationToken ct)
+        => Ok(await _diner.QuoteAsync(dto, ct));
+
     /// <summary>Fires the diner's cart to the kitchen. Payment is requested automatically once
     /// inventory is reserved, so the client's next step is to poll for the payment session.</summary>
     [HttpPost("checkout")]

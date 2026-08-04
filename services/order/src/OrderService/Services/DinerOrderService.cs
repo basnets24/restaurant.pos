@@ -4,6 +4,7 @@ using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Exceptions;
 using OrderService.Interfaces;
+using OrderService.Projections;
 
 namespace OrderService.Services;
 
@@ -21,6 +22,8 @@ public class DinerOrderService : IDinerOrderService
     private readonly IRepository<Order> _orders;
     private readonly ICurrentUserAccessor _currentUser;
     private readonly ITenantContext _tenant;
+    private readonly IRepository<PosCatalogItem> _posCatalog;
+    private readonly IPricingService _pricing;
     private readonly ILogger<DinerOrderService> _logger;
 
     public DinerOrderService(
@@ -30,6 +33,8 @@ public class DinerOrderService : IDinerOrderService
         IRepository<Order> orders,
         ICurrentUserAccessor currentUser,
         ITenantContext tenant,
+        IRepository<PosCatalogItem> posCatalog,
+        IPricingService pricing,
         ILogger<DinerOrderService> logger)
     {
         _carts = carts;
@@ -38,6 +43,8 @@ public class DinerOrderService : IDinerOrderService
         _orders = orders;
         _currentUser = currentUser;
         _tenant = tenant;
+        _posCatalog = posCatalog;
+        _pricing = pricing;
         _logger = logger;
     }
 
@@ -72,6 +79,42 @@ public class DinerOrderService : IDinerOrderService
             customerId, orderId, order.GrandTotal);
 
         return new DinerCheckoutResultDto(order.Id, order.GrandTotal, order.Status);
+    }
+
+    /// <summary>
+    /// Prices a cart without committing it, so the checkout screen can show what the diner is
+    /// about to be charged. Nothing is persisted and no event is published.
+    ///
+    /// This exists because the diner cart lives in the browser: without it the only way to learn
+    /// the tax and discount would be to place the order first, which would mean committing to a
+    /// price before seeing it. The frontend must render these numbers rather than recomputing
+    /// them - the same rule the POS cart estimate already follows.
+    /// </summary>
+    public async Task<CartEstimateDto> QuoteAsync(DinerCheckoutDto dto, CancellationToken ct = default)
+    {
+        if (dto.Items.Count == 0) throw new BusinessRuleException("Your cart is empty.");
+
+        var menu = await _catalog.GetModifiersAsync(_tenant.RestaurantId, _tenant.LocationId, ct);
+        var lines = dto.Items.Select(line => Resolve(line, menu)).ToList();
+
+        decimal subtotal = 0m;
+        foreach (var line in lines)
+        {
+            // The POS projection, the same source CartService.ReplaceItemsAsync prices from,
+            // so a quote can never disagree with the order it precedes.
+            var posItem = await _posCatalog.GetAsync(line.MenuItemId)
+                ?? throw new BusinessRuleException("One of the items in your cart is no longer available.");
+
+            subtotal += line.Quantity * (posItem.BasePrice + line.Modifiers.Sum(m => m.PriceDelta));
+        }
+
+        // DineIn: false and a party of one - a pickup order is never a party, so neither the
+        // dine-in rules nor auto-gratuity can apply. Same context CheckoutAsync ends up with.
+        var b = _pricing.Calculate(subtotal, 0m, new PricingContext(GuestCount: 1, DineIn: false));
+
+        return new CartEstimateDto(
+            b.Subtotal, b.DiscountTotal, b.ServiceChargeTotal, b.TaxTotal, b.GrandTotal,
+            b.AppliedDiscounts, b.ServiceCharges, b.AppliedTaxes);
     }
 
     public async Task<IReadOnlyList<Order>> GetMyOrdersAsync(CancellationToken ct = default)
