@@ -57,6 +57,7 @@ const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 // ---- Diner ordering (public, customer-facing) ----
 const DinerLayout    = lazy(() => import("@/features/diner/DinerLayout"));
 const DiscoveryPage  = lazy(() => import("@/features/diner/routes/DiscoveryPage"));
+const RestaurantMenuPage = lazy(() => import("@/features/diner/routes/RestaurantMenuPage"));
 
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
     element: <Suspense fallback={<Fallback />}><DinerLayout /></Suspense>,
     children: [
       { index: true, element: <Suspense fallback={<Fallback />}><DiscoveryPage /></Suspense> },
+      { path: ":restaurantId/:locationId", element: <Suspense fallback={<Fallback />}><RestaurantMenuPage /></Suspense> },
     ],
   },
 

@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import { DinerCartProvider } from "./cart/DinerCartProvider";
 
 /**
  * Shell for the customer-facing ordering surface (`/order`). Public — no
@@ -10,8 +11,10 @@ import { Outlet } from "react-router-dom";
  */
 export default function DinerLayout() {
   return (
-    <div className="min-h-screen bg-background">
-      <Outlet />
-    </div>
+    <DinerCartProvider>
+      <div className="min-h-screen bg-background">
+        <Outlet />
+      </div>
+    </DinerCartProvider>
   );
 }
