@@ -15,6 +15,11 @@ public class Restaurant
     [MaxLength(128)]
     public string? Slug { get; set; } // optional
 
+    // Nullable: existing tenants have no sensible value, and discovery treats a null
+    // cuisine as matching every filter rather than delisting the restaurant.
+    [MaxLength(64)]
+    public string? Cuisine { get; set; }
+
     public bool IsActive { get; set; } = true;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
