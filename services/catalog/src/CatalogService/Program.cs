@@ -7,6 +7,7 @@ using CatalogService.Auth;
 using CatalogService.Consumers;
 using CatalogService.Data;
 using CatalogService.Entities;
+using CatalogService.Features.PublicMenu;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Common.Library.Configuration;
@@ -23,6 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddScoped<MenuStockService>();
+builder.Services.AddScoped<IPublicMenuService, PublicMenuService>();
 
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
