@@ -3,6 +3,7 @@ using IdentityService.Features.Discovery.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace IdentityService.Features.Discovery.Controllers;
 
@@ -15,9 +16,11 @@ namespace IdentityService.Features.Discovery.Controllers;
 /// is the only client allowed to request the <c>diner</c> scope; a diner signing in through the
 /// staff client would get a token with no usable scope at all.
 ///
-/// Not hardened against abuse: there is no rate limit, no CAPTCHA and no email verification, so
-/// this will happily mint unlimited accounts. Acceptable for a demo platform, not for the open
-/// internet - see DINER_ORDERING_PLAN.md before deploying this anywhere public.
+/// Partly hardened. It is rate limited per client address (see <see cref="RateLimitPolicies"/>,
+/// and read the caveat there about needing ForwardedHeaders:KnownNetworks set for that address to
+/// mean anything behind an ingress). Still missing, and still blocking a genuinely public
+/// deployment: there is no CAPTCHA, so a distributed flood is unaffected, and no email
+/// verification, so anyone can sign up as an address they don't own.
 /// </summary>
 [ApiController]
 [AllowAnonymous]
@@ -34,6 +37,7 @@ public class DinerAccountController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitPolicies.DinerRegistration)]
     public async Task<IActionResult> Register(DinerRegistrationDto dto)
     {
         var user = new ApplicationUser
