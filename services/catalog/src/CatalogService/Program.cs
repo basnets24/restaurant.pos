@@ -11,6 +11,7 @@ using CatalogService.Features.PublicMenu;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
 using Common.Library.Configuration;
+using Common.Library.Settings;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using CatalogService.Services;
@@ -25,6 +26,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddScoped<MenuStockService>();
 builder.Services.AddScoped<IPublicMenuService, PublicMenuService>();
+
+// Identity's public discovery endpoint, reusing the authority already configured for JWT
+// validation rather than adding a second setting pointing at the same service. Short timeout:
+// this sits in front of a page load, and failing closed quickly beats hanging.
+var identitySettings = builder.Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>()
+    ?? throw new InvalidOperationException("ServiceSettings is not configured.");
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<ILocationDirectoryClient, LocationDirectoryClient>(c =>
+{
+    c.BaseAddress = new Uri(identitySettings.Authority.TrimEnd('/') + "/");
+    c.Timeout = TimeSpan.FromSeconds(3);
+});
 
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
