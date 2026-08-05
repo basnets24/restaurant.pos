@@ -30,6 +30,15 @@ export interface DinerSession {
   email: string;
 }
 
+// The refresh token (offline_access, Duende default: 30-day sliding lifetime) never touches
+// localStorage - only this in-memory variable. localStorage is readable by any XSS on the diner
+// surface, and a long-lived credential sitting there turns a one-off script injection into
+// durable account takeover; the access token alone is only a ~1h window. This means a genuine
+// page reload starts with no refresh token (module state is gone) - the access token still
+// works until its own expiry, then the diner is asked to sign in again rather than silently
+// refreshed. That's the deliberate trade-off, not a bug.
+let inMemoryRefreshToken: string | undefined;
+
 interface TokenResponse {
   access_token: string;
   refresh_token?: string;
@@ -86,16 +95,27 @@ export const DinerAuth = {
   load(): DinerSession | null {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as DinerSession) : null;
+      if (!raw) return null;
+      // The refresh token itself was never in `raw` - it only ever lives in
+      // inMemoryRefreshToken (see the comment above), which is unset on a fresh page load since
+      // module state doesn't survive one. Attaching it here keeps this function the single
+      // source of truth for what a "session" looks like, rather than leaving refreshToken
+      // silently missing from its return type only sometimes.
+      return { ...(JSON.parse(raw) as DinerSession), refreshToken: inMemoryRefreshToken };
     } catch {
       return null;
     }
   },
 
   save(session: DinerSession | null) {
+    inMemoryRefreshToken = session?.refreshToken;
     try {
-      if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-      else localStorage.removeItem(STORAGE_KEY);
+      if (session) {
+        const { accessToken, expiresAt, userId, email } = session;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ accessToken, expiresAt, userId, email }));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       // Private browsing - the session still works for this tab.
     }
