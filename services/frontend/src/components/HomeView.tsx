@@ -10,7 +10,7 @@ import { StatCard } from "@/components/primitives/StatCard";
 
 // Icons (lucide-react)
 import {
-    ChevronRight, TrendingUp,
+    ChevronRight,
     AlertTriangle, CalendarClock, UserPlus, CreditCard, Package, CheckCircle2, X,
     type LucideIcon,
 } from "lucide-react";
@@ -25,6 +25,8 @@ import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import { useNotifications, useMarkNotificationRead, useNotificationHub } from "@/domain/notifications";
 import type { NotificationType as ApiNotificationType } from "@/domain/notifications";
+import { useOrders } from "@/domain/orders/hooks";
+import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
 
 export default function Home() {
     const { isAuthenticated } = useAuth();
@@ -84,6 +86,8 @@ const NOTIFICATION_VARIANT: Record<ApiNotificationType, NotificationVariant> = {
     TableRemoved: "danger",
 };
 
+const isPaid = (o: OrderDto) => !!o.paidAt || (o.status ?? "").toLowerCase() === "paid";
+
 function formatRelativeTime(iso: string): string {
     const diffMs = Date.now() - new Date(iso).getTime();
     const minutes = Math.floor(diffMs / 60_000);
@@ -122,17 +126,31 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const kitchen = useKitchen();
     const activeOrdersCount = kitchen.active().length;
 
+    const orderTenant: TenantHeaders | undefined = useMemo(
+        () => (rid ? { restaurantId: rid, locationId: lid ?? undefined } : undefined),
+        [rid, lid]
+    );
+    const { data: ordersData } = useOrders(orderTenant);
+    const orders = useMemo(() => (ordersData?.items ?? []) as OrderDto[], [ordersData]);
+
     const stats = useMemo(() => {
         const list = tablesData ?? [];
         const total = list.length;
         const occupied = list.filter((t) => t.status === "occupied").length;
         const capacityPct = total ? Math.round((occupied / total) * 100) : 0;
-        return { total, occupied, capacityText: `${capacityPct}% capacity` };
-    }, [tablesData]);
+
+        // Wall-clock cutoff is intentional here: recomputed whenever `orders` changes, not on every render.
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        const paidToday = orders.filter((o) => isPaid(o) && new Date(o.createdAt).getTime() >= startOfToday);
+        const salesToday = paidToday.reduce((sum, o) => sum + (o.grandTotal ?? 0), 0);
+
+        return { total, occupied, capacityText: `${capacityPct}% capacity`, salesToday };
+    }, [tablesData, orders]);
 
     const num = (v: React.ReactNode) => <span className="font-numeric">{v}</span>;
+    const money = (n: number) => `$${n.toFixed(2)}`;
     const quickStats = [
-        { label: "Today's Sales", value: num("$2,847.50"), change: "+12.5%", trend: "up" as const, onClick: () => navigate("/management") },
+        { label: "Today's Sales", value: num(money(stats.salesToday)), trend: "neutral" as const, onClick: () => navigate("/management") },
         { label: "Active Orders", value: num(String(activeOrdersCount)), trend: "neutral" as const, onClick: () => navigate("/pos/current") },
         { label: "Staff On Duty", value: num(String(employees.data?.total ?? "—")), trend: "neutral" as const, onClick: () => navigate("/management/staff") },
         { label: "Tables Occupied", value: num(`${stats.occupied}/${stats.total}`), change: stats.capacityText, trend: "neutral" as const, onClick: () => navigate("/pos/tables") },
@@ -162,7 +180,6 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                             change={s.change}
                             trend={s.trend}
                             onClick={s.onClick}
-                            icon={s.trend === "up" ? <TrendingUp className="h-8 w-8 text-status-available" /> : undefined}
                         />
                     ))}
                 </CardGrid>
