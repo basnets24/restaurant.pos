@@ -6,8 +6,12 @@ namespace OrderService.Data;
 
 // Deliberately NOT ITenantScopedDbContext / ApplyTenantQueryFilters: SagaDbContext
 // is a distinct EF base class from plain DbContext (required by MassTransit's EF
-// saga repository), and nothing queries OrderState directly outside MassTransit's
-// own CorrelationId-based correlation, so tenant query filtering has no consumer here.
+// saga repository), so tenant query filtering has no consumer here.
+//
+// AbandonedOrderSweeper is the one thing that reads OrderState outside MassTransit's own
+// CorrelationId-based correlation, and it wants exactly this: a cross-tenant view of which
+// orders actually reached the inventory-reserved state. Anything added here that expects
+// tenant scoping would not get it.
 public class OrderStateDbContext : SagaDbContext
 {
     public OrderStateDbContext(DbContextOptions options) : base(options)

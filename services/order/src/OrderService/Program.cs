@@ -52,6 +52,9 @@ builder.Services.AddTablesModule();
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(
     builder.Configuration.GetSection("Pricing"));
+builder.Services.Configure<AbandonedOrderSettings>(
+    builder.Configuration.GetSection("AbandonedOrders"));
+builder.Services.AddHostedService<AbandonedOrderSweeper>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICartService, CartService>();
