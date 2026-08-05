@@ -5,6 +5,8 @@ import type {
   DinerCheckoutResult,
   DinerEstimate,
   DinerOrder,
+  DinerPaymentConfirm,
+  DinerPaymentSession,
   DinerTenant,
 } from "./types";
 
@@ -65,6 +67,43 @@ export const DinerOrders = {
     const { data } = await dinerHttp.get<DinerOrder>(DinerOrdersAPI.order(orderId), {
       headers: headers(token, tenant),
     });
+    return data;
+  },
+
+  async paymentSession(
+    token: string,
+    tenant: DinerTenant,
+    orderId: string
+  ): Promise<DinerPaymentSession> {
+    try {
+      const { data } = await dinerHttp.get<DinerPaymentSession>(
+        DinerOrdersAPI.paymentSession(orderId),
+        { headers: headers(token, tenant) }
+      );
+      return data ?? { status: "pending" };
+    } catch (error) {
+      // 404 means the PaymentIntent doesn't exist yet - it is created a broker round trip after
+      // inventory is reserved. 202 is the same thing once the row exists but has no secret.
+      //
+      // 404 is also the answer for an order belonging to someone else, deliberately: the payment
+      // service refuses to distinguish the two. Reporting "pending" for both is the price of
+      // that, and it only shows up on a page the diner reached with someone else's order id.
+      const code = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 404 || code === 202) return { status: "pending" };
+      throw error;
+    }
+  },
+
+  async confirmPayment(
+    token: string,
+    tenant: DinerTenant,
+    orderId: string
+  ): Promise<DinerPaymentConfirm> {
+    const { data } = await dinerHttp.post<DinerPaymentConfirm>(
+      DinerOrdersAPI.paymentConfirm(orderId),
+      null,
+      { headers: headers(token, tenant) }
+    );
     return data;
   },
 };

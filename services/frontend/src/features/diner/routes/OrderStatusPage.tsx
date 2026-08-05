@@ -1,14 +1,18 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Clock } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
 import {
   DinerOrderKeys,
   DinerOrders,
   dinerErrorMessage,
   type DinerOrder,
+  type DinerPaymentSession,
   type DinerTenant,
 } from "@/domain/dinerOrders";
 
@@ -17,11 +21,17 @@ import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { useDinerLastTenant } from "../cart/lastTenant";
 import { money } from "../money";
 
+/** Statuses past which nothing more will happen to the order, so polling can stop. */
+const SETTLED = ["Paid", "Cancelled", "Rejected"];
+
 export default function OrderStatusPage() {
   const { orderId = "" } = useParams();
   const navigate = useNavigate();
   const { isSignedIn, getToken } = useDinerAuth();
   const tenant = useDinerLastTenant();
+  const queryClient = useQueryClient();
+
+  const [payOpen, setPayOpen] = useState(false);
 
   const order = useQuery<DinerOrder>({
     queryKey: DinerOrderKeys.detail(orderId),
@@ -31,11 +41,38 @@ export default function OrderStatusPage() {
       return DinerOrders.get(token, tenant as DinerTenant, orderId);
     },
     enabled: Boolean(isSignedIn && orderId && tenant),
-    // The order is Pending until the saga reserves inventory, which takes a broker round trip.
-    // Poll until it settles rather than leaving the diner on a stale "Pending".
+    // Two separate waits are folded into one poll here: Pending → Confirmed happens when the
+    // saga reserves inventory, and Confirmed → Paid happens a broker round trip after Stripe
+    // confirms. Polling until the order settles covers both without a second mechanism.
     refetchInterval: (query) =>
-      query.state.data && query.state.data.status === "Pending" ? 2000 : false,
+      query.state.data && !SETTLED.includes(query.state.data.status) ? 2000 : false,
   });
+
+  const paid = Boolean(order.data?.paidAt) || order.data?.status === "Paid";
+  const dead = order.data?.status === "Cancelled" || order.data?.status === "Rejected";
+
+  const session = useQuery<DinerPaymentSession>({
+    queryKey: DinerOrderKeys.paymentSession(orderId),
+    queryFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Signed out");
+      return DinerOrders.paymentSession(token, tenant as DinerTenant, orderId);
+    },
+    enabled: Boolean(isSignedIn && orderId && tenant && order.data && !paid && !dead),
+    // The PaymentIntent is created off InventoryReserved, so it simply is not there for the
+    // first few seconds. Poll until the secret shows up, then stop - it does not change.
+    refetchInterval: (query) => (query.state.data?.clientSecret ? false : 2000),
+  });
+
+  const clientSecret = session.data?.clientSecret ?? null;
+
+  const onPaid = async () => {
+    setPayOpen(false);
+    toast.success("Payment complete");
+    // PaymentSucceeded reaches the order entity through a consumer, not synchronously, so the
+    // refetch below may still read Confirmed. The poll above keeps running until it says Paid.
+    await queryClient.invalidateQueries({ queryKey: DinerOrderKeys.detail(orderId) });
+  };
 
   return (
     <>
@@ -58,13 +95,21 @@ export default function OrderStatusPage() {
         ) : (
           <>
             <div className="flex items-center gap-2">
-              {order.data.status === "Pending" ? (
-                <Clock className="h-5 w-5 text-muted-foreground" />
-              ) : (
+              {dead ? (
+                <XCircle className="h-5 w-5 text-destructive" />
+              ) : paid ? (
                 <CheckCircle2 className="h-5 w-5 text-primary" />
+              ) : (
+                <Clock className="h-5 w-5 text-muted-foreground" />
               )}
               <h1 className="text-2xl font-semibold">
-                {order.data.status === "Pending" ? "Sending to the kitchen…" : "Order confirmed"}
+                {dead
+                  ? "Order cancelled"
+                  : paid
+                    ? "Paid — see you soon"
+                    : order.data.status === "Pending"
+                      ? "Sending to the kitchen…"
+                      : "Ready to pay"}
               </h1>
             </div>
 
@@ -102,14 +147,48 @@ export default function OrderStatusPage() {
               </div>
             </section>
 
-            {/* Payment lands in the next phase - the PaymentIntent already exists by now,
-                created automatically once inventory was reserved. */}
-            <p className="mt-5 text-center text-[13px] text-muted-foreground">
-              {order.data.paidAt ? "Paid — see you soon." : "Payment is coming in the next release."}
-            </p>
+            <div className="mt-5">
+              {paid ? (
+                <p className="text-center text-[13px] text-muted-foreground">
+                  We'll have it ready for you at the counter.
+                </p>
+              ) : dead ? (
+                <p className="text-center text-[13px] text-muted-foreground">
+                  This order wasn't fulfilled, and you haven't been charged.
+                </p>
+              ) : clientSecret ? (
+                <Button className="w-full" size="lg" onClick={() => setPayOpen(true)}>
+                  Pay {money(order.data.grandTotal)}
+                </Button>
+              ) : (
+                // Deliberately a disabled button rather than a spinner: the diner needs to see
+                // that paying is the next step and is coming, not wonder whether it's their move.
+                <Button className="w-full" size="lg" disabled>
+                  Preparing payment…
+                </Button>
+              )}
+            </div>
           </>
         )}
       </main>
+
+      {clientSecret && (
+        <StripeCheckoutDialog
+          open={payOpen}
+          onOpenChange={setPayOpen}
+          orderId={orderId}
+          clientSecret={clientSecret}
+          onSuccess={onPaid}
+          onFailure={(message) => toast.error(message)}
+          // The diner's own token and tenant. The default confirm mints a staff token from the
+          // POS session, which a diner does not have.
+          confirm={async (id) => {
+            const token = await getToken();
+            if (!token) throw new Error("Please sign in again to finish paying.");
+            return DinerOrders.confirmPayment(token, tenant as DinerTenant, id);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -43,6 +43,20 @@ export interface DinerEstimate {
   appliedTaxes: AppliedLineDto[];
 }
 
+/** Stripe session for an order. `clientSecret` is absent until the PaymentIntent exists, which
+ *  happens a broker round trip after inventory is reserved - so "pending" is the normal first
+ *  answer, not an error. */
+export interface DinerPaymentSession {
+  clientSecret?: string | null;
+  status?: string;
+}
+
+export interface DinerPaymentConfirm {
+  status: string;
+  receiptUrl?: string | null;
+  error?: string;
+}
+
 export interface DinerOrderItem {
   menuItemId: string;
   menuItemName: string;
