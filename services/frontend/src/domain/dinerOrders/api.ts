@@ -12,6 +12,7 @@ export const DinerOrdersAPI = {
   checkout: () => `${base}/checkout`,
   orders: () => `${base}/orders`,
   order: (orderId: string) => `${base}/orders/${orderId}`,
+  cancelOrder: (orderId: string) => `${base}/orders/${orderId}/cancel`,
   paymentSession: (orderId: string) => `${payments}/${orderId}/payment-session`,
   paymentConfirm: (orderId: string) => `${payments}/${orderId}/payment-confirm`,
 } as const;

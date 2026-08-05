@@ -47,4 +47,15 @@ public class DinerController : ControllerBase
     [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
     public async Task<ActionResult<OrderDto>> MyOrder(Guid orderId, CancellationToken ct)
         => Ok((await _diner.GetMyOrderAsync(orderId, ct)).ToDto());
+
+    /// <summary>Calls off the diner's own order while it is still unpaid. Separate from the
+    /// staff cancel on <see cref="OrderController"/>, which can reach any order in the tenant;
+    /// this one is scoped to the caller's own and delegates to the same cancel path.</summary>
+    [HttpPost("orders/{orderId:guid}/cancel")]
+    [Authorize(Policy = OrderPolicyExtensions.DinerWrite)]
+    public async Task<IActionResult> CancelMyOrder(Guid orderId, CancellationToken ct)
+    {
+        await _diner.CancelMyOrderAsync(orderId, ct);
+        return NoContent();
+    }
 }

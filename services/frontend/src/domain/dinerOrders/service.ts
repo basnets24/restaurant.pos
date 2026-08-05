@@ -70,6 +70,14 @@ export const DinerOrders = {
     return data;
   },
 
+  /** Calls off an unpaid order. The server rejects an already-paid one, so this is only ever
+   *  offered before payment. */
+  async cancel(token: string, tenant: DinerTenant, orderId: string): Promise<void> {
+    await dinerHttp.post(DinerOrdersAPI.cancelOrder(orderId), null, {
+      headers: headers(token, tenant),
+    });
+  },
+
   async paymentSession(
     token: string,
     tenant: DinerTenant,

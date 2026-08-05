@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,9 +41,10 @@ export default function OrderStatusPage() {
       return DinerOrders.get(token, tenant as DinerTenant, orderId);
     },
     enabled: Boolean(isSignedIn && orderId && tenant),
-    // Two separate waits are folded into one poll here: Pending → Confirmed happens when the
-    // saga reserves inventory, and Confirmed → Paid happens a broker round trip after Stripe
-    // confirms. Polling until the order settles covers both without a second mechanism.
+    // An order sits at Pending from checkout until it is paid - inventory reservation moves the
+    // saga, not the order - so the status alone never announces that payment is ready. Polling
+    // until the order settles covers that wait and the one after Stripe (PaymentSucceeded
+    // reaches the order through a consumer, a broker round trip later) with one mechanism.
     refetchInterval: (query) =>
       query.state.data && !SETTLED.includes(query.state.data.status) ? 2000 : false,
   });
@@ -65,6 +66,23 @@ export default function OrderStatusPage() {
   });
 
   const clientSecret = session.data?.clientSecret ?? null;
+
+  const cancel = useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      if (!token) throw new Error("Your session expired. Please sign in again.");
+      return DinerOrders.cancel(token, tenant as DinerTenant, orderId);
+    },
+    onSuccess: async () => {
+      toast.success("Order cancelled");
+      await queryClient.invalidateQueries({ queryKey: DinerOrderKeys.detail(orderId) });
+    },
+    onError: (error) => {
+      // The likely failure is a 409 for an order that got paid in another tab, and the server's
+      // own wording says so more usefully than anything generic would.
+      toast.error(dinerErrorMessage(error, "Could not cancel your order."));
+    },
+  });
 
   const onPaid = async () => {
     setPayOpen(false);
@@ -103,13 +121,15 @@ export default function OrderStatusPage() {
                 <Clock className="h-5 w-5 text-muted-foreground" />
               )}
               <h1 className="text-2xl font-semibold">
+                {/* Keyed on the payment session rather than the status, which stays Pending the
+                    whole way from checkout to paid and so can't tell these two apart. */}
                 {dead
                   ? "Order cancelled"
                   : paid
                     ? "Paid — see you soon"
-                    : order.data.status === "Pending"
-                      ? "Sending to the kitchen…"
-                      : "Ready to pay"}
+                    : clientSecret
+                      ? "Ready to pay"
+                      : "Sending to the kitchen…"}
               </h1>
             </div>
 
@@ -165,6 +185,20 @@ export default function OrderStatusPage() {
                 // that paying is the next step and is coming, not wonder whether it's their move.
                 <Button className="w-full" size="lg" disabled>
                   Preparing payment…
+                </Button>
+              )}
+
+              {/* Offered right up until the order is paid. Cancelling here is what puts the
+                  items back on the menu immediately; leaving the page instead just means
+                  waiting for the server-side sweep to do the same thing later. */}
+              {!paid && !dead && (
+                <Button
+                  variant="ghost"
+                  className="mt-2 w-full text-muted-foreground"
+                  disabled={cancel.isPending}
+                  onClick={() => cancel.mutate()}
+                >
+                  {cancel.isPending ? "Cancelling…" : "Cancel order"}
                 </Button>
               )}
             </div>

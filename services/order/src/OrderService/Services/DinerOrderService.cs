@@ -24,6 +24,7 @@ public class DinerOrderService : IDinerOrderService
     private readonly ITenantContext _tenant;
     private readonly IRepository<PosCatalogItem> _posCatalog;
     private readonly IPricingService _pricing;
+    private readonly IOrderService _orderLifecycle;
     private readonly ILogger<DinerOrderService> _logger;
 
     public DinerOrderService(
@@ -35,8 +36,10 @@ public class DinerOrderService : IDinerOrderService
         ITenantContext tenant,
         IRepository<PosCatalogItem> posCatalog,
         IPricingService pricing,
+        IOrderService orderLifecycle,
         ILogger<DinerOrderService> logger)
     {
+        _orderLifecycle = orderLifecycle;
         _carts = carts;
         _catalog = catalog;
         _cartRepo = cartRepo;
@@ -134,6 +137,27 @@ public class DinerOrderService : IDinerOrderService
             throw new KeyNotFoundException("Order not found.");
 
         return order;
+    }
+
+    /// <summary>
+    /// Lets a diner call off their own order rather than waiting for the sweep to time it out -
+    /// the difference between the kitchen hearing about it now and hearing about it in five
+    /// minutes, and between stock coming back now or then.
+    ///
+    /// Deliberately routed through the same <see cref="IOrderService.CancelAsync"/> the POS and
+    /// the sweep use, so there stays one cancel path and one publisher of ReleaseInventory. That
+    /// also means its guards apply unchanged: a paid order is a 409, not something a diner can
+    /// undo by cancelling, and a second tap is a no-op rather than a double release.
+    /// </summary>
+    public async Task CancelMyOrderAsync(Guid orderId, CancellationToken ct = default)
+    {
+        // Reuses the read path's ownership check, so someone else's order 404s here exactly as
+        // it does there instead of announcing that it exists by refusing differently.
+        var order = await GetMyOrderAsync(orderId, ct);
+
+        await _orderLifecycle.CancelAsync(order.Id, ct);
+        _logger.LogInformation("Diner {CustomerId} cancelled their order {OrderId}",
+            order.CustomerId, order.Id);
     }
 
     /// <summary>

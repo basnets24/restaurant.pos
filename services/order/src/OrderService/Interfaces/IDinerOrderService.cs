@@ -16,4 +16,7 @@ public interface IDinerOrderService
 
     /// <summary>One order, but only if it belongs to the authenticated diner.</summary>
     Task<Order> GetMyOrderAsync(Guid orderId, CancellationToken ct = default);
+
+    /// <summary>Calls off the diner's own order while it is still unpaid, releasing its stock.</summary>
+    Task CancelMyOrderAsync(Guid orderId, CancellationToken ct = default);
 }
