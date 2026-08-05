@@ -15,7 +15,6 @@
              ABI - resolving to EF 9 at runtime throws MissingMethodException on
              get_LockReleaseBehavior). 8.4.0 is the last version still on EF Core 8. -->
         <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.4.0" />
-        <PackageReference Include="Messaging.Contracts" Version="1.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.19">
             <PrivateAssets>all</PrivateAssets>
@@ -25,6 +24,13 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     </ItemGroup>
 
+    <!-- TODO(diner-ordering): flip back to <PackageReference Include="Messaging.Contracts" Version="1.0.7" />
+         at merge. 1.0.7 (PaymentRequested.CustomerId) only publishes on a push to dev/main, so
+         this branch consumes it as a project reference. Do not merge without reverting this and
+         confirming 1.0.7 is actually on the feed - the publish workflow does not bump versions
+         and skip-duplicate fails silently. -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\shared\messaging.contracts\Messaging.Contracts.csproj" />
+    </ItemGroup>
 
-    
 </Project>

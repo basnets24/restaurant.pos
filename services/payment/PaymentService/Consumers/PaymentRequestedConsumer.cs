@@ -42,6 +42,7 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             Id = Guid.NewGuid(),
             OrderId = msg.OrderId,
             CorrelationId = msg.CorrelationId,
+            CustomerId = msg.CustomerId,
             Amount = msg.AmountCents,
             Currency = "usd",
             Provider = "Stripe",
@@ -59,6 +60,8 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             // Starting a new attempt on a previously failed payment - reset all
             // attempt-scoped fields together, not just PaymentIntentId/ClientSecret below,
             // so GetPaymentSession/ConfirmPayment don't keep seeing the old decline.
+            // CustomerId is deliberately left alone: it is set once, when the payment is
+            // created, and a later event must never be able to hand ownership to someone else.
             payment.Status = "Pending";
             payment.ErrorMessage = null;
         }

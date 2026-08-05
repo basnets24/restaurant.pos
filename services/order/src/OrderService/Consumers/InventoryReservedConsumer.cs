@@ -66,7 +66,10 @@ public class InventoryReservedConsumer : IConsumer<InventoryReserved>
             TableId: order.TableId ?? Guid.Empty,
             AmountCents: (long)(order.GrandTotal * 100m),
             RestaurantId: order.RestaurantId,
-            LocationId: order.LocationId
+            LocationId: order.LocationId,
+            // Carries ownership across to a service that has no order data of its own; it is
+            // what stops one diner pulling another's Stripe client secret.
+            CustomerId: order.CustomerId
         ), context.CancellationToken);
 
         _logger.LogInformation("Payment requested for pickup order {OrderId} ({AmountCents} cents)",

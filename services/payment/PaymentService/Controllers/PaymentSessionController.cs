@@ -35,7 +35,7 @@ public class PaymentSessionController : ControllerBase
     [HttpGet("{orderId:guid}/payment-session")]
     public async Task<IActionResult> GetPaymentSession([FromRoute] Guid orderId)
     {
-        var payment = await _payments.GetAsync(p => p.OrderId == orderId);
+        var payment = await LoadForCallerAsync(orderId);
 
         if (payment is null)
         {
@@ -62,7 +62,7 @@ public class PaymentSessionController : ControllerBase
     [HttpPost("{orderId:guid}/payment-confirm")]
     public async Task<IActionResult> ConfirmPayment([FromRoute] Guid orderId)
     {
-        var payment = await _payments.GetAsync(p => p.OrderId == orderId);
+        var payment = await LoadForCallerAsync(orderId);
         if (payment is null) return NotFound(new { status = "pending" });
 
         if (string.Equals(payment.Status, "Succeeded", StringComparison.OrdinalIgnoreCase))
@@ -108,6 +108,34 @@ public class PaymentSessionController : ControllerBase
                 // requires_action, processing, requires_confirmation, etc. - not resolved yet
                 return Ok(new { status = "pending", intentStatus = intent.Status });
         }
+    }
+
+    /// <summary>
+    /// The payment for this order, but only if the caller is allowed to see it. Returns null
+    /// otherwise, so both endpoints answer exactly as they do for an order that has no payment
+    /// yet - an order id is a bare GUID in a URL, and a distinct 403 would confirm which GUIDs
+    /// are real and whose they are.
+    ///
+    /// The payment.read scope is not the boundary: every diner holds it, so without the check
+    /// below anyone who learned an order id could pull its Stripe client secret and confirm a
+    /// stranger's payment. Staff are unaffected - the check keys off the `diner` scope, which
+    /// only the spoontab-diner client is allowed to request.
+    /// </summary>
+    private async Task<Payment?> LoadForCallerAsync(Guid orderId)
+    {
+        var payment = await _payments.GetAsync(p => p.OrderId == orderId);
+        if (payment is null) return null;
+
+        var scopes = User.FindAll("scope")
+            .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (!scopes.Contains("diner", StringComparer.Ordinal)) return payment;
+
+        // A diner may only reach a payment that was raised for them. Note this rejects
+        // staff-taken payments (CustomerId null) outright rather than falling through.
+        return Guid.TryParse(User.FindFirst("sub")?.Value, out var customerId)
+               && payment.CustomerId == customerId
+            ? payment
+            : null;
     }
 
     private async Task<string?> TryGetReceiptUrlAsync(string paymentIntentId)

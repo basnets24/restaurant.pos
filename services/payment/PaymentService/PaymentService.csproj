@@ -9,7 +9,6 @@
 
     <ItemGroup>
         <PackageReference Include="Common.Library" Version="1.0.23" />
-        <PackageReference Include="Messaging.Contracts" Version="1.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
             <PrivateAssets>all</PrivateAssets>
@@ -20,5 +19,13 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     </ItemGroup>
 
+    <!-- TODO(diner-ordering): flip back to <PackageReference Include="Messaging.Contracts" Version="1.0.7" />
+         at merge. 1.0.7 (PaymentRequested.CustomerId) only publishes on a push to dev/main, so
+         this branch consumes it as a project reference. Do not merge without reverting this and
+         confirming 1.0.7 is actually on the feed - the publish workflow does not bump versions
+         and skip-duplicate fails silently. -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\shared\messaging.contracts\Messaging.Contracts.csproj" />
+    </ItemGroup>
 
 </Project>
