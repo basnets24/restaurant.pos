@@ -37,15 +37,12 @@ export default function AnalyticsTab() {
         { label: "Weekly Revenue", value: num(money(stats.revenue)), trend: "up" as const, onClick: () => navigate("/pos/orders") },
         { label: "Avg. Order Value", value: num(money(stats.avgOrderValue)), trend: "neutral" as const, onClick: () => navigate("/pos/orders") },
         { label: "Orders This Week", value: num(String(stats.ordersThisWeek)), trend: "neutral" as const, onClick: () => navigate("/pos/orders") },
-        // No table-turnover tracking in the backend yet (would need seating-duration
-        // data); shown as an illustrative figure until that's real.
-        { label: "Table Turnover", value: num("3.4x"), trend: "neutral" as const },
     ];
 
     return (
         <>
             <h2 className="text-2xl font-bold text-foreground mb-5">Business Analytics</h2>
-            <CardGrid cols={{ base: 1, md: 4 }} gap="gap-4">
+            <CardGrid cols={{ base: 1, md: 3 }} gap="gap-4">
                 {quickStats.map((s) => (
                     <StatCard
                         key={s.label}
