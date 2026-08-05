@@ -16,15 +16,7 @@
         </PackageReference>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-    </ItemGroup>
-
-    <!-- TODO(modifier-authoring): flip back to <PackageReference Include="Messaging.Contracts" Version="1.0.8" />
-         at merge. 1.0.8 (MenuItemModifiersChanged) only publishes on a push to dev/main, so this
-         branch consumes it as a project reference in the meantime - same gate order/payment are
-         already carrying for 1.0.7's CustomerId addition. Confirm 1.0.8 is on the feed (version
-         index, not `dotnet package search`) before flipping back. -->
-    <ItemGroup>
-        <ProjectReference Include="..\..\..\..\shared\Messaging.Contracts\Messaging.Contracts.csproj" />
+        <PackageReference Include="Messaging.Contracts" Version="1.0.8" />
     </ItemGroup>
 
 </Project>
