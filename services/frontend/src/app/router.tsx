@@ -36,8 +36,6 @@ const AdminTab           = lazy(() => import("@/features/management/tabs/AdminTa
 const OrganizationPage   = lazy(() => import("@/features/admin/pages/OrganizationPage"));
 const FloorPlanDesigner  = lazy(() => import("@/features/admin/pages/FloorPlanDesigner"));
 const RolesPage          = lazy(() => import("@/features/admin/pages/RolesPage"));
-const LocationsPage      = lazy(() => import("@/features/admin/pages/LocationsPage"));
-const IntegrationsPage   = lazy(() => import("@/features/admin/pages/IntegrationsPage"));
 
 // ---- Settings (profile only) ----
 const SettingsLayout     = lazy(() => import("@/features/settings/SettingsLayout"));
@@ -138,8 +136,6 @@ export const router = createBrowserRouter([
           { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
           { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
           { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
-          { path: "locations",    element: <Suspense fallback={<Fallback />}><LocationsPage /></Suspense> },
-          { path: "integrations", element: <Suspense fallback={<Fallback />}><IntegrationsPage /></Suspense> },
         ],
       },
     ],
