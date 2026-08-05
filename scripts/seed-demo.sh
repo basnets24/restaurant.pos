@@ -5,9 +5,10 @@
 # by identity's DemoSeedHostedService on startup (services/identity/src/IdentityService/
 # HostedServices/DemoSeedHostedService.cs) - this script only creates the menu, which lives in
 # catalog and has no startup-seed equivalent. Unlike scripts/seed-discovery.sh, this goes
-# through the real staff APIs rather than psql: the spoontab-demo-admin OIDC client (password
-# grant) makes minting a staff-scoped token from a script trivial, so there's no need to fall
-# back to raw SQL the way the discovery seed does.
+# through the real staff APIs rather than psql: the spoontab-demo-admin OIDC client's custom
+# `demo_admin` grant (no credentials needed, always resolves to the seeded demo admin - see
+# DemoAdminGrantValidator) makes minting a staff-scoped token from a script trivial, so there's
+# no need to fall back to raw SQL the way the discovery seed does.
 #
 # Requires jq. Idempotent: skips any menu item whose name already exists for this restaurant/
 # location, and skips any modifier group whose name already exists on its item.
@@ -29,9 +30,7 @@ echo "Minting demo admin token..."
 TOKEN=$(curl -sf -X POST "$IDENTITY_URL/connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   --data-urlencode "client_id=spoontab-demo-admin" \
-  --data-urlencode "grant_type=password" \
-  --data-urlencode "username=admin@momoandburger.com" \
-  --data-urlencode "password=Demo@Admin123" \
+  --data-urlencode "grant_type=demo_admin" \
   --data-urlencode "scope=openid menu.read menu.write" \
   | jq -r '.access_token')
 

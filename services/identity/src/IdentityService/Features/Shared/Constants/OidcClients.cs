@@ -12,8 +12,13 @@ public static class OidcClients
     /// flow. Diners have no <c>RestaurantMembership</c>, so they carry no tenant claims.</summary>
     public const string Diner = "spoontab-diner";
 
-    /// <summary>Recruiter-facing "Admin Demo" button. Password grant like <see cref="Diner"/>,
-    /// but scoped to the single seeded demo admin account so the landing page can log straight
-    /// in without the Duende redirect screen. Not a general-purpose staff login path.</summary>
+    /// <summary>Recruiter-facing "Admin Demo" button. Unlike <see cref="Diner"/>, this does NOT
+    /// use the password grant - a password grant validates whatever credentials are submitted
+    /// against the entire user store, and this client's "credentials" are already public
+    /// (demoCredentials.ts), so anyone could submit a real staff member's password through it and
+    /// get a full-scope token. Instead it uses a custom <c>demo_admin</c> grant
+    /// (see <see cref="IdentityService.Features.Shared.Auth.DemoAdminGrantValidator"/>) that takes
+    /// no credentials at all and always issues a token for the one fixed seeded demo admin. Not a
+    /// general-purpose staff login path.</summary>
     public const string DemoAdmin = "spoontab-demo-admin";
 }

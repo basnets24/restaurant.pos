@@ -17,7 +17,7 @@ public class DemoSeedHostedService : IHostedService
     public const string RestaurantId = "momo-and-burger";
     public const string LocationId = "main";
 
-    private const string AdminEmail = "admin@momoandburger.com";
+    public const string AdminEmail = "admin@momoandburger.com";
     private const string AdminPassword = "Demo@Admin123";
     private const string DinerEmail = "diner@momoandburger.com";
     private const string DinerPassword = "Demo@Diner123";

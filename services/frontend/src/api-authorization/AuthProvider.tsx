@@ -10,19 +10,19 @@ import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 import { bindAuthAccessors } from "@/auth/runtime";
 import type { AppProfile, SignInState } from "@/auth/types";
-import { DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD } from "@/features/landing/demoCredentials";
 
-// Recruiter-facing "Admin Demo" button. `spoontab-demo-admin` is a password-grant
-// OIDC client (see OidcClients.DemoAdmin, identity service) scoped to the single
-// seeded demo admin account, so this can log in with one click instead of bouncing
-// through the Duende-hosted login page like real staff do.
+// Recruiter-facing "Admin Demo" button. `spoontab-demo-admin` is a custom `demo_admin`-grant
+// OIDC client (see OidcClients.DemoAdmin, identity service's DemoAdminGrantValidator) that takes
+// no credentials at all and always issues a token for the one fixed seeded demo admin - so this
+// can log in with one click instead of bouncing through the Duende-hosted login page like real
+// staff do, with nothing to submit that could double as a real staff member's password.
 const DEMO_ADMIN_CLIENT_ID = "spoontab-demo-admin";
 const DEMO_ADMIN_SCOPE =
     "openid profile roles tenancy IdentityServerApi menu.read menu.write catalog.inventory.read catalog.inventory.write order.read order.write payment.read payment.charge payment.refund";
 
-// The password grant issues no id_token (that's an OIDC-flow concept, not part of plain OAuth2
-// ROPC) - restaurant_id/location_id/role claims ride on the access_token instead, same as
-// dinerAuth.ts's decodeClaims does for the diner client.
+// The custom grant issues no id_token (that's an OIDC-flow concept the extension grant pipeline
+// doesn't produce) - restaurant_id/location_id/role claims ride on the access_token instead, same
+// as dinerAuth.ts's decodeClaims does for the diner client.
 function decodeAccessTokenProfile(accessToken: string): AppProfile {
     const [, payload] = accessToken.split(".");
     const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
@@ -202,9 +202,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: new URLSearchParams({
                 client_id: DEMO_ADMIN_CLIENT_ID,
-                grant_type: "password",
-                username: DEMO_ADMIN_EMAIL,
-                password: DEMO_ADMIN_PASSWORD,
+                grant_type: "demo_admin",
                 scope: DEMO_ADMIN_SCOPE,
             }),
         });
