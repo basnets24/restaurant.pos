@@ -51,7 +51,7 @@ npm run lint            # eslint
 | Service | Path | Ports (https/http) | Notes |
 |---|---|---|---|
 | identity | `services/identity/src/IdentityService` | 7163/5265 | Duende IdentityServer (OAuth2/OIDC). Absorbed the former `tenant` service — onboarding, location/membership management live under `Features/Tenancy/`. |
-| catalog | `services/catalog/src/CatalogService` | 7226/5062 | Merged former `menu` + `inventory` services. Entities: `MenuItem` (see below) plus `ModifierGroup`/`ModifierOption`; publishes `MenuItemCreated/Updated/Deleted` and `InventoryItem*` events. Also serves the anonymous `GET /public/menu`. |
+| catalog | `services/catalog/src/CatalogService` | 7226/5062 | Merged former `menu` + `inventory` services. Entities: `MenuItem` (see below) plus `ModifierGroup`/`ModifierOption`; publishes `MenuItemCreated/Updated/Deleted`, `MenuItemModifiersChanged`, and `InventoryItem*` events. Also serves the anonymous `GET /public/menu`. |
 | order | `services/order/src/OrderService` | 7288/5236 | Cart, ordering, dining tables, pricing, notifications, SignalR floor hub. Owns the order saga and the POS read-model projector (below). |
 | payment | `services/payment/PaymentService` | 7182/5238 | Stripe **PaymentIntent** integration; decoupled from the saga (see below). |
 
@@ -59,7 +59,7 @@ npm run lint            # eslint
 
 There is no `menu`, `inventory`, or `tenant` service directory — those names refer to features living inside `catalog`/`identity`.
 
-**Stock lives on the menu item.** Stock is `MenuItem`'s `Quantity` field — no `InventoryItem` entity, no `/inventory-items` endpoint, no separate inventory table. The `InventoryItem*` names in `Messaging.Contracts` are *event* names published off menu-item stock changes; they don't imply a second entity. Stock updates go through `PATCH /menu-items/{id}` → `MenuStockService`, where `quantity` is **absolute, not a delta**, and `IsAvailable` re-derives as `Quantity > 0` unless explicitly overridden. `CatalogService/Entities/` also holds `ModifierGroup`/`ModifierOption` (single/multi-select add-ons, e.g. size or extras) — staff-managed but with no authoring UI yet, so in practice they only exist where a seed script put them; see Diner ordering below.
+**Stock lives on the menu item.** Stock is `MenuItem`'s `Quantity` field — no `InventoryItem` entity, no `/inventory-items` endpoint, no separate inventory table. The `InventoryItem*` names in `Messaging.Contracts` are *event* names published off menu-item stock changes; they don't imply a second entity. Stock updates go through `PATCH /menu-items/{id}` → `MenuStockService`, where `quantity` is **absolute, not a delta**, and `IsAvailable` re-derives as `Quantity > 0` unless explicitly overridden. `CatalogService/Entities/` also holds `ModifierGroup`/`ModifierOption` (single/multi-select add-ons, e.g. size or extras) — staff-managed via `ModifierGroupsController`; see Diner ordering below.
 
 ### Order saga (`OrderService/StateMachines/OrderStateMachine.cs`, MassTransit)
 The saga is deliberately kept small — it only covers inventory reservation, not payment:
@@ -88,7 +88,7 @@ A second, anonymous-first surface alongside the staff POS, built on the same fou
 - **Checkout is one call, not two.** `POST /diner/checkout` (`OrderService/Controllers/DinerController.cs`) commits the order and reserves inventory like staff's "Fire to Kitchen", but `PaymentRequested` then publishes automatically once inventory is confirmed (`InventoryReservedConsumer`, gated on `OrderType == Pickup`) rather than needing a separate staff-initiated call. Staff keep the two-step fire-then-pay flow unchanged.
 - **Abandonment needs a sweep.** A diner has no staff backstop to cancel a walked-away order, so `AbandonedOrderSweeper` (order service, `BackgroundService`) cancels unpaid `Pickup` orders past a TTL (dine-in exempt) and releases their inventory — the same `ReleaseInventory` path as a manual cancel.
 - **Order history and notifications are the other two cross-tenant exceptions** — `CustomerOrderSummary`/`CustomerNotification` are deliberately not `ITenantEntity`, queried by `CustomerId` across restaurants, and written inline from the order lifecycle rather than projected off events.
-- **Modifiers have no authoring UI.** `ModifierGroup`/`ModifierOption` are seeded by `scripts/seed-discovery.sh`, not created through any staff screen.
+- **Modifiers have a staff authoring UI** (added 2026-08-05, superseding the earlier "seeded by script only" decision). Catalog's `ModifierGroupsController` (`/menu-items/{id}/modifier-groups`, `/modifier-groups/{id}`) gives staff full CRUD, gated on the existing `menu.read`/`menu.write` policies — no new scope. Every write republishes the item's full current modifier set as `MenuItemModifiersChanged` (a snapshot, never a delta), which order's `PosReadModelProjector` folds into `PosCatalogItem.Modifiers`; `CatalogMenuClient` in the order service now prices a diner's selections from that local projection instead of a synchronous call to catalog's `/public/menu`. `scripts/seed-discovery.sh` still seeds demo data, but it's no longer the only way modifiers get created.
 
 See `services/order/CLAUDE.md` and `services/frontend/CLAUDE.md` for the implementation-level detail (consumers, DbContext layout, `domain/discovery`/`features/diner` structure).
 
