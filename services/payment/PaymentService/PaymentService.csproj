@@ -22,10 +22,14 @@
     <!-- TODO(diner-ordering): flip back to <PackageReference Include="Messaging.Contracts" Version="1.0.7" />
          at merge. 1.0.7 (PaymentRequested.CustomerId) only publishes on a push to dev/main, so
          this branch consumes it as a project reference.
-         Checked 2026-08-05: the feed's newest Messaging.Contracts is 1.0.4, so flipping now
-         would not restore. The bump is real (1.0.4 -> 1.0.7), so publish-messaging-contracts.yml
-         will not silently no-op on skip-duplicate the way it would have on an unchanged
-         version - but confirm the version is on the feed after merging before flipping. -->
+         Checked 2026-08-05 against the flat-container index: the feed holds up to 1.0.6, so
+         flipping now would not restore. The bump is real (1.0.6 -> 1.0.7), so
+         publish-messaging-contracts.yml will not silently no-op on skip-duplicate the way it
+         would have on an unchanged version - but confirm the version is on the feed after
+         merging before flipping.
+         Check it with the version index, not `dotnet package search`: GitHub's NuGet search
+         index lags badly and reported 1.0.4 as newest while 1.0.6 was long published.
+           curl -u <user>:$GH_PAT https://nuget.pkg.github.com/basnets24/messaging.contracts/index.json -->
     <ItemGroup>
         <ProjectReference Include="..\..\..\shared\messaging.contracts\Messaging.Contracts.csproj" />
     </ItemGroup>
