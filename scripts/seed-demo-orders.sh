@@ -47,7 +47,7 @@ DINER_TOKEN=$(curl -sf -X POST "$IDENTITY_URL/connect/token" \
   --data-urlencode "grant_type=password" \
   --data-urlencode "username=diner@momoandburger.com" \
   --data-urlencode "password=Demo@Diner123" \
-  --data-urlencode "scope=openid profile roles diner payment.read" \
+  --data-urlencode "scope=openid profile diner payment.read" \
   | jq -r '.access_token')
 
 if [[ -z "$DINER_TOKEN" || "$DINER_TOKEN" == "null" ]]; then

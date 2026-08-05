@@ -14,7 +14,11 @@ import { ENV } from "@/config/env";
 
 const STORAGE_KEY = "spoontab.diner.auth";
 const CLIENT_ID = "spoontab-diner";
-const SCOPE = "openid profile roles diner payment.read offline_access";
+// No `roles` scope: diners and staff share the same user store, so a staff member's real
+// credentials also work through this client - only `sub`/`email` are ever read from the
+// resulting token (see decodeClaims below), so there's no reason to let their real staff
+// role claims ride along.
+const SCOPE = "openid profile diner payment.read offline_access";
 
 export interface DinerSession {
   accessToken: string;

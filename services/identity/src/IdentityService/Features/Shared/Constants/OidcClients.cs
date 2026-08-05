@@ -9,7 +9,12 @@ public static class OidcClients
 
     /// <summary>Customer-facing diner ordering. Password grant, deliberately scoped to this
     /// one first-party client so the inline sign-in modal works; staff keep the real redirect
-    /// flow. Diners have no <c>RestaurantMembership</c>, so they carry no tenant claims.</summary>
+    /// flow. Diners have no <c>RestaurantMembership</c>, so they carry no tenant claims.
+    /// Deliberately excludes the <c>roles</c> scope: since diners and staff share the same
+    /// <see cref="IdentityService.Entities.ApplicationUser"/> store, a staff member's real
+    /// credentials also work through this client, and nothing here uses role claims - only
+    /// <c>sub</c>/<c>email</c> - so there's no reason to let their real staff role claims
+    /// (Admin/Owner/...) ride along.</summary>
     public const string Diner = "spoontab-diner";
 
     /// <summary>Recruiter-facing "Admin Demo" button. Unlike <see cref="Diner"/>, this does NOT

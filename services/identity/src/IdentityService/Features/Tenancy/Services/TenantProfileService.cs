@@ -26,6 +26,19 @@ public class TenantProfileService : IProfileService
             return;
         }
 
+        // The diner client is deliberately never issued tenant/role claims (diners have no
+        // RestaurantMembership by design) - but Catalog/Order/Payment's ApiResource.UserClaims
+        // all list role/restaurant_id/location_id, and the `diner` scope is tied to all three,
+        // so RequestedClaimTypes ends up wanting them regardless of the identity scopes actually
+        // requested. Without this gate, a staff account authenticating through the diner client
+        // (same ApplicationUser store, see OidcClients.Diner) would leak its real tenant/role
+        // claims onto an otherwise diner-scoped token.
+        if (context.Application?.Identifier == OidcClients.Diner)
+        {
+            _logger.LogDebug("Skipping tenant/role claim enrichment for diner client, user {UserId}", userId);
+            return;
+        }
+
         var requested = context.RequestedClaimTypes?.ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
         var wantRestaurant = requested.Count == 0 || requested.Contains(RestaurantIdClaim);
         var wantLocation = requested.Count == 0 || requested.Contains(LocationIdClaim);
@@ -40,16 +53,9 @@ public class TenantProfileService : IProfileService
         var claims = await _claims.GetAsync(userId, cancellationToken);
         if (claims is null)
         {
-            // Diners have no RestaurantMembership by design - they are ordinary users
-            // distinguished only by the absence of one. Warning-level here would fire on
-            // every diner token and bury the staff case, where a missing membership is a
-            // real problem worth seeing.
-            // Duende 8 exposes the requesting client as Application (IConnectedApplication,
-            // which Client implements); the client id is Identifier, not ClientId.
-            if (context.Application?.Identifier == OidcClients.Diner)
-                _logger.LogDebug("No tenant claims for diner {UserId}; expected for the diner client", userId);
-            else
-                _logger.LogWarning("No tenant membership/claims resolved for user {UserId}; issuing no tenant/location/role claims", userId);
+            // The diner client already returned above, so reaching here with no membership
+            // means a staff account genuinely has none - worth a warning, not the routine case.
+            _logger.LogWarning("No tenant membership/claims resolved for user {UserId}; issuing no tenant/location/role claims", userId);
             return;
         }
 
