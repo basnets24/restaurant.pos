@@ -1,6 +1,6 @@
 // src/auth/AuthProvider.tsx
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { User } from 'oidc-client-ts';
+import { User } from 'oidc-client-ts';
 import { userManager } from './oidc';
 import { clearApiTokenCache } from "@/auth/getApiToken";
 import { clearTenant } from "@/auth/tenant";
@@ -10,6 +10,25 @@ import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 import { bindAuthAccessors } from "@/auth/runtime";
 import type { AppProfile, SignInState } from "@/auth/types";
+import { DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD } from "@/features/landing/demoCredentials";
+
+// Recruiter-facing "Admin Demo" button. `spoontab-demo-admin` is a password-grant
+// OIDC client (see OidcClients.DemoAdmin, identity service) scoped to the single
+// seeded demo admin account, so this can log in with one click instead of bouncing
+// through the Duende-hosted login page like real staff do.
+const DEMO_ADMIN_CLIENT_ID = "spoontab-demo-admin";
+const DEMO_ADMIN_SCOPE =
+    "openid profile roles tenancy IdentityServerApi menu.read menu.write catalog.inventory.read catalog.inventory.write order.read order.write payment.read payment.charge payment.refund";
+
+// The password grant issues no id_token (that's an OIDC-flow concept, not part of plain OAuth2
+// ROPC) - restaurant_id/location_id/role claims ride on the access_token instead, same as
+// dinerAuth.ts's decodeClaims does for the diner client.
+function decodeAccessTokenProfile(accessToken: string): AppProfile {
+    const [, payload] = accessToken.split(".");
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "===".slice((base64.length + 3) % 4);
+    return JSON.parse(atob(padded)) as AppProfile;
+}
 
 // Local caches to wipe whenever a session ends (sign-out or an unexpected
 // unload, e.g. silent renew failing) - a shared device switching tenants
@@ -31,6 +50,7 @@ type AuthState = {
     accessToken?: string;
     profile?: AppProfile;
     signIn: (returnUrl?: string) => Promise<void>;
+    signInDemoAdmin: (returnUrl?: string) => Promise<void>;
     completeSignIn: () => Promise<void>;
     signOut: (returnUrl?: string) => Promise<void>;
     completeSignOut: () => Promise<void>;
@@ -176,6 +196,41 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         }
     };
 
+    const signInDemoAdmin = async (returnUrl?: string) => {
+        const res = await fetch(`${ENV.IDENTITY_URL}/connect/token`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+                client_id: DEMO_ADMIN_CLIENT_ID,
+                grant_type: "password",
+                username: DEMO_ADMIN_EMAIL,
+                password: DEMO_ADMIN_PASSWORD,
+                scope: DEMO_ADMIN_SCOPE,
+            }),
+        });
+        if (!res.ok) {
+            throw new Error("Could not start the admin demo. Please try again.");
+        }
+        const token = (await res.json()) as {
+            access_token: string;
+            token_type: string;
+            scope?: string;
+            expires_in: number;
+        };
+
+        const user = new User({
+            access_token: token.access_token,
+            token_type: token.token_type,
+            scope: token.scope,
+            profile: decodeAccessTokenProfile(token.access_token),
+            expires_at: Math.floor(Date.now() / 1000) + token.expires_in,
+        });
+
+        await userManager.storeUser(user);
+        setFromUser(user);
+        window.location.replace(returnUrl ?? `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
+    };
+
     const completeSignIn = async () => {
         const u = await userManager.signinCallback(window.location.href);
         setFromUser(u);
@@ -255,6 +310,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             accessToken,
             profile,
             signIn,
+            signInDemoAdmin,
             completeSignIn,
             signOut,
             completeSignOut,

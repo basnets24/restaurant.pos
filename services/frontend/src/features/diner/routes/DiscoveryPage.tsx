@@ -18,6 +18,7 @@ import { useCuisines, useDiscoveryListings } from "@/domain/discovery";
 import type { DiscoveryListingDto, DiscoverySort } from "@/domain/discovery";
 import { DinerHeader } from "../components/DinerHeader";
 import { DinerNotificationBell } from "../components/DinerNotificationBell";
+import { DinerAccountMenu } from "../components/DinerAccountMenu";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 
 const ALL_CUISINES = "__all__";
@@ -75,6 +76,7 @@ export default function DiscoveryPage() {
                 <Receipt className="h-4 w-4" />
                 <span className="hidden sm:inline">Your orders</span>
               </Button>
+              <DinerAccountMenu />
             </>
           )
         }

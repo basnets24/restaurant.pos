@@ -40,6 +40,19 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   try {
     user = await userManager.signinSilent({ scope });
   } catch (err: unknown) {
+    // A demo session (password grant, see AuthProvider.signInDemoAdmin) has no real
+    // Authorization Code session at the IdP for signinSilent's prompt=none iframe to renew
+    // against - it will always fail here. If the token already on hand covers every scope
+    // this call needs, reuse it instead of treating that as a real "need to log in" failure.
+    const current = await userManager.getUser();
+    if (current && !current.expired && neededScopes.every((s) => current.scopes.includes(s))) {
+      const token = current.access_token;
+      const exp = parseExp(token) ?? (Math.floor(Date.now() / 1000) + 60);
+      cache.set(key, { token, exp });
+      addGrantedScopes(neededScopes);
+      return token;
+    }
+
     const msg = String(errorMessage(err) || err || "signinSilent failed").toLowerCase();
     // If the OP requires interactive login, send user to login preserving returnUrl
     if (msg.includes("login_required") || msg.includes("consent_required") || msg.includes("interaction_required")) {

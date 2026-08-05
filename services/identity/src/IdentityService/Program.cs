@@ -45,6 +45,7 @@ builder.Services.AddControllers();
 builder.Services.Configure<IdentitySettings>(builder.Configuration.GetSection("IdentitySettings"));
 builder.Services.AddHostedService<IdentitySeedHostedService>();
 builder.Services.AddHostedService<TenantDatabaseMigrationHostedService>();
+builder.Services.AddHostedService<DemoSeedHostedService>();
 
 // Identity Feature Services & Repositories
 builder.Services.AddEfRepository<ApplicationUser, ApplicationDbContext>();

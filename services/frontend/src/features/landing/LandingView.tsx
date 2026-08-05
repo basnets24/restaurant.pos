@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,12 @@ import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
+import { DinerAuth } from "@/features/diner/auth/dinerAuth";
+import { DEMO_DINER_EMAIL, DEMO_DINER_PASSWORD } from "@/features/landing/demoCredentials";
+
+// Matches the restaurant/location tenant IDs scripts/seed-demo.sh creates.
+const DEMO_RESTAURANT_ID = "momo-and-burger";
+const DEMO_LOCATION_ID = "main";
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1669131196140-49591336b13e?auto=format&fit=crop&w=1200&q=80";
 const FEATURE_IMAGE = "https://images.unsplash.com/photo-1609951734391-b79a50460c6c?auto=format&fit=crop&w=1200&q=80";
@@ -49,8 +56,10 @@ const EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
 
 export default function LandingView() {
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, signInDemoAdmin } = useAuth();
     const [demoOpen, setDemoOpen] = useState(false);
+    const [adminDemoLoading, setAdminDemoLoading] = useState(false);
+    const [customerDemoLoading, setCustomerDemoLoading] = useState(false);
 
     const register = () => {
         const returnUrl = `${window.location.origin}/join`;
@@ -61,6 +70,29 @@ export default function LandingView() {
         if (isAuthenticated) return navigate("/home");
         const returnUrl = `${window.location.origin}/home`;
         navigate(`${AuthorizationPaths.Login}?${QueryParameterNames.ReturnUrl}=${encodeURIComponent(returnUrl)}`);
+    };
+
+    const goAdminDemo = async () => {
+        setAdminDemoLoading(true);
+        try {
+            await signInDemoAdmin(`${window.location.origin}/home`);
+        } catch {
+            toast.error("Could not start the admin demo. Please try again.");
+            setAdminDemoLoading(false);
+        }
+    };
+
+    const goCustomerDemo = async () => {
+        setCustomerDemoLoading(true);
+        try {
+            const session = await DinerAuth.signIn(DEMO_DINER_EMAIL, DEMO_DINER_PASSWORD);
+            DinerAuth.save(session);
+            navigate(`/order/${DEMO_RESTAURANT_ID}/${DEMO_LOCATION_ID}`);
+        } catch {
+            toast.error("Could not start the customer demo. Please try again.");
+        } finally {
+            setCustomerDemoLoading(false);
+        }
     };
 
     return (
@@ -155,15 +187,16 @@ export default function LandingView() {
                                             <div className="rounded-lg border border-border p-4 flex flex-col gap-2">
                                                 <span className="text-sm font-medium text-foreground">Business View</span>
                                                 <span className="text-xs text-muted-foreground">Staff POS — floor plan, ordering, kitchen, payments</span>
-                                                <Button size="sm" className="mt-1 shadow-md" onClick={go}>Admin Demo</Button>
+                                                <Button size="sm" className="mt-1 shadow-md" onClick={goAdminDemo} disabled={adminDemoLoading}>
+                                                    {adminDemoLoading ? "Signing in…" : "Admin Demo"}
+                                                </Button>
                                             </div>
-                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-2 opacity-70">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-sm font-medium text-foreground">Customer View</span>
-                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">Coming Soon</Badge>
-                                                </div>
-                                                <span className="text-xs text-muted-foreground">Browse the menu &amp; order as a guest</span>
-                                                <Button size="sm" variant="outline" className="mt-1" disabled>Customer Demo</Button>
+                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-2">
+                                                <span className="text-sm font-medium text-foreground">Customer View</span>
+                                                <span className="text-xs text-muted-foreground">Browse Momo &amp; Burger&apos;s menu and order as a guest</span>
+                                                <Button size="sm" variant="outline" className="mt-1" onClick={goCustomerDemo} disabled={customerDemoLoading}>
+                                                    {customerDemoLoading ? "Signing in…" : "Customer Demo"}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
