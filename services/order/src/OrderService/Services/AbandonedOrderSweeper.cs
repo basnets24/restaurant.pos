@@ -112,7 +112,12 @@ public sealed class AbandonedOrderSweeper : BackgroundService
                     // The one cancel path in the service, so there stays exactly one publisher
                     // of ReleaseInventory. It also raises the OrderCancelled notification, which
                     // is how staff find out this happened.
-                    await orders.CancelAsync(order.Id, ct);
+                    await orders.CancelAsync(
+                        order.Id,
+                        // The diner reads this one. Without the "why", an order they simply never
+                        // got round to paying for reads as the restaurant refusing it.
+                        $"Your order wasn't paid within {_settings.Ttl.TotalMinutes:0} minutes, so we released it. Nothing was charged.",
+                        ct);
                     _logger.LogInformation(
                         "Cancelled abandoned pickup order {OrderId} for {RestaurantId}/{LocationId}, unpaid since {CreatedAt}",
                         order.Id, order.RestaurantId, order.LocationId, order.CreatedAt);

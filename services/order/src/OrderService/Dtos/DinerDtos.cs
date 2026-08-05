@@ -52,3 +52,22 @@ public record DinerOrderSummaryDto(
     DateTimeOffset? PaidAt,
     DateTimeOffset? CancelledAt
 );
+
+/// <summary>
+/// One thing that happened to one of the diner's orders. Carries the restaurant for the same
+/// reason the history row does: the list spans all of them.
+/// </summary>
+/// <param name="OrderId">What to open when the diner taps it. The client must set its remembered
+/// tenant from the restaurant fields first - the single-order read is tenant-scoped.</param>
+public record DinerNotificationDto(
+    Guid Id,
+    Guid OrderId,
+    string RestaurantId,
+    string LocationId,
+    string? RestaurantName,
+    string Type,
+    string Title,
+    string? Message,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReadAt
+);

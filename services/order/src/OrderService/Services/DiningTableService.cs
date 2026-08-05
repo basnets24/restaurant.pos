@@ -62,7 +62,7 @@ public class DiningTableService : IDiningTableService
     private async Task TryCancelLinkedOrderAsync(Guid? activeCartId, CancellationToken ct)
     {
         if (activeCartId is not { } orderId) return;
-        try { await _orders.CancelAsync(orderId, ct); }
+        try { await _orders.CancelAsync(orderId, "The table this order was on was cleared.", ct); }
         catch (KeyNotFoundException) { /* cart never checked out into an order */ }
         catch (ConflictException) { /* already Rejected (Paid already nulled the link) */ }
     }

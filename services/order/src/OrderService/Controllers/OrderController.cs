@@ -86,7 +86,7 @@ public class OrderController : ControllerBase
     [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<IActionResult> Cancel(Guid orderId, CancellationToken ct)
     {
-        await _orders.CancelAsync(orderId, ct);
+        await _orders.CancelAsync(orderId, ct: ct);
         return NoContent();
     }
 }

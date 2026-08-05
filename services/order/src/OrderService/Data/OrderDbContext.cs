@@ -24,8 +24,10 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
     public DbSet<PosCatalogItem> PosCatalogItems => Set<PosCatalogItem>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
-    /// <summary>Not tenant-scoped, unlike everything above it. See the entity.</summary>
+    /// <summary>Neither of these is tenant-scoped, unlike everything above them. See the
+    /// entities.</summary>
     public DbSet<CustomerOrderSummary> CustomerOrderSummaries => Set<CustomerOrderSummary>();
+    public DbSet<CustomerNotification> CustomerNotifications => Set<CustomerNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -72,6 +74,14 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
             // is deliberately no (RestaurantId, LocationId) index - nothing reads it that way,
             // and one would invite exactly the tenant-scoped query this table exists to avoid.
             b.HasIndex(s => new { s.CustomerId, s.CreatedAt });
+        });
+
+        modelBuilder.Entity<CustomerNotification>(b =>
+        {
+            b.HasKey(n => n.Id);
+            // Same shape of read as the summaries above, and the same deliberate absence of a
+            // tenant index.
+            b.HasIndex(n => new { n.CustomerId, n.CreatedAt });
         });
 
         modelBuilder.Entity<Order>(b =>

@@ -3,6 +3,7 @@ using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Payment;
 using OrderService.Entities;
+using OrderService.Interfaces;
 
 namespace OrderService.Consumers;
 
@@ -28,15 +29,18 @@ public class InventoryReservedConsumer : IConsumer<InventoryReserved>
 {
     private readonly IRepository<Order> _orders;
     private readonly IPublishEndpoint _publish;
+    private readonly ICustomerNotifier _customerNotifications;
     private readonly ILogger<InventoryReservedConsumer> _logger;
 
     public InventoryReservedConsumer(
         IRepository<Order> orders,
         IPublishEndpoint publish,
+        ICustomerNotifier customerNotifications,
         ILogger<InventoryReservedConsumer> logger)
     {
         _orders = orders;
         _publish = publish;
+        _customerNotifications = customerNotifications;
         _logger = logger;
     }
 
@@ -71,6 +75,17 @@ public class InventoryReservedConsumer : IConsumer<InventoryReserved>
             // what stops one diner pulling another's Stripe client secret.
             CustomerId: order.CustomerId
         ), context.CancellationToken);
+
+        // Sent here rather than at checkout because this is the first moment the answer is
+        // actually known: at checkout the order is Pending with its stock unresolved, and
+        // "confirmed" would be a guess that InventoryReserveFaulted could contradict seconds
+        // later. The same guard above that stops a settled order being charged twice stops this
+        // being sent twice on a redelivery.
+        await _customerNotifications.NotifyAsync(order,
+            CustomerNotificationType.OrderConfirmed,
+            "Order confirmed",
+            "The kitchen has your order. Finish paying to lock in your pickup.",
+            context.CancellationToken);
 
         _logger.LogInformation("Payment requested for pickup order {OrderId} ({AmountCents} cents)",
             order.Id, (long)(order.GrandTotal * 100m));

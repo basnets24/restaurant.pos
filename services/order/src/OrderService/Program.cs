@@ -64,6 +64,7 @@ builder.Services.AddScoped<IOrderService, FinalOrderService>();
 builder.Services.AddScoped<IDinerOrderService, DinerOrderService>();
 builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 builder.Services.AddScoped<ICustomerOrderHistory, CustomerOrderHistoryService>();
+builder.Services.AddScoped<ICustomerNotifier, CustomerNotificationService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
 var catalogSettings = builder.Configuration.GetSection(nameof(CatalogSettings)).Get<CatalogSettings>()

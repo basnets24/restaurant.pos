@@ -24,4 +24,13 @@ public interface IDinerOrderService
 
     /// <summary>Calls off the diner's own order while it is still unpaid, releasing its stock.</summary>
     Task CancelMyOrderAsync(Guid orderId, CancellationToken ct = default);
+
+    /// <summary>The diner's notifications across every restaurant, newest first.</summary>
+    Task<IReadOnlyList<DinerNotificationDto>> GetMyNotificationsAsync(int take, CancellationToken ct = default);
+
+    /// <summary>Marks one of the diner's own notifications read.</summary>
+    Task MarkNotificationReadAsync(Guid notificationId, CancellationToken ct = default);
+
+    /// <summary>Marks every one of the diner's notifications read.</summary>
+    Task MarkAllNotificationsReadAsync(CancellationToken ct = default);
 }

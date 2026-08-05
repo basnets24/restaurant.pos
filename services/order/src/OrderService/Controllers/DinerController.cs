@@ -65,4 +65,31 @@ public class DinerController : ControllerBase
         await _diner.CancelMyOrderAsync(orderId, ct);
         return NoContent();
     }
+
+    /// <summary>What has happened to this diner's orders, at any restaurant. Tenant headers are
+    /// ignored here for the same reason they are on <c>history</c>.</summary>
+    [HttpGet("notifications")]
+    [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
+    public async Task<ActionResult<IEnumerable<DinerNotificationDto>>> MyNotifications(
+        [FromQuery] int take, CancellationToken ct)
+        => Ok(await _diner.GetMyNotificationsAsync(take is <= 0 or > 100 ? 50 : take, ct));
+
+    /// <summary>DinerRead, not DinerWrite: clearing your own badge is not an act on an order,
+    /// and gating it behind the write scope would mean a read-only session could see a count it
+    /// could never clear.</summary>
+    [HttpPost("notifications/{id:guid}/read")]
+    [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
+    public async Task<IActionResult> MarkNotificationRead(Guid id, CancellationToken ct)
+    {
+        await _diner.MarkNotificationReadAsync(id, ct);
+        return NoContent();
+    }
+
+    [HttpPost("notifications/read-all")]
+    [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
+    public async Task<IActionResult> MarkAllNotificationsRead(CancellationToken ct)
+    {
+        await _diner.MarkAllNotificationsReadAsync(ct);
+        return NoContent();
+    }
 }

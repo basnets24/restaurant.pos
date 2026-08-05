@@ -27,6 +27,7 @@ public class DinerOrderService : IDinerOrderService
     private readonly IPricingService _pricing;
     private readonly IOrderService _orderLifecycle;
     private readonly ICustomerOrderHistory _history;
+    private readonly ICustomerNotifier _notifications;
     private readonly ILogger<DinerOrderService> _logger;
 
     public DinerOrderService(
@@ -40,10 +41,12 @@ public class DinerOrderService : IDinerOrderService
         IPricingService pricing,
         IOrderService orderLifecycle,
         ICustomerOrderHistory history,
+        ICustomerNotifier notifications,
         ILogger<DinerOrderService> logger)
     {
         _orderLifecycle = orderLifecycle;
         _history = history;
+        _notifications = notifications;
         _carts = carts;
         _catalog = catalog;
         _cartRepo = cartRepo;
@@ -171,10 +174,30 @@ public class DinerOrderService : IDinerOrderService
         // it does there instead of announcing that it exists by refusing differently.
         var order = await GetMyOrderAsync(orderId, ct);
 
-        await _orderLifecycle.CancelAsync(order.Id, ct);
+        await _orderLifecycle.CancelAsync(order.Id, "You cancelled this order.", ct);
         _logger.LogInformation("Diner {CustomerId} cancelled their order {OrderId}",
             order.CustomerId, order.Id);
     }
+
+    /// <summary>
+    /// The diner's notifications, across every restaurant. Like the history read this ignores
+    /// the request's tenant headers, and for the same reason: the diner is not inside any one
+    /// restaurant when they check what has happened to their orders.
+    /// </summary>
+    public async Task<IReadOnlyList<DinerNotificationDto>> GetMyNotificationsAsync(
+        int take, CancellationToken ct = default)
+    {
+        var notifications = await _notifications.GetForCustomerAsync(_currentUser.UserId, take, ct);
+        return notifications.Select(n => n.ToDinerDto()).ToList();
+    }
+
+    /// <summary>Ownership is enforced inside the notifier, by making CustomerId part of the
+    /// predicate rather than a check after the fact.</summary>
+    public Task MarkNotificationReadAsync(Guid notificationId, CancellationToken ct = default)
+        => _notifications.MarkReadAsync(_currentUser.UserId, notificationId, ct);
+
+    public Task MarkAllNotificationsReadAsync(CancellationToken ct = default)
+        => _notifications.MarkAllReadAsync(_currentUser.UserId, ct);
 
     /// <summary>
     /// The order this cart already produced, if any. A cart id doubles as its order's id, so

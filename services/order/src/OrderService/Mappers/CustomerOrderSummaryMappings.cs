@@ -21,4 +21,17 @@ public static class CustomerOrderSummaryMappings
             PickupTime: s.PickupTime,
             PaidAt: s.PaidAt,
             CancelledAt: s.CancelledAt);
+
+    public static DinerNotificationDto ToDinerDto(this CustomerNotification n) =>
+        new(
+            Id: n.Id,
+            OrderId: n.OrderId,
+            RestaurantId: n.RestaurantId,
+            LocationId: n.LocationId,
+            RestaurantName: n.RestaurantName,
+            Type: n.Type,
+            Title: n.Title,
+            Message: n.Message,
+            CreatedAt: n.CreatedAt,
+            ReadAt: n.ReadAt);
 }

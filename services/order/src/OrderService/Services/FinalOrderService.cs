@@ -21,6 +21,7 @@ public class FinalOrderService : IOrderService
     private readonly ITenantContext _tenant;
     private readonly INotificationService _notifications;
     private readonly ICustomerOrderHistory _history;
+    private readonly ICustomerNotifier _customerNotifications;
 
     public FinalOrderService(IRepository<Order> orders,
         ILogger<FinalOrderService> logger,
@@ -29,9 +30,11 @@ public class FinalOrderService : IOrderService
         IRepository<DiningTable> tables,
         ITenantContext tenant,
         INotificationService notifications,
-        ICustomerOrderHistory history)
+        ICustomerOrderHistory history,
+        ICustomerNotifier customerNotifications)
     {
         _history = history;
+        _customerNotifications = customerNotifications;
         _orders = orders;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
@@ -93,6 +96,15 @@ public class FinalOrderService : IOrderService
         await _orders.UpdateAsync(order);
         await _history.RecordAsync(order, ct);
 
+        // No amount in the text, deliberately. Formatting money is the frontend's job - `money()`
+        // owns the one currency assumption in the app - and a ":C" here renders in whatever
+        // culture the server host happens to run under, which on a dev machine is not the
+        // diner's. The notification links to the order, which shows the total properly.
+        await _customerNotifications.NotifyAsync(order,
+            CustomerNotificationType.OrderPaid,
+            "Payment received",
+            "Your order is paid. We'll have it ready for pickup.", ct);
+
         if (order.TableId is Guid tableId)
         {
             var table = await _tables.GetAsync(tableId);
@@ -105,7 +117,7 @@ public class FinalOrderService : IOrderService
         }
     }
 
-    public async Task CancelAsync(Guid orderId, CancellationToken ct = default)
+    public async Task CancelAsync(Guid orderId, string? reason = null, CancellationToken ct = default)
     {
         var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
         if (order.Status == OrderStatus.Paid)
@@ -134,6 +146,13 @@ public class FinalOrderService : IOrderService
             NotificationType.OrderCancelled,
             "Order cancelled",
             null, "Order", order.Id, ct);
+
+        // Raised for the diner's own cancel too, not just the sweep's and the staff's. It is the
+        // one record of the order ending that outlives the screen they tapped it on.
+        await _customerNotifications.NotifyAsync(order,
+            CustomerNotificationType.OrderCancelled,
+            "Order cancelled",
+            reason ?? "Your order was cancelled. You haven't been charged.", ct);
     }
 
 }
