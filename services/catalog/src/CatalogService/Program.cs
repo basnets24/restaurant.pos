@@ -7,6 +7,7 @@ using CatalogService.Auth;
 using CatalogService.Consumers;
 using CatalogService.Data;
 using CatalogService.Entities;
+using CatalogService.Features.Modifiers;
 using CatalogService.Features.PublicMenu;
 using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
@@ -26,6 +27,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddScoped<MenuStockService>();
 builder.Services.AddScoped<IPublicMenuService, PublicMenuService>();
+builder.Services.AddScoped<IModifierGroupService, ModifierGroupService>();
 
 // Identity's public discovery endpoint, reusing the authority already configured for JWT
 // validation rather than adding a second setting pointing at the same service. Short timeout:
