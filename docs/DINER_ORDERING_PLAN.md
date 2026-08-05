@@ -591,32 +591,33 @@ unaffected and anyone can sign up as an address they don't own. Both need infras
 platform doesn't have (a CAPTCHA provider, an outbound mailer). Still blocking a genuinely
 public deployment.
 
-### Still blocked: `Messaging.Contracts` merge gate
-Cannot be cleared before merge, by construction — `publish-messaging-contracts.yml` only fires on
-a push to `dev`/`main`. Checked the feed on 2026-08-05: newest published is **1.0.6** (dev's own
-declared version), so order and payment keep their `ProjectReference` for now. The bump is real
-(1.0.6 → 1.0.7), so the `--skip-duplicate` silent-no-op failure mode doesn't apply, and
-`dotnet pack` produces a clean `Messaging.Contracts.1.0.7.nupkg`. (`Tenant.Domain` 2.1.0 *is* on
-the feed — that gate was closed correctly.)
+### `Messaging.Contracts` merge gate — **CLOSED 2026-08-05**
+Was blocked by construction — `publish-messaging-contracts.yml` only fires on a push to
+`dev`/`main`, so the version couldn't be confirmed on the feed until something actually merged.
+Closed via the recommended sequence below, widened to also cover Phase 7's 1.0.8 bump (the gate
+was still open when Phase 7 started, so its `MenuItemModifiersChanged` addition rode the same
+PR rather than opening a second one):
+
+1. `dev` merged into `diner-ordering` (picked up `726ac9f`, the `Tenant.Domain` discovery-fields
+   commit) — clean merge, no conflicts.
+2. [PR #25](https://github.com/basnets24/restaurant.pos/pull/25) opened against `dev`, containing
+   only `shared/Messaging.Contracts/` (the `PaymentRequested.CustomerId` addition from Phase 4
+   plus `MenuItemModifiersChanged` from Phase 7, both already additive/non-breaking) — merged.
+3. `publish-messaging-contracts.yml` ran on the merge and succeeded; confirmed via the version
+   index (not `dotnet package search`) that **1.0.8** is on the feed.
+4. All three csprojs (`order`, `payment`, `catalog`) flipped from `ProjectReference` back to
+   `PackageReference Version="1.0.8"`. Required a local NuGet cache clear
+   (`rm -rf ~/.nuget/packages/messaging.contracts/1.0.8`) and a clean `obj/`/`bin/` on `order`
+   (a stale `.nuget.g.props` from the `ProjectReference` era collided on restore) before
+   `dotnet restore`/`build` picked up the real package. Solution builds clean.
 
 > **Check the feed with the version index, not `dotnet package search`.** That command reported
 > 1.0.4 as newest while 1.0.6 had been published for ten months — GitHub's NuGet *search* index
 > lags arbitrarily behind the *registration* index that restore actually uses. Use:
 > `curl -u <user>:$GH_PAT https://nuget.pkg.github.com/basnets24/messaging.contracts/index.json`
 
-**Recommended sequence** (see also the `Tenant.Domain` precedent — dev's tip `726ac9f` is exactly
-this pattern, a shared-library-only commit merged to dev so the package existed before anything
-referenced it):
-
-1. Merge `dev` into `diner-ordering` — the branch is behind by `726ac9f`.
-2. Open a small PR to `dev` containing **only** `shared/Messaging.Contracts/` (the
-   `PaymentRequested.CustomerId` addition + the 1.0.7 bump). Safe to merge alone: `CustomerId` is
-   an optional trailing parameter, so every existing publisher on `dev` compiles unchanged, and
-   nothing on `dev` consumes it yet.
-3. Merging it publishes 1.0.7. Confirm via the version index above.
-4. Flip both `.csproj` files to `<PackageReference Include="Messaging.Contracts" Version="1.0.7" />`
-   on `diner-ordering`, closing this gate.
-5. Then open the diner-ordering PR, with no merge gate left in it.
+*(The sequence actually followed, once 1.0.8 was in the picture too, is the numbered list above —
+this originally previewed 1.0.7 only, before the gate closed.)*
 
 ---
 
@@ -664,8 +665,8 @@ deliberately left alone.
 **Not covered by this phase, and still open:**
 - Visual confirmation that `DinerNotificationBell` renders correctly in a browser — it exists
   and is wired up, but nothing has actually looked at it rendered.
-- Merge gate #17 (`Messaging.Contracts` 1.0.7) — tracked separately, blocked by construction
-  until something merges to `dev`.
+- ~~Merge gate #17 (`Messaging.Contracts` 1.0.7)~~ — closed 2026-08-05 as part of the wider
+  1.0.8 gate closure; see Phase 7.
 
 ---
 
@@ -759,13 +760,17 @@ catalog → event → projector path, not just the catalog write. Edited the gro
 preserved by id, not recreated) and deleted it, confirming the projection went back to `[]` and
 the delete cascaded in catalog's own tables.
 
-**Not done as part of this phase:**
-- Not pushed to `dev`/`main` — catalog's `Messaging.Contracts` flip stays on `ProjectReference`
-  until that happens, same as order/payment's existing 1.0.7 gate.
-- Nothing committed yet.
+**Not done as part of this phase, closed shortly after (2026-08-05):**
+- ~~Not pushed to `dev`/`main`~~ — see the merge gate closure above; all three services are back
+  on `PackageReference Version="1.0.8"`.
+- ~~Nothing committed yet~~ — five commits landed on `diner-ordering`, then pushed.
+
+**Still not done:**
 - The E2E fixture (`e2e/fixtures/dinerMenu.ts`) still seeds its modifier group via raw `psql`
   rather than the new API — simpler for a fixture than driving the management UI or minting a
   second staff token, not a gap in the API itself. Left as-is.
+- No Playwright coverage for the staff modifier CRUD flow itself (create/edit/delete through the
+  Menu tab) — verified by hand in the browser during this phase, not automated.
 
 ---
 
