@@ -67,15 +67,7 @@ builder.Services.AddScoped<ICustomerOrderHistory, CustomerOrderHistoryService>()
 builder.Services.AddScoped<ICustomerNotifier, CustomerNotificationService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
 
-var catalogSettings = builder.Configuration.GetSection(nameof(CatalogSettings)).Get<CatalogSettings>()
-    ?? throw new InvalidOperationException("CatalogSettings is not configured.");
-builder.Services.AddHttpClient<ICatalogMenuClient, CatalogMenuClient>(c =>
-{
-    c.BaseAddress = new Uri(catalogSettings.BaseUrl.TrimEnd('/') + "/");
-    // Checkout is a person waiting on a button. Better to fail fast and let them retry than
-    // to hold the request open while catalog is wedged.
-    c.Timeout = TimeSpan.FromSeconds(5);
-});
+builder.Services.AddScoped<ICatalogMenuClient, CatalogMenuClient>();
 
 // Identity's public discovery endpoint, reusing the authority already configured for JWT
 // validation rather than adding a second setting that points at the same service. Only ever

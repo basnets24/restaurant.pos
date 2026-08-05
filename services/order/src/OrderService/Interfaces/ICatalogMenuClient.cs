@@ -2,14 +2,17 @@ using OrderService.Entities;
 
 namespace OrderService.Interfaces;
 
-/// <summary>Reads catalog's public menu so the order service can price modifier selections
-/// itself instead of trusting the request body.</summary>
+/// <summary>Resolves menu items' modifier groups so the order service can price a diner's
+/// selections itself instead of trusting the request body. Backed by the POS read-model
+/// projection (<c>PosCatalogItem.Modifiers</c>), not a live call to catalog - see
+/// <c>CatalogMenuClient</c>.</summary>
 public interface ICatalogMenuClient
 {
-    /// <summary>Every orderable item at this location, keyed by menu item id, with its
-    /// modifier groups and each option already shaped as a snapshottable selection.</summary>
+    /// <summary>The requested menu items, keyed by id, with their modifier groups and each
+    /// option already shaped as a snapshottable selection. Items with no modifiers configured
+    /// are still present, with an empty group list.</summary>
     Task<IReadOnlyDictionary<Guid, MenuItemModifiers>> GetModifiersAsync(
-        string restaurantId, string locationId, CancellationToken ct = default);
+        IEnumerable<Guid> menuItemIds, CancellationToken ct = default);
 }
 
 public record MenuItemModifiers(string Name, IReadOnlyList<ModifierGroupInfo> Groups);

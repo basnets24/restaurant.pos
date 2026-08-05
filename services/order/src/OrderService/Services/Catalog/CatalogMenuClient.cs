@@ -1,78 +1,52 @@
-using System.Net.Http.Json;
+using Common.Library;
 using OrderService.Entities;
-using OrderService.Exceptions;
 using OrderService.Interfaces;
+using OrderService.Projections;
 
 namespace OrderService.Services.Catalog;
 
 /// <summary>
-/// Resolves modifier selections against catalog at checkout time.
+/// Resolves modifier selections against the POS read-model projection at checkout time.
 ///
-/// Why an HTTP call, in a platform that is otherwise event-driven: the order service has no
-/// modifier data at all. <c>PosCatalogItem</c> projects name, price, stock and availability -
-/// nothing about modifier groups - and a diner line's price is base + deltas. The deltas have
-/// to come from somewhere authoritative, and it cannot be the request body: a client that
-/// prices its own line can send a delta of -100.
+/// Used to be a synchronous HTTP call to catalog's /public/menu - the order service had no
+/// modifier data of its own, because modifier rows were seeded by script and fired no events.
+/// Now that catalog publishes <c>MenuItemModifiersChanged</c> and <c>PosReadModelProjector</c>
+/// folds it into <c>PosCatalogItem.Modifiers</c>, this reads that projection instead: no
+/// cross-service call at checkout, and no more "menu is temporarily unavailable" failure mode
+/// when catalog itself is down.
 ///
-/// A projection would be the house style, but modifier rows are currently seeded by script
-/// straight into catalog's tables, so no events ever fire for them and a projection would
-/// start life empty with no way to backfill. Revisit when modifiers get a real authoring UI
-/// that publishes events - see task in DINER_ORDERING_PLAN.md.
-///
-/// Failure is not silently tolerated. If catalog is unreachable we cannot price the order, so
-/// checkout fails rather than falling back to whatever the client claimed.
+/// Still not silently tolerant of a missing item, though for a different reason now - an id
+/// with no matching row just isn't in the returned dictionary, and <c>DinerOrderService.Resolve</c>
+/// treats that the same way it always has: reject the line, don't guess.
 /// </summary>
 public class CatalogMenuClient : ICatalogMenuClient
 {
-    private readonly HttpClient _http;
-    private readonly ILogger<CatalogMenuClient> _logger;
+    private readonly IRepository<PosCatalogItem> _posCatalog;
 
-    public CatalogMenuClient(HttpClient http, ILogger<CatalogMenuClient> logger)
+    public CatalogMenuClient(IRepository<PosCatalogItem> posCatalog)
     {
-        _http = http;
-        _logger = logger;
+        _posCatalog = posCatalog;
     }
 
     public async Task<IReadOnlyDictionary<Guid, MenuItemModifiers>> GetModifiersAsync(
-        string restaurantId, string locationId, CancellationToken ct = default)
+        IEnumerable<Guid> menuItemIds, CancellationToken ct = default)
     {
-        PublicMenuResponse? menu;
-        try
-        {
-            menu = await _http.GetFromJsonAsync<PublicMenuResponse>(
-                $"public/menu?restaurantId={Uri.EscapeDataString(restaurantId)}" +
-                $"&locationId={Uri.EscapeDataString(locationId)}", ct);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            _logger.LogError(ex, "Could not reach catalog to price modifiers for {RestaurantId}/{LocationId}",
-                restaurantId, locationId);
-            throw new BusinessRuleException("The menu is temporarily unavailable. Please try again.");
-        }
+        var ids = menuItemIds.ToHashSet();
+        if (ids.Count == 0) return new Dictionary<Guid, MenuItemModifiers>();
 
-        if (menu is null) return new Dictionary<Guid, MenuItemModifiers>();
+        // Tenant scoping comes for free from PosCatalogItem's EF query filter - no explicit
+        // restaurantId/locationId predicate needed, unlike the old HTTP call.
+        var items = await _posCatalog.GetAllAsync(i => ids.Contains(i.Id));
 
-        return menu.Categories
-            .SelectMany(c => c.Items)
-            .ToDictionary(
-                i => i.Id,
-                i => new MenuItemModifiers(
-                    i.Name,
-                    i.ModifierGroups.Select(g => new ModifierGroupInfo(
-                        g.Id, g.Name, g.SelectionType, g.Required,
-                        g.Options.ToDictionary(
-                            o => o.Id,
-                            o => new SelectedModifier(g.Id, g.Name, o.Id, o.Name, o.PriceDelta))))
-                        .ToList()));
+        return items.ToDictionary(
+            i => i.Id,
+            i => new MenuItemModifiers(
+                i.Name,
+                i.Modifiers.Select(g => new ModifierGroupInfo(
+                    g.Id, g.Name, g.SelectionType, g.Required,
+                    g.Options.ToDictionary(
+                        o => o.Id,
+                        o => new SelectedModifier(g.Id, g.Name, o.Id, o.Name, o.PriceDelta))))
+                    .ToList()));
     }
-
-    // Mirrors CatalogService.Features.PublicMenu's DTOs. Deliberately re-declared rather than
-    // shared: this is a wire contract between two services, and the day catalog reshapes its
-    // internal DTO we want a deserialisation change here to be a decision, not a silent break.
-    private record PublicMenuResponse(List<PublicMenuCategory> Categories);
-    private record PublicMenuCategory(List<PublicMenuItem> Items);
-    private record PublicMenuItem(Guid Id, string Name, decimal Price, List<PublicModifierGroup> ModifierGroups);
-    private record PublicModifierGroup(
-        Guid Id, string Name, string SelectionType, bool Required, List<PublicModifierOption> Options);
-    private record PublicModifierOption(Guid Id, string Name, decimal PriceDelta, bool IsDefault);
 }

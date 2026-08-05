@@ -1,5 +1,4 @@
 using Common.Library;
-using Common.Library.Tenancy;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Exceptions;
@@ -22,7 +21,6 @@ public class DinerOrderService : IDinerOrderService
     private readonly IRepository<Cart> _cartRepo;
     private readonly IRepository<Order> _orders;
     private readonly ICurrentUserAccessor _currentUser;
-    private readonly ITenantContext _tenant;
     private readonly IRepository<PosCatalogItem> _posCatalog;
     private readonly IPricingService _pricing;
     private readonly IOrderService _orderLifecycle;
@@ -36,7 +34,6 @@ public class DinerOrderService : IDinerOrderService
         IRepository<Cart> cartRepo,
         IRepository<Order> orders,
         ICurrentUserAccessor currentUser,
-        ITenantContext tenant,
         IRepository<PosCatalogItem> posCatalog,
         IPricingService pricing,
         IOrderService orderLifecycle,
@@ -52,7 +49,6 @@ public class DinerOrderService : IDinerOrderService
         _cartRepo = cartRepo;
         _orders = orders;
         _currentUser = currentUser;
-        _tenant = tenant;
         _posCatalog = posCatalog;
         _pricing = pricing;
         _logger = logger;
@@ -75,7 +71,7 @@ public class DinerOrderService : IDinerOrderService
             return new DinerCheckoutResultDto(placed.Id, placed.GrandTotal, placed.Status);
         }
 
-        var menu = await _catalog.GetModifiersAsync(_tenant.RestaurantId, _tenant.LocationId, ct);
+        var menu = await _catalog.GetModifiersAsync(dto.Items.Select(i => i.MenuItemId), ct);
         var lines = dto.Items.Select(line => Resolve(line, menu)).ToList();
 
         var cart = await GetOrCreateCartAsync(dto, customerId);
@@ -104,7 +100,7 @@ public class DinerOrderService : IDinerOrderService
     {
         if (dto.Items.Count == 0) throw new BusinessRuleException("Your cart is empty.");
 
-        var menu = await _catalog.GetModifiersAsync(_tenant.RestaurantId, _tenant.LocationId, ct);
+        var menu = await _catalog.GetModifiersAsync(dto.Items.Select(i => i.MenuItemId), ct);
         var lines = dto.Items.Select(line => Resolve(line, menu)).ToList();
 
         decimal subtotal = 0m;

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
@@ -29,7 +30,22 @@ namespace OrderService.Projections
         public long InventoryVersion { get; set; }
 
         public DateTimeOffset UpdatedAt { get; set; }
+
+        /// <summary>The item's full current modifier-group set, folded from
+        /// <see cref="MenuItemModifiersChanged"/> snapshots. Empty until catalog publishes one -
+        /// most items have no modifiers at all.</summary>
+        public List<PosModifierGroup> Modifiers { get; set; } = new();
     }
+
+    /// <summary>
+    /// Deliberately re-declared rather than reusing Messaging.Contracts' ModifierGroupSnapshot -
+    /// this is the read model's own on-disk shape (jsonb via JsonConverters.ListConverter), not
+    /// the wire event, the same way CatalogMenuClient re-declares catalog's public-menu DTOs.
+    /// </summary>
+    public sealed record PosModifierGroup(
+        Guid Id, string Name, string SelectionType, bool Required, List<PosModifierOption> Options);
+
+    public sealed record PosModifierOption(Guid Id, string Name, decimal PriceDelta, bool IsDefault);
 
     // ---- Projector (single consumer class; one receive endpoint) ----
     // Every handler is a single atomic INSERT ... ON CONFLICT DO UPDATE against
@@ -40,6 +56,7 @@ namespace OrderService.Projections
         IConsumer<MenuItemCreated>,
         IConsumer<MenuItemUpdated>,
         IConsumer<MenuItemDeleted>,
+        IConsumer<MenuItemModifiersChanged>,
         IConsumer<InventoryItemUpdated>,
         IConsumer<InventoryItemDepleted>,
         IConsumer<InventoryItemRestocked>
@@ -75,6 +92,9 @@ namespace OrderService.Projections
                  WHERE "Id" = {e.Id} AND "RestaurantId" = {e.RestaurantId} AND "LocationId" = {location}
                  """);
         }
+
+        public Task Consume(ConsumeContext<MenuItemModifiersChanged> ctx) => UpsertModifiers(
+            ctx.Message.MenuItemId, ctx.Message.RestaurantId, ctx.Message.LocationId, ctx.Message.Groups);
 
         // ----------- INVENTORY -----------
 
@@ -118,6 +138,38 @@ namespace OrderService.Projections
                      "BasePrice" = {price},
                      "MenuAvailable" = {menuAvailable},
                      "IsAvailable" = (p."InventoryAvailable" AND {menuAvailable} AND p."Quantity" > 0),
+                     "UpdatedAt" = {updatedAt}
+                 """);
+        }
+
+        // Always the item's full current modifier set (see MenuItemModifiersChanged's doc
+        // comment) - so this only ever overwrites the column, never merges into it. The
+        // "Modifiers" column is omitted from UpsertMenuSide/UpsertInventorySide's INSERTs
+        // above and defaults to '[]'::jsonb (OrderDbContext), so a row created by either of
+        // those before any modifier exists is never left with a NULL there.
+        private async Task UpsertModifiers(Guid menuItemId, string restaurantId, string? locationId,
+            IReadOnlyList<ModifierGroupSnapshot> groups)
+        {
+            if (!SameTenant(restaurantId, locationId)) return;
+            var location = NormalizeLocation(locationId);
+            var updatedAt = DateTimeOffset.UtcNow;
+
+            var modifiers = groups.Select(g => new PosModifierGroup(
+                g.Id, g.Name, g.SelectionType, g.Required,
+                g.Options.Select(o => new PosModifierOption(o.Id, o.Name, o.PriceDelta, o.IsDefault)).ToList()
+            )).ToList();
+            var json = JsonSerializer.Serialize(modifiers, (JsonSerializerOptions?)null);
+
+            await _db.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                 INSERT INTO "order"."PosCatalogItems" AS p
+                     ("Id","RestaurantId","LocationId","Name","Category","BasePrice","MenuAvailable",
+                      "Quantity","InventoryAvailable","IsAvailable","MenuVersion","InventoryVersion","UpdatedAt","Modifiers")
+                 VALUES
+                     ({menuItemId},{restaurantId},{location},'','Uncategorized',0,false,
+                      0,false,false,0,0,{updatedAt},{json}::jsonb)
+                 ON CONFLICT ("Id") DO UPDATE SET
+                     "Modifiers" = {json}::jsonb,
                      "UpdatedAt" = {updatedAt}
                  """);
         }

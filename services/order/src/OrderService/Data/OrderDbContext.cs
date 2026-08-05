@@ -65,6 +65,16 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
             b.HasIndex(p => new { p.RestaurantId, p.LocationId });
             b.HasIndex(p => new { p.RestaurantId, p.LocationId, p.IsAvailable });
             b.HasIndex(p => new { p.RestaurantId, p.LocationId, p.Category, p.Name });
+
+            // Raw-SQL upserts (PosReadModelProjector) that don't know about modifiers omit this
+            // column entirely rather than writing an explicit '[]' - the DB default covers them.
+            b.Property(p => p.Modifiers)
+                .HasConversion(JsonConverters.ListConverter<PosModifierGroup>())
+                .Metadata.SetValueComparer(JsonConverters.ListComparer<PosModifierGroup>());
+            b.Property(p => p.Modifiers)
+                .HasColumnType("jsonb")
+                .HasDefaultValueSql("'[]'::jsonb")
+                .IsRequired();
         });
 
         modelBuilder.Entity<CustomerOrderSummary>(b =>
