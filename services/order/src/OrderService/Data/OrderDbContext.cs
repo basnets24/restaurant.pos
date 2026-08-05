@@ -24,6 +24,9 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
     public DbSet<PosCatalogItem> PosCatalogItems => Set<PosCatalogItem>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    /// <summary>Not tenant-scoped, unlike everything above it. See the entity.</summary>
+    public DbSet<CustomerOrderSummary> CustomerOrderSummaries => Set<CustomerOrderSummary>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -60,6 +63,15 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
             b.HasIndex(p => new { p.RestaurantId, p.LocationId });
             b.HasIndex(p => new { p.RestaurantId, p.LocationId, p.IsAvailable });
             b.HasIndex(p => new { p.RestaurantId, p.LocationId, p.Category, p.Name });
+        });
+
+        modelBuilder.Entity<CustomerOrderSummary>(b =>
+        {
+            b.HasKey(s => s.Id);
+            // The only way this table is ever queried: one customer, newest first. Note there
+            // is deliberately no (RestaurantId, LocationId) index - nothing reads it that way,
+            // and one would invite exactly the tenant-scoped query this table exists to avoid.
+            b.HasIndex(s => new { s.CustomerId, s.CreatedAt });
         });
 
         modelBuilder.Entity<Order>(b =>

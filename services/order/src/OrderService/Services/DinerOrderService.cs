@@ -4,6 +4,7 @@ using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Exceptions;
 using OrderService.Interfaces;
+using OrderService.Mappers;
 using OrderService.Projections;
 
 namespace OrderService.Services;
@@ -25,6 +26,7 @@ public class DinerOrderService : IDinerOrderService
     private readonly IRepository<PosCatalogItem> _posCatalog;
     private readonly IPricingService _pricing;
     private readonly IOrderService _orderLifecycle;
+    private readonly ICustomerOrderHistory _history;
     private readonly ILogger<DinerOrderService> _logger;
 
     public DinerOrderService(
@@ -37,9 +39,11 @@ public class DinerOrderService : IDinerOrderService
         IRepository<PosCatalogItem> posCatalog,
         IPricingService pricing,
         IOrderService orderLifecycle,
+        ICustomerOrderHistory history,
         ILogger<DinerOrderService> logger)
     {
         _orderLifecycle = orderLifecycle;
+        _history = history;
         _carts = carts;
         _catalog = catalog;
         _cartRepo = cartRepo;
@@ -125,6 +129,18 @@ public class DinerOrderService : IDinerOrderService
         var customerId = _currentUser.UserId;
         var orders = await _orders.GetAllAsync(o => o.CustomerId == customerId);
         return orders.OrderByDescending(o => o.CreatedAt).ToList();
+    }
+
+    /// <summary>
+    /// The cross-restaurant view. <see cref="GetMyOrdersAsync"/> above cannot answer this: it
+    /// reads <c>Order</c> through the tenant repository, so it only ever sees the restaurant
+    /// whose headers the request carried - which for a history screen is arbitrary, since the
+    /// diner is not browsing any restaurant when they open it.
+    /// </summary>
+    public async Task<IReadOnlyList<DinerOrderSummaryDto>> GetMyHistoryAsync(CancellationToken ct = default)
+    {
+        var summaries = await _history.GetForCustomerAsync(_currentUser.UserId, ct);
+        return summaries.Select(s => s.ToDinerSummaryDto()).ToList();
     }
 
     public async Task<Order> GetMyOrderAsync(Guid orderId, CancellationToken ct = default)

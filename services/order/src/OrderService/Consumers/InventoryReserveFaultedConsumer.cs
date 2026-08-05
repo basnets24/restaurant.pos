@@ -2,6 +2,7 @@ using Common.Library;
 using MassTransit;
 using Messaging.Contracts.Events.Inventory;
 using OrderService.Entities;
+using OrderService.Interfaces;
 
 namespace OrderService.Consumers;
 
@@ -12,11 +13,16 @@ namespace OrderService.Consumers;
 public class InventoryReserveFaultedConsumer : IConsumer<InventoryReserveFaulted>
 {
     private readonly IRepository<Order> _orders;
+    private readonly ICustomerOrderHistory _history;
     private readonly ILogger<InventoryReserveFaultedConsumer> _logger;
 
-    public InventoryReserveFaultedConsumer(IRepository<Order> orders, ILogger<InventoryReserveFaultedConsumer> logger)
+    public InventoryReserveFaultedConsumer(
+        IRepository<Order> orders,
+        ICustomerOrderHistory history,
+        ILogger<InventoryReserveFaultedConsumer> logger)
     {
         _orders = orders;
+        _history = history;
         _logger = logger;
     }
 
@@ -35,6 +41,11 @@ public class InventoryReserveFaultedConsumer : IConsumer<InventoryReserveFaulted
         order.Status = OrderStatus.Rejected;
         order.LastPaymentError = msg.Reason;
         await _orders.UpdateAsync(order);
+
+        // The one status this consumer owns outright - it never goes through FinalOrderService,
+        // so without this a diner whose order was rejected for stock would see it sitting at
+        // Pending in their history for good.
+        await _history.RecordAsync(order, context.CancellationToken);
         _logger.LogWarning("Order {OrderId} rejected: {Reason}", msg.OrderId, msg.Reason);
     }
 }

@@ -43,6 +43,13 @@ public class DinerController : ControllerBase
         return Ok(orders.Select(o => o.ToDto()));
     }
 
+    /// <summary>Every order this diner has placed, at any restaurant. The tenant headers on the
+    /// request are ignored here by design - the whole point is to look past them.</summary>
+    [HttpGet("history")]
+    [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
+    public async Task<ActionResult<IEnumerable<DinerOrderSummaryDto>>> MyHistory(CancellationToken ct)
+        => Ok(await _diner.GetMyHistoryAsync(ct));
+
     [HttpGet("orders/{orderId:guid}")]
     [Authorize(Policy = OrderPolicyExtensions.DinerRead)]
     public async Task<ActionResult<OrderDto>> MyOrder(Guid orderId, CancellationToken ct)

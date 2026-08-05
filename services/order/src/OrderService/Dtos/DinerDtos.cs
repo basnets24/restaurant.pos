@@ -28,3 +28,27 @@ public record DinerCheckoutLineDto(
 );
 
 public record DinerCheckoutResultDto(Guid OrderId, decimal GrandTotal, string Status);
+
+/// <summary>
+/// One row of the diner's history, which spans every restaurant they have ordered from - hence
+/// the restaurant fields, which no other diner response carries: elsewhere the tenant is implied
+/// by the request headers, and here it is precisely what varies.
+/// </summary>
+/// <param name="RestaurantName">Snapshotted when the order was placed, so it survives the
+/// restaurant leaving discovery. Null only if identity was unreachable at that moment.</param>
+public record DinerOrderSummaryDto(
+    Guid OrderId,
+    string RestaurantId,
+    string LocationId,
+    string? RestaurantName,
+    string? LocationName,
+    string Status,
+    string OrderType,
+    decimal GrandTotal,
+    int ItemCount,
+    string ItemSummary,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? PickupTime,
+    DateTimeOffset? PaidAt,
+    DateTimeOffset? CancelledAt
+);

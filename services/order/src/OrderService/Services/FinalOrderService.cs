@@ -20,6 +20,7 @@ public class FinalOrderService : IOrderService
     private readonly IPricingService _pricingService;
     private readonly ITenantContext _tenant;
     private readonly INotificationService _notifications;
+    private readonly ICustomerOrderHistory _history;
 
     public FinalOrderService(IRepository<Order> orders,
         ILogger<FinalOrderService> logger,
@@ -27,8 +28,10 @@ public class FinalOrderService : IOrderService
         IPricingService pricingService,
         IRepository<DiningTable> tables,
         ITenantContext tenant,
-        INotificationService notifications)
+        INotificationService notifications,
+        ICustomerOrderHistory history)
     {
+        _history = history;
         _orders = orders;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
@@ -59,6 +62,11 @@ public class FinalOrderService : IOrderService
 
         await _orders.CreateAsync(order);
         _logger.LogInformation("Order {OrderId} created", orderId);
+
+        // Written here rather than projected off OrderSubmitted: this service is both the
+        // publisher and the only consumer of that event, so the broker round trip would buy
+        // nothing but a window where a diner's own order is missing from their history.
+        await _history.RecordAsync(order, cancellationToken);
         _logger.LogInformation("Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
                                 "grand total is {grandTotal}", dto.Subtotal, pricing.TaxTotal, pricing.ServiceChargeTotal, pricing.Tip, pricing.GrandTotal);
 
@@ -83,6 +91,7 @@ public class FinalOrderService : IOrderService
         order.Status = OrderStatus.Paid;
         order.PaidAt = DateTimeOffset.UtcNow;
         await _orders.UpdateAsync(order);
+        await _history.RecordAsync(order, ct);
 
         if (order.TableId is Guid tableId)
         {
@@ -109,6 +118,7 @@ public class FinalOrderService : IOrderService
         order.Status = OrderStatus.Cancelled;
         order.CancelledAt = DateTimeOffset.UtcNow;
         await _orders.UpdateAsync(order);
+        await _history.RecordAsync(order, ct);
 
         await _publishEndpoint.Publish(new ReleaseInventory(
             CorrelationId: order.Id,

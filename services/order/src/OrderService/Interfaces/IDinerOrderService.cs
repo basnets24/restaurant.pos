@@ -11,8 +11,13 @@ public interface IDinerOrderService
     /// <summary>Prices, commits and fires a diner's cart in one call.</summary>
     Task<DinerCheckoutResultDto> CheckoutAsync(DinerCheckoutDto dto, CancellationToken ct = default);
 
-    /// <summary>Orders belonging to the authenticated diner, newest first.</summary>
+    /// <summary>Orders belonging to the authenticated diner at the restaurant in the request
+    /// headers, newest first. For every restaurant, see <see cref="GetMyHistoryAsync"/>.</summary>
     Task<IReadOnlyList<Order>> GetMyOrdersAsync(CancellationToken ct = default);
+
+    /// <summary>The diner's orders across every restaurant, newest first. Read off
+    /// <c>CustomerOrderSummary</c>, the one order table that is not tenant-scoped.</summary>
+    Task<IReadOnlyList<DinerOrderSummaryDto>> GetMyHistoryAsync(CancellationToken ct = default);
 
     /// <summary>One order, but only if it belongs to the authenticated diner.</summary>
     Task<Order> GetMyOrderAsync(Guid orderId, CancellationToken ct = default);
