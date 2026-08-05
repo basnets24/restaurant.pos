@@ -6,10 +6,11 @@ items, publishes domain events, and services the order saga's reserve/release
 inventory commands. Built with .NET 10, PostgreSQL/EF Core, MassTransit/RabbitMQ,
 and JWT Bearer auth.
 
-**Stock lives on the menu item.** `Entities/` contains exactly one file,
-`MenuItem.cs`, and stock is its `Quantity` field — there is no separate inventory
-entity, table, or endpoint. The `InventoryItem*` **event names** are still
-published off menu-item stock changes; they name events, not a second entity.
+**Stock lives on the menu item.** Stock is `MenuItem.Quantity` — there is no
+separate inventory entity, table, or endpoint. The `InventoryItem*` **event
+names** are still published off menu-item stock changes; they name events, not
+a second entity. `Entities/` additionally holds `ModifierGroup`/`ModifierOption`
+(single/multi-select add-ons such as size or extras) — see Diner ordering below.
 
 ## Features
 - Tenant-scoped menu items in PostgreSQL — one `MenuItems` table, stock included
@@ -23,6 +24,7 @@ published off menu-item stock changes; they name events, not a second entity.
   `PosReadModelProjector` consumes both families to fold one `IsAvailable` flag
 - Consumes `ReserveInventory`/`ReleaseInventory` from the order service, on the
   `inventory-reserve-inventory` / `inventory-release-inventory` queues
+- Anonymous `GET /public/menu` for the diner-facing surface (see below)
 - Serilog + Seq logging, OpenTelemetry, CORS for the frontend, Swagger in Development
 
 ## Getting Started
@@ -77,6 +79,29 @@ Notes
   `RestaurantId` and `LocationId` from the tenant context.
 - Controllers return simple paged results; repositories currently page in memory.
 
+## Diner ordering
+
+`GET /public/menu?restaurantId=&locationId=` — anonymous, returns available
+items (`IsAvailable && Quantity > 0`) grouped by category, each with its
+`modifierGroups[]` nested. Deliberately narrower than the staff `MenuItemDto`:
+no stock levels, no timestamps.
+
+**Gated on discoverability, and fails closed.** `Features/PublicMenu/LocationDirectoryClient.cs`
+asks identity's `public/restaurants/{r}/locations/{l}` (catalog has no copy of
+`IsDiscoverable` — it belongs to identity's `Location`, and projecting it would
+mean two sources of truth for who is publicly visible) and 404s the menu when
+that 404s. Unlike the order service's `TenantDirectoryClient` (which decorates
+a history row and swallows errors), this is an authorization gate: an
+unreachable identity returns `503`, not an open menu. Answers cache for one
+minute — short, because a stale `true` would keep serving a menu the restaurant
+just took down.
+
+`ModifierGroup`/`ModifierOption` (`SelectionType`: `Single`|`Multi`, `Required`,
+tenant-scoped) have **no staff authoring UI** — they exist only where
+`scripts/seed-discovery.sh` put them. The order service resolves modifier
+prices from this endpoint at checkout time rather than from a projection (see
+`services/order/CLAUDE.md`), so a negative `PriceDelta` can't be forged client-side.
+
 ## Messaging
 - **Publishes**: `MenuItemCreated`, `MenuItemUpdated`, `MenuItemDeleted`,
   `InventoryItemRestocked`, `InventoryItemDepleted`, `InventoryItemUpdated`
@@ -91,11 +116,12 @@ timeout, so an abandoned order still holds its reservation.
 - `Program.cs` — DI for Postgres/EF Core, MassTransit (including the explicit
   `inventory-reserve-inventory`/`inventory-release-inventory` receive endpoints),
   tenancy, auth, Swagger, CORS
-- `Controllers/MenuItemsController.cs` — the only controller
+- `Controllers/MenuItemsController.cs` — the staff menu/stock controller
 - `Services/MenuStockService.cs` — stock/availability transitions and event publishing
-- `Entities/MenuItem.cs` — the only entity (stock lives here as `Quantity`)
+- `Entities/MenuItem.cs`, `Entities/ModifierGroup.cs` (also holds `ModifierOption`)
 - `Dtos.cs` — request/response DTOs and paging models
 - `Auth/CatalogPolicyExtensions.cs` — `menu.read` / `menu.write` policies
+- `Features/PublicMenu/` — `PublicMenuController`, `PublicMenuService`, `LocationDirectoryClient`
 - `Consumers/` — `ReserveInventoryConsumer`, `ReleaseInventoryConsumer`
 - `Exceptions/` — `InsufficientInventoryException`, `UnknownItemException`
 

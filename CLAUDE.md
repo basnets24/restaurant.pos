@@ -51,7 +51,7 @@ npm run lint            # eslint
 | Service | Path | Ports (https/http) | Notes |
 |---|---|---|---|
 | identity | `services/identity/src/IdentityService` | 7163/5265 | Duende IdentityServer (OAuth2/OIDC). Absorbed the former `tenant` service — onboarding, location/membership management live under `Features/Tenancy/`. |
-| catalog | `services/catalog/src/CatalogService` | 7226/5062 | Merged former `menu` + `inventory` services. **One entity — `MenuItem`** (see below); publishes `MenuItemCreated/Updated/Deleted` and `InventoryItem*` events. |
+| catalog | `services/catalog/src/CatalogService` | 7226/5062 | Merged former `menu` + `inventory` services. Entities: `MenuItem` (see below) plus `ModifierGroup`/`ModifierOption`; publishes `MenuItemCreated/Updated/Deleted` and `InventoryItem*` events. Also serves the anonymous `GET /public/menu`. |
 | order | `services/order/src/OrderService` | 7288/5236 | Cart, ordering, dining tables, pricing, notifications, SignalR floor hub. Owns the order saga and the POS read-model projector (below). |
 | payment | `services/payment/PaymentService` | 7182/5238 | Stripe **PaymentIntent** integration; decoupled from the saga (see below). |
 
@@ -59,7 +59,7 @@ npm run lint            # eslint
 
 There is no `menu`, `inventory`, or `tenant` service directory — those names refer to features living inside `catalog`/`identity`.
 
-**Stock lives on the menu item.** `CatalogService/Entities/` contains exactly one file, `MenuItem.cs`, and stock is its `Quantity` field — no `InventoryItem` entity, no `/inventory-items` endpoint, no separate inventory table. The `InventoryItem*` names in `Messaging.Contracts` are *event* names published off menu-item stock changes; they don't imply a second entity. Stock updates go through `PATCH /menu-items/{id}` → `MenuStockService`, where `quantity` is **absolute, not a delta**, and `IsAvailable` re-derives as `Quantity > 0` unless explicitly overridden.
+**Stock lives on the menu item.** Stock is `MenuItem`'s `Quantity` field — no `InventoryItem` entity, no `/inventory-items` endpoint, no separate inventory table. The `InventoryItem*` names in `Messaging.Contracts` are *event* names published off menu-item stock changes; they don't imply a second entity. Stock updates go through `PATCH /menu-items/{id}` → `MenuStockService`, where `quantity` is **absolute, not a delta**, and `IsAvailable` re-derives as `Quantity > 0` unless explicitly overridden. `CatalogService/Entities/` also holds `ModifierGroup`/`ModifierOption` (single/multi-select add-ons, e.g. size or extras) — staff-managed but with no authoring UI yet, so in practice they only exist where a seed script put them; see Diner ordering below.
 
 ### Order saga (`OrderService/StateMachines/OrderStateMachine.cs`, MassTransit)
 The saga is deliberately kept small — it only covers inventory reservation, not payment:
@@ -80,6 +80,17 @@ Stateless singleton that computes subtotal / discounts / service charges / tax /
 
 ### Notifications (`OrderService`: `Entities/Notification.cs`, `Services/NotificationService.cs`, `NotificationsController`)
 Persisted, tenant-scoped notifications for dining-table and order lifecycle events (e.g. `OrderCancelled`); frontend consumes them via `domain/notifications`. Distinct from the SignalR floor hub, which is live-only broadcast with no persistence — the two are separate mechanisms, not layers of one.
+
+### Diner ordering (customer-facing, `/order` in the frontend)
+A second, anonymous-first surface alongside the staff POS, built on the same four services. Key differences from the staff flow, not a separate design:
+- **Discovery is cross-tenant by design.** `GET /public/restaurants` (identity, `Features/Discovery/`) lists `IsActive && IsDiscoverable` restaurants/locations directly off `TenantDbContext` — `Restaurant`/`Location` aren't `ITenantEntity` rows, they *are* the tenant, so there's no query filter to bypass. `GET /public/menu` (catalog) is gated behind identity's discoverability flag via `LocationDirectoryClient`, and **fails closed** — a 503 if identity is unreachable, not an open menu.
+- **A diner is not staff.** OIDC client `spoontab-diner` uses the `password` grant (a deliberate exception so the inline sign-in modal works) and the `diner` scope; `DinerWrite`/`DinerRead` policies require that scope with no role check, but every diner-facing read/write additionally checks `order.CustomerId`/`Payment.CustomerId` against the caller — ownership, not just scope, keeps one diner off another's orders.
+- **Checkout is one call, not two.** `POST /diner/checkout` (`OrderService/Controllers/DinerController.cs`) commits the order and reserves inventory like staff's "Fire to Kitchen", but `PaymentRequested` then publishes automatically once inventory is confirmed (`InventoryReservedConsumer`, gated on `OrderType == Pickup`) rather than needing a separate staff-initiated call. Staff keep the two-step fire-then-pay flow unchanged.
+- **Abandonment needs a sweep.** A diner has no staff backstop to cancel a walked-away order, so `AbandonedOrderSweeper` (order service, `BackgroundService`) cancels unpaid `Pickup` orders past a TTL (dine-in exempt) and releases their inventory — the same `ReleaseInventory` path as a manual cancel.
+- **Order history and notifications are the other two cross-tenant exceptions** — `CustomerOrderSummary`/`CustomerNotification` are deliberately not `ITenantEntity`, queried by `CustomerId` across restaurants, and written inline from the order lifecycle rather than projected off events.
+- **Modifiers have no authoring UI.** `ModifierGroup`/`ModifierOption` are seeded by `scripts/seed-discovery.sh`, not created through any staff screen.
+
+See `services/order/CLAUDE.md` and `services/frontend/CLAUDE.md` for the implementation-level detail (consumers, DbContext layout, `domain/discovery`/`features/diner` structure).
 
 ### Multi-tenancy (every request path)
 `TenantMiddleware` (Common.Library) reads `X-Restaurant-Id`/`X-Location-Id` headers into an AsyncLocal-backed context, falling back to hardcoded defaults (`acme-bistro`/`sjc-01`) if absent → MassTransit `TenantBusFilter`/`TenantConsumeFilter` propagate the same headers across events → `TenantEfRepository<T>` stamps tenant IDs on write → EF `HasQueryFilter`/`ApplyTenantQueryFilters` enforce tenant scoping on read, made correct per-tenant (not frozen to whichever tenant's request first compiled the model) via `ITenantScopedDbContext` + `TenantModelCacheKeyFactory`/`UseTenantModelCache()`.
