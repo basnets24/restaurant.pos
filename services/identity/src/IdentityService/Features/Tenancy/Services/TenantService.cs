@@ -165,6 +165,22 @@ public class TenantService : ITenantService
             location.Name = sanitizedName;
         }
 
+        // Deactivating unlists the location as well, and does not put it back on reactivation.
+        //
+        // UpdateLocationDiscoveryAsync refuses to list an inactive location; without this, that
+        // guard only held in one direction. Deactivating left IsDiscoverable sitting at true -
+        // invisible, because the discovery query needs both flags - and flipping IsActive back
+        // on months later silently republished the location to the marketplace, with nobody
+        // having decided that. Listing is meant to be an explicit act; so is relisting.
+        if (location.IsActive && !dto.IsActive && location.IsDiscoverable)
+        {
+            _logger.LogInformation(
+                "Location {LocationId} deactivated by user {UserId}; clearing its public listing",
+                locationId, userId);
+
+            location.IsDiscoverable = false;
+        }
+
         location.IsActive = dto.IsActive;
         location.TimeZoneId = dto.TimeZoneId;
 
