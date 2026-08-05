@@ -15,6 +15,9 @@ using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
 using OrderService.Projections;
+using OrderService.Services.Catalog;
+using OrderService.Services.Tenancy;
+using Common.Library.Settings;
 using Serilog;
 using Common.Library.Configuration;
 using Common.Library.HealthChecks;
@@ -51,12 +54,33 @@ builder.Services.AddTablesModule();
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(
     builder.Configuration.GetSection("Pricing"));
+builder.Services.Configure<AbandonedOrderSettings>(
+    builder.Configuration.GetSection("AbandonedOrders"));
+builder.Services.AddHostedService<AbandonedOrderSweeper>();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
+builder.Services.AddScoped<IDinerOrderService, DinerOrderService>();
 builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
+builder.Services.AddScoped<ICustomerOrderHistory, CustomerOrderHistoryService>();
+builder.Services.AddScoped<ICustomerNotifier, CustomerNotificationService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
+
+builder.Services.AddScoped<ICatalogMenuClient, CatalogMenuClient>();
+
+// Identity's public discovery endpoint, reusing the authority already configured for JWT
+// validation rather than adding a second setting that points at the same service. Only ever
+// called to decorate an order-history row, so a slow identity delays nothing that matters -
+// hence a timeout short enough that it cannot hold up a checkout.
+var serviceSettings = builder.Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>()
+    ?? throw new InvalidOperationException("ServiceSettings is not configured.");
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<ITenantDirectoryClient, TenantDirectoryClient>(c =>
+{
+    c.BaseAddress = new Uri(serviceSettings.Authority.TrimEnd('/') + "/");
+    c.Timeout = TimeSpan.FromSeconds(3);
+});
 
 
 

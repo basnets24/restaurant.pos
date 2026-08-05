@@ -165,10 +165,87 @@ public class TenantService : ITenantService
             location.Name = sanitizedName;
         }
 
+        // Deactivating unlists the location as well, and does not put it back on reactivation.
+        //
+        // UpdateLocationDiscoveryAsync refuses to list an inactive location; without this, that
+        // guard only held in one direction. Deactivating left IsDiscoverable sitting at true -
+        // invisible, because the discovery query needs both flags - and flipping IsActive back
+        // on months later silently republished the location to the marketplace, with nobody
+        // having decided that. Listing is meant to be an explicit act; so is relisting.
+        if (location.IsActive && !dto.IsActive && location.IsDiscoverable)
+        {
+            _logger.LogInformation(
+                "Location {LocationId} deactivated by user {UserId}; clearing its public listing",
+                locationId, userId);
+
+            location.IsDiscoverable = false;
+        }
+
         location.IsActive = dto.IsActive;
         location.TimeZoneId = dto.TimeZoneId;
 
         await _locationRepository.UpdateAsync(location);
+    }
+
+    public async Task UpdateRestaurantDiscoveryAsync(
+        Guid userId,
+        string restaurantId,
+        UpdateRestaurantDiscoveryDto dto,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ArgumentNullException.ThrowIfNull(restaurantId);
+
+        if (!await _tenantDb.IsTenantAdminAsync(userId, restaurantId, ct))
+            throw new UnauthorizedAccessException($"User {userId} is not an admin of restaurant {restaurantId}");
+
+        var restaurant = await _tenantRepository.GetByIdAsync(restaurantId)
+            ?? throw new KeyNotFoundException($"Restaurant {restaurantId} not found");
+
+        restaurant.Cuisine = string.IsNullOrWhiteSpace(dto.Cuisine)
+            ? null
+            : SanitizeInput(dto.Cuisine.Trim());
+
+        await _tenantRepository.UpdateAsync(restaurant);
+
+        _logger.LogInformation("Cuisine for restaurant {RestaurantId} set to '{Cuisine}' by user {UserId}",
+            restaurantId, restaurant.Cuisine, userId);
+    }
+
+    public async Task UpdateLocationDiscoveryAsync(
+        Guid userId,
+        string restaurantId,
+        string locationId,
+        UpdateLocationDiscoveryDto dto,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ArgumentNullException.ThrowIfNull(restaurantId);
+        ArgumentNullException.ThrowIfNull(locationId);
+
+        if (!await _tenantDb.IsTenantAdminAsync(userId, restaurantId, ct))
+            throw new UnauthorizedAccessException($"User {userId} is not an admin of restaurant {restaurantId}");
+
+        var location = await _locationRepository.GetByIdAsync(locationId);
+        if (location is null || location.RestaurantId != restaurantId)
+            throw new KeyNotFoundException($"Location {locationId} not found for restaurant {restaurantId}");
+
+        // An inactive location must never appear in public listings - discovery filters on
+        // both flags, but rejecting here makes the contradiction visible to the caller
+        // instead of silently accepting a setting that does nothing.
+        if (dto.IsDiscoverable && !location.IsActive)
+            throw new InvalidOperationException("An inactive location cannot be listed publicly.");
+
+        location.IsDiscoverable = dto.IsDiscoverable;
+        location.Address = string.IsNullOrWhiteSpace(dto.Address) ? null : SanitizeInput(dto.Address.Trim());
+        location.DisplayDistanceMiles = dto.DisplayDistanceMiles;
+        location.EstimatedPickupMinutes = dto.EstimatedPickupMinutes;
+
+        await _locationRepository.UpdateAsync(location);
+
+        _logger.LogInformation(
+            "Location {LocationId} of restaurant {RestaurantId} discoverable={IsDiscoverable} by user {UserId}",
+            locationId, restaurantId, dto.IsDiscoverable, userId);
     }
 
     private static string SanitizeInput(string input)

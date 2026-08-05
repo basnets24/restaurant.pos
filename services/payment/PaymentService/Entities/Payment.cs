@@ -8,6 +8,10 @@ public class Payment : IEntity, ITenantEntity
     public Guid Id { get; set; }
     public Guid OrderId { get; set; }
     public Guid CorrelationId { get; set; }
+    /// <summary>The diner who owns this payment, or null when staff are taking it at the POS.
+    /// This service holds no order data, so this is the only thing standing between a diner and
+    /// someone else's client secret - see the ownership check in PaymentSessionController.</summary>
+    public Guid? CustomerId { get; set; }
     public long Amount { get; set; }
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "Pending"; // Pending|Succeeded|Failed

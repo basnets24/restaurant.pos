@@ -1,4 +1,5 @@
 using IdentityService.Entities;
+using IdentityService.Features.Shared.Auth;
 using IdentityService.Features.Tenancy.Services;
 using IdentityService.Common.Settings;
 using Microsoft.AspNetCore.Identity;
@@ -46,7 +47,8 @@ public static class IdentityServerExtensions
            .AddInMemoryApiScopes(idp.ApiScopes)
            .AddInMemoryApiResources(idp.ApiResources)
            .AddInMemoryClients(idp.Clients)
-           .AddProfileService<TenantProfileService>();
+           .AddProfileService<TenantProfileService>()
+           .AddExtensionGrantValidator<DemoAdminGrantValidator>();
 
         if (environment.IsDevelopment())
         {

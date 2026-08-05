@@ -70,6 +70,104 @@ namespace CatalogService.Migrations
 
                     b.ToTable("MenuItems", "catalog");
                 });
+
+            modelBuilder.Entity("CatalogService.Entities.ModifierGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LocationId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("MenuItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("Required")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RestaurantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SelectionType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.HasIndex("RestaurantId", "LocationId", "MenuItemId");
+
+                    b.ToTable("ModifierGroups", "catalog");
+                });
+
+            modelBuilder.Entity("CatalogService.Entities.ModifierOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ModifierGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("PriceDelta")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModifierGroupId");
+
+                    b.ToTable("ModifierOptions", "catalog");
+                });
+
+            modelBuilder.Entity("CatalogService.Entities.ModifierGroup", b =>
+                {
+                    b.HasOne("CatalogService.Entities.MenuItem", null)
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CatalogService.Entities.ModifierOption", b =>
+                {
+                    b.HasOne("CatalogService.Entities.ModifierGroup", "Group")
+                        .WithMany("Options")
+                        .HasForeignKey("ModifierGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("CatalogService.Entities.ModifierGroup", b =>
+                {
+                    b.Navigation("Options");
+                });
 #pragma warning restore 612, 618
         }
     }

@@ -72,7 +72,11 @@ public class OrderController : ControllerBase
             TableId: order.TableId ?? Guid.Empty,
             AmountCents: (long)(order.GrandTotal * 100m),
             RestaurantId: order.RestaurantId,
-            LocationId: order.LocationId
+            LocationId: order.LocationId,
+            // Null for a walk-in, which is the usual case here. Passed anyway so that a diner's
+            // order re-requested from the POS lands on the same owner the diner's own path sets,
+            // rather than silently locking them out of their payment session.
+            CustomerId: order.CustomerId
         ), ct);
 
         return Accepted();
@@ -82,7 +86,7 @@ public class OrderController : ControllerBase
     [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<IActionResult> Cancel(Guid orderId, CancellationToken ct)
     {
-        await _orders.CancelAsync(orderId, ct);
+        await _orders.CancelAsync(orderId, ct: ct);
         return NoContent();
     }
 }

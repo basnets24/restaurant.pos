@@ -29,4 +29,20 @@ public interface ITenantService
         string locationId,
         UpdateLocationDto dto,
         CancellationToken ct = default);
+
+    /// <summary>Set restaurant-level diner discovery settings (cuisine).</summary>
+    Task UpdateRestaurantDiscoveryAsync(
+        Guid userId,
+        string restaurantId,
+        UpdateRestaurantDiscoveryDto dto,
+        CancellationToken ct = default);
+
+    /// <summary>Opt a location into (or out of) the public diner listings, and set what
+    /// that listing shows.</summary>
+    Task UpdateLocationDiscoveryAsync(
+        Guid userId,
+        string restaurantId,
+        string locationId,
+        UpdateLocationDiscoveryDto dto,
+        CancellationToken ct = default);
 }

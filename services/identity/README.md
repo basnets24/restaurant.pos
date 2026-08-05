@@ -7,6 +7,7 @@ Identity and authorization for the Restaurant POS platform: ASP.NET Core Identit
 - ASP.NET Core Identity: user and role management with EF Core
 - Multi-tenant claims: issues `restaurant_id`, `location_id`, and `role` via a custom profile service, resolved directly against the `tenant` schema via EF Core — no separate tenant service or HTTP hop
 - Restaurant onboarding, join-by-code, and location management (`Features/Tenancy/`)
+- Public restaurant discovery for the diner-facing surface, and diner self-signup — the platform's only anonymous endpoints (`Features/Discovery/`, see below)
 - Swagger UI in Development, Serilog + Seq logging, CORS for the frontend
 
 ## Getting Started
@@ -88,6 +89,24 @@ All endpoints are protected with IdentityServer's Local API policy unless noted.
 | `GET` | `/api/onboarding/status` | Current user's membership/onboarding status |
 | `GET` | `/api/onboarding/me/code` | Current user's restaurant join code/URL |
 
+### Discovery admin (tenant staff, Admin only)
+| Method | Route | Notes |
+|---|---|---|
+| `PUT` | `/tenants/{restaurantId}/discovery` | Set `Cuisine` |
+| `PUT` | `/tenants/{restaurantId}/locations/{locationId}/discovery` | Set `IsDiscoverable`, `Address`, `DisplayDistanceMiles`, `EstimatedPickupMinutes`. Rejects listing an inactive location (`400`). Deactivating a location (via the plain location-update endpoint) automatically clears its listing — relisting after reactivation is a separate, explicit call. |
+
+### Public discovery — `/public` (anonymous, cross-tenant; the platform's only unauthenticated surface besides diner registration below)
+| Method | Route | Notes |
+|---|---|---|
+| `GET` | `/public/restaurants` | Discoverable restaurants + locations. Filters: `q` (name/cuisine substring), `cuisine`; `sort`: `Recommended`\|`Distance`\|`Pickup` |
+| `GET` | `/public/restaurants/{restaurantId}/locations/{locationId}` | One listing — `404` whether it doesn't exist, isn't a location of that restaurant, or simply isn't discoverable (never confirms a private tenant exists). Consumed by catalog's `LocationDirectoryClient` to gate `GET /public/menu`. |
+| `GET` | `/public/cuisines` | Distinct cuisine values in use, for the discovery filter |
+
+### Diner self-signup — `/public/diner`
+| Method | Route | Notes |
+|---|---|---|
+| `POST` | `/public/diner/register` | Creates an account only — no roles, no tenant membership. Usable only through the `spoontab-diner` OIDC client. Rate limited to 5 requests per client address per 15 minutes (`429` + `Retry-After`); real client-address partitioning requires `ForwardedHeaders:KnownNetworks` to be set to the deployment's trusted proxy network, or every caller behind one ingress shares a single bucket. No CAPTCHA, no email verification. |
+
 ## Project Layout
 - `Program.cs` — service wiring (IdentityServer, Identity, EF Core, CORS, Serilog)
 - `Areas/Identity/Pages/` — scaffolded ASP.NET Core Identity Razor pages (login, register, password reset, 2FA)
@@ -97,6 +116,7 @@ All endpoints are protected with IdentityServer's Local API policy unless noted.
 - `Entities/` — ASP.NET Identity entities (`ApplicationUser`, `ApplicationRole`); shared by both `Features/` areas below, which is why it lives at the root
 - `Features/Identity/` — user management: `Controllers`, `DTOs`, `Repositories`, `Services`, `Extensions` (DTO mapping)
 - `Features/Tenancy/` — onboarding, tenants, and employees: `Controllers`, `DTOs`, `Repositories`, `Services`, `Validation`
+- `Features/Discovery/` — public restaurant/menu discovery and diner self-signup: `PublicDiscoveryController`, `DinerAccountController`, `RateLimitPolicies`
 - `Features/Shared/` — cross-feature `DTOs`/`Constants` (e.g. `Paged<T>`, `Roles`)
 - `Filters/` — validation action filters used by `Common/Extensions/ValidationExtensions`
 - `Middleware/` — global exception handling

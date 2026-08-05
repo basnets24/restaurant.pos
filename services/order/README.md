@@ -19,6 +19,7 @@ See [`CLAUDE.md`](./CLAUDE.md) in this folder for saga/consumer gotchas and the 
 - Pricing engine with configurable taxes, service charges, and discounts (appsettings) — cart responses carry a live `estimate` object, so the UI renders those figures rather than recomputing tax
 - Persisted notifications for order/table lifecycle events (`/api/notifications`) — distinct from the SignalR hub, which is live-only broadcast with no persistence
 - Real-time table updates over SignalR
+- Diner-facing ordering (`/diner/*`, see below): checkout, cross-restaurant order history, a background sweep that cancels abandoned pickup orders, and customer-addressed notifications
 - Serilog + Seq logging, CORS for the frontend, Swagger in Development
 
 ## Getting Started
@@ -74,6 +75,19 @@ dotnet run --project services/order/src/OrderService  # https://localhost:7288 /
 | `GET` | `/api/notifications` | List notifications for the current tenant |
 | `POST` | `/api/notifications/{id}/read` | Mark one as read |
 
+### Diner — `/diner` (customer-facing, `DinerRead`/`DinerWrite` policies — `diner` scope, no role check, plus an ownership check on every route)
+| Method | Route | Notes |
+|---|---|---|
+| `POST` | `/diner/quote` | Prices a cart without placing it — the same resolve-and-price path as checkout, persists nothing |
+| `POST` | `/diner/checkout` | Commits the order and reserves inventory, like "Fire to Kitchen" — but payment is requested automatically once inventory is confirmed (`InventoryReservedConsumer`), so there's no separate diner call to request payment |
+| `GET` | `/diner/orders` | The caller's own orders, tenant-scoped |
+| `GET` | `/diner/orders/{orderId}` | One of the caller's own orders |
+| `POST` | `/diner/orders/{orderId}/cancel` | Cancels the caller's own **unpaid** order — same `CancelAsync` path as staff cancel |
+| `GET` | `/diner/history` | The caller's orders **across every restaurant** — ignores tenant headers by design |
+| `GET` | `/diner/notifications` | The caller's own notifications, across every restaurant — also ignores tenant headers |
+| `POST` | `/diner/notifications/{id}/read` | Mark one read |
+| `POST` | `/diner/notifications/read-all` | Mark all read |
+
 ### Tables — `/api/tables`
 | Method | Route | Notes |
 |---|---|---|
@@ -99,17 +113,17 @@ Uses MassTransit with saga orchestration, configured in `Program.cs`; interacts 
 
 Payment is driven outside the saga by `OrderController.RequestPayment`, and payment/inventory outcomes are applied to the `Order` entity by handlers in `Consumers/` rather than by saga transitions. If an order's status looks wrong after a payment event, check the consumer, not the state machine.
 
-Inventory is reserved at checkout and released only when someone calls `POST /orders/{orderId}/cancel`. Nothing reclaims it automatically.
+Inventory is reserved at checkout and released when someone calls `POST /orders/{orderId}/cancel` — staff, a diner cancelling their own unpaid order (`POST /diner/orders/{orderId}/cancel`), or the `AbandonedOrderSweeper` background service, which cancels unpaid pickup orders past a configurable TTL (`AbandonedOrders` in `appsettings.json`; dine-in orders are exempt). Without one of those three, an abandoned order holds its reservation indefinitely.
 
 ## Project Layout
 - `Program.cs` — DI for Postgres/EF Core, tenancy, MassTransit saga, auth, Swagger, CORS, SignalR
-- `Controllers/` — carts, orders, tables, notifications
-- `Services/` — cart management, pricing, tables, notifications
-- `Entities/` — tenant-scoped entities (`Order`, `Cart`, `DiningTable`, `Notification`)
+- `Controllers/` — carts, orders, tables, notifications, `DinerController`
+- `Services/` — cart management, pricing, tables, notifications, `DinerOrderService`, `CustomerOrderHistoryService`, `CustomerNotificationService`, `AbandonedOrderSweeper`
+- `Entities/` — tenant-scoped entities (`Order`, `Cart`, `DiningTable`, `Notification`) plus `CustomerOrderSummary`/`CustomerNotification`, which are **not** tenant-scoped (a diner's history/notifications span restaurants)
 - `StateMachines/` — the MassTransit saga
 - `Consumers/`, `Projections/` — messaging workflows and the POS read-model projector
 - `Data/` — `OrderDbContext`, `OrderStateDbContext`, and their design-time factories
-- `Auth/` — authorization policies (`order.read`, `order.write`, etc.)
+- `Auth/` — authorization policies (`order.read`, `order.write`, `DinerRead`, `DinerWrite`, etc.)
 - `Dtos/`, `Extensions/`, `Hubs/`, `Settings/` — DTOs, helpers, SignalR hubs, typed settings
 
 ## Docker Build

@@ -36,8 +36,6 @@ const AdminTab           = lazy(() => import("@/features/management/tabs/AdminTa
 const OrganizationPage   = lazy(() => import("@/features/admin/pages/OrganizationPage"));
 const FloorPlanDesigner  = lazy(() => import("@/features/admin/pages/FloorPlanDesigner"));
 const RolesPage          = lazy(() => import("@/features/admin/pages/RolesPage"));
-const LocationsPage      = lazy(() => import("@/features/admin/pages/LocationsPage"));
-const IntegrationsPage   = lazy(() => import("@/features/admin/pages/IntegrationsPage"));
 
 // ---- Settings (profile only) ----
 const SettingsLayout     = lazy(() => import("@/features/settings/SettingsLayout"));
@@ -53,6 +51,14 @@ const MenuPage      = lazy(() => import("@/features/pos/routes/MenuPage"));
 const OrderPage     = lazy(() => import("@/features/pos/routes/OrderPage"));
 const ActiveOrdersPage = lazy(() => import("@/features/pos/routes/ActiveOrdersPage"));
 const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
+
+// ---- Diner ordering (public, customer-facing) ----
+const DinerLayout    = lazy(() => import("@/features/diner/DinerLayout"));
+const DiscoveryPage  = lazy(() => import("@/features/diner/routes/DiscoveryPage"));
+const RestaurantMenuPage = lazy(() => import("@/features/diner/routes/RestaurantMenuPage"));
+const DinerCheckoutPage  = lazy(() => import("@/features/diner/routes/CheckoutPage"));
+const DinerOrderStatusPage = lazy(() => import("@/features/diner/routes/OrderStatusPage"));
+const DinerOrderHistoryPage = lazy(() => import("@/features/diner/routes/OrderHistoryPage"));
 
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
@@ -71,6 +77,22 @@ export const router = createBrowserRouter([
   { path: AuthorizationPaths.LogOut,          element: <LogoutPage /> },
   { path: AuthorizationPaths.LogOutCallback,  element: <LogoutCallbackPage /> },
   { path: AuthorizationPaths.LoggedOut,       element: <LoggedOutPage /> },
+
+  // Diner ordering — public by design. Browsing restaurants and menus must work
+  // signed out; only placing an order requires an account, gated further in.
+  {
+    path: "/order",
+    element: <Suspense fallback={<Fallback />}><DinerLayout /></Suspense>,
+    children: [
+      { index: true, element: <Suspense fallback={<Fallback />}><DiscoveryPage /></Suspense> },
+      // Static segments before the :restaurantId/:locationId pattern, or "checkout" would
+      // match as a restaurant id.
+      { path: "checkout", element: <Suspense fallback={<Fallback />}><DinerCheckoutPage /></Suspense> },
+      { path: "orders", element: <Suspense fallback={<Fallback />}><DinerOrderHistoryPage /></Suspense> },
+      { path: "orders/:orderId", element: <Suspense fallback={<Fallback />}><DinerOrderStatusPage /></Suspense> },
+      { path: ":restaurantId/:locationId", element: <Suspense fallback={<Fallback />}><RestaurantMenuPage /></Suspense> },
+    ],
+  },
 
   // ========= PROTECTED (everything from /home onward) =========
   { path: "/join",
@@ -114,8 +136,6 @@ export const router = createBrowserRouter([
           { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
           { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
           { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
-          { path: "locations",    element: <Suspense fallback={<Fallback />}><LocationsPage /></Suspense> },
-          { path: "integrations", element: <Suspense fallback={<Fallback />}><IntegrationsPage /></Suspense> },
         ],
       },
     ],

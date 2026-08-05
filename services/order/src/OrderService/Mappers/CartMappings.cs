@@ -6,7 +6,17 @@ namespace OrderService.Mappers;
 
 public static class CartMappings
 {
-     
+    private static CartItemDto ToDto(this CartItem i) => new(
+        MenuItemId: i.MenuItemId,
+        MenuItemName: i.MenuItemName,
+        Quantity: i.Quantity,
+        UnitPrice: i.UnitPrice,
+        Notes: i.Notes,
+        LineId: i.LineId,
+        SelectedModifiers: i.SelectedModifiers
+            .Select(m => new SelectedModifierDto(m.GroupId, m.GroupName, m.OptionId, m.OptionName, m.PriceDelta))
+            .ToList());
+
     public static CartDto ToDto(
         this Cart cart,
         IPricingService pricing,
@@ -24,8 +34,7 @@ public static class CartMappings
                 ServerId: cart.ServerId,
                 ServerName: cart.ServerName,
                 GuestCount: cart.GuestCount,
-                Items: cart.Items.Select(i => new CartItemDto(
-                    i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes)).ToList(),
+                Items: cart.Items.Select(ToDto).ToList(),
                 CreatedAt: cart.CreatedAt
             )
             {
@@ -53,8 +62,7 @@ public static class CartMappings
             ServerId: cart.ServerId,
             ServerName: cart.ServerName,
             GuestCount: cart.GuestCount,
-            Items: cart.Items.Select(i => new CartItemDto(
-                i.MenuItemId, i.MenuItemName, i.Quantity, i.UnitPrice, i.Notes)).ToList(),
+            Items: cart.Items.Select(ToDto).ToList(),
             CreatedAt: cart.CreatedAt
         )
         {

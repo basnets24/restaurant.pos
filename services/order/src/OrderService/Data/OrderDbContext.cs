@@ -24,6 +24,11 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
     public DbSet<PosCatalogItem> PosCatalogItems => Set<PosCatalogItem>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    /// <summary>Neither of these is tenant-scoped, unlike everything above them. See the
+    /// entities.</summary>
+    public DbSet<CustomerOrderSummary> CustomerOrderSummaries => Set<CustomerOrderSummary>();
+    public DbSet<CustomerNotification> CustomerNotifications => Set<CustomerNotification>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -33,6 +38,9 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
         {
             b.HasKey(c => c.Id);
             b.HasIndex(c => new { c.RestaurantId, c.LocationId });
+            // Explicit default so rows that predate the column read as DineIn rather than "",
+            // which is what EF would otherwise backfill a non-nullable string column with.
+            b.Property(c => c.OrderType).HasDefaultValue(OrderTypes.DineIn);
             b.Property(c => c.Items)
                 .HasConversion(JsonConverters.ListConverter<CartItem>())
                 .Metadata.SetValueComparer(JsonConverters.ListComparer<CartItem>());
@@ -57,12 +65,46 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
             b.HasIndex(p => new { p.RestaurantId, p.LocationId });
             b.HasIndex(p => new { p.RestaurantId, p.LocationId, p.IsAvailable });
             b.HasIndex(p => new { p.RestaurantId, p.LocationId, p.Category, p.Name });
+
+            // Raw-SQL upserts (PosReadModelProjector) that don't know about modifiers omit this
+            // column entirely rather than writing an explicit '[]' - the DB default covers them.
+            b.Property(p => p.Modifiers)
+                .HasConversion(JsonConverters.ListConverter<PosModifierGroup>())
+                .Metadata.SetValueComparer(JsonConverters.ListComparer<PosModifierGroup>());
+            b.Property(p => p.Modifiers)
+                .HasColumnType("jsonb")
+                .HasDefaultValueSql("'[]'::jsonb")
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<CustomerOrderSummary>(b =>
+        {
+            b.HasKey(s => s.Id);
+            // The only way this table is ever queried: one customer, newest first. Note there
+            // is deliberately no (RestaurantId, LocationId) index - nothing reads it that way,
+            // and one would invite exactly the tenant-scoped query this table exists to avoid.
+            b.HasIndex(s => new { s.CustomerId, s.CreatedAt });
+        });
+
+        modelBuilder.Entity<CustomerNotification>(b =>
+        {
+            b.HasKey(n => n.Id);
+            // Same shape of read as the summaries above, and the same deliberate absence of a
+            // tenant index.
+            b.HasIndex(n => new { n.CustomerId, n.CreatedAt });
         });
 
         modelBuilder.Entity<Order>(b =>
         {
             b.HasKey(o => o.Id);
             b.HasIndex(o => new { o.RestaurantId, o.LocationId });
+
+            // A diner only ever queries their own orders, so every read on that path
+            // carries a CustomerId predicate on top of the tenant filter.
+            b.HasIndex(o => new { o.RestaurantId, o.LocationId, o.CustomerId });
+
+            // See the matching comment on Cart.OrderType.
+            b.Property(o => o.OrderType).HasDefaultValue(OrderTypes.DineIn);
 
             b.Property(o => o.Items)
                 .HasConversion(JsonConverters.ListConverter<OrderItem>())

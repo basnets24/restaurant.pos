@@ -46,6 +46,15 @@ namespace OrderService.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OrderType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("DineIn");
+
+                    b.Property<DateTimeOffset?>("PickupTime")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("RestaurantId")
                         .IsRequired()
                         .HasColumnType("text");
@@ -64,6 +73,113 @@ namespace OrderService.Migrations
                     b.HasIndex("RestaurantId", "LocationId");
 
                     b.ToTable("Carts", "order");
+                });
+
+            modelBuilder.Entity("OrderService.Entities.CustomerNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LocationId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RestaurantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RestaurantName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId", "CreatedAt");
+
+                    b.ToTable("CustomerNotifications", "order");
+                });
+
+            modelBuilder.Entity("OrderService.Entities.CustomerOrderSummary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("GrandTotal")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ItemSummary")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LocationId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LocationName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OrderType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("PickupTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RestaurantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RestaurantName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId", "CreatedAt");
+
+                    b.ToTable("CustomerOrderSummaries", "order");
                 });
 
             modelBuilder.Entity("OrderService.Entities.DiningTable", b =>
@@ -229,7 +345,16 @@ namespace OrderService.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OrderType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("DineIn");
+
                     b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("PickupTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReceiptUrl")
@@ -272,6 +397,8 @@ namespace OrderService.Migrations
 
                     b.HasIndex("RestaurantId", "LocationId");
 
+                    b.HasIndex("RestaurantId", "LocationId", "CustomerId");
+
                     b.ToTable("Orders", "order");
                 });
 
@@ -306,6 +433,12 @@ namespace OrderService.Migrations
 
                     b.Property<long>("MenuVersion")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("Modifiers")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
 
                     b.Property<string>("Name")
                         .IsRequired()

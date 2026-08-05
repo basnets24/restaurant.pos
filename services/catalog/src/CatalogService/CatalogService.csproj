@@ -9,7 +9,6 @@
 
     <ItemGroup>
         <PackageReference Include="Common.Library" Version="1.0.23" />
-        <PackageReference Include="Messaging.Contracts" Version="1.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
             <PrivateAssets>all</PrivateAssets>
@@ -17,8 +16,7 @@
         </PackageReference>
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+        <PackageReference Include="Messaging.Contracts" Version="1.0.8" />
     </ItemGroup>
-
-
 
 </Project>
