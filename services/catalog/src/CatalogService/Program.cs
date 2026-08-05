@@ -105,6 +105,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Auto-migrate DbContext on boot (idempotent; safe to run in every environment)
+using (var scope = app.Services.CreateScope())
+{
+    var catalogDbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+    catalogDbContext.Database.Migrate();
+}
+
 // Configure HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

@@ -69,6 +69,13 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Auto-migrate DbContext on boot (idempotent; safe to run in every environment)
+using (var scope = app.Services.CreateScope())
+{
+    var paymentDbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    paymentDbContext.Database.Migrate();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

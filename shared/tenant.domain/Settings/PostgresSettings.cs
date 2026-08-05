@@ -23,6 +23,8 @@ public class PostgresSettings
             return _connectionString;
         }
 
-        return $"Host={Host};Port={Port};Database={Database};Username={Username};Password={Password}";
+        // Trust Server Certificate is needed because the ASP.NET base container images'
+        // minimal CA bundle can fail to validate Supabase's cert chain otherwise.
+        return $"Host={Host};Port={Port};Database={Database};Username={Username};Password={Password};SSL Mode=Require;Trust Server Certificate=true";
     }
 }
