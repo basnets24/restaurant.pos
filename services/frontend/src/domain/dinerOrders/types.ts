@@ -66,6 +66,32 @@ export interface DinerOrderItem {
   selectedModifiers: { groupName: string; optionName: string; priceDelta: number }[];
 }
 
+/**
+ * One row of cross-restaurant order history. Carries the restaurant it was placed at, which
+ * `DinerOrder` does not: everywhere else the restaurant is whichever one the diner is browsing,
+ * and here it is the thing that varies from row to row.
+ *
+ * `restaurantName` is a snapshot taken when the order was placed, so it survives a restaurant
+ * leaving discovery. It is null only if the name couldn't be resolved at that moment.
+ */
+export interface DinerOrderSummary {
+  orderId: string;
+  restaurantId: string;
+  locationId: string;
+  restaurantName?: string | null;
+  locationName?: string | null;
+  status: string;
+  orderType: string;
+  grandTotal: number;
+  itemCount: number;
+  /** Pre-rendered line summary ("2x House Fries, 1x Olive Oil Cake"). Display as-is. */
+  itemSummary: string;
+  createdAt: string;
+  pickupTime?: string | null;
+  paidAt?: string | null;
+  cancelledAt?: string | null;
+}
+
 export interface DinerOrder {
   id: string;
   status: string;

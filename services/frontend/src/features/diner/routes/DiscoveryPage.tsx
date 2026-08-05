@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clock, MapPin, Search, SearchX } from "lucide-react";
+import { Clock, MapPin, Receipt, Search, SearchX } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +17,7 @@ import {
 import { useCuisines, useDiscoveryListings } from "@/domain/discovery";
 import type { DiscoveryListingDto, DiscoverySort } from "@/domain/discovery";
 import { DinerHeader } from "../components/DinerHeader";
+import { useDinerAuth } from "../auth/DinerAuthProvider";
 
 const ALL_CUISINES = "__all__";
 
@@ -27,6 +29,7 @@ const SORT_LABELS: Record<DiscoverySort, string> = {
 
 export default function DiscoveryPage() {
   const navigate = useNavigate();
+  const { isSignedIn } = useDinerAuth();
   const [search, setSearch] = useState("");
   const [cuisine, setCuisine] = useState<string>(ALL_CUISINES);
   const [sort, setSort] = useState<DiscoverySort>("Recommended");
@@ -60,6 +63,16 @@ export default function DiscoveryPage() {
             </div>
             <CuisineSelect value={cuisine} onChange={setCuisine} cuisines={cuisines} />
           </div>
+        }
+        right={
+          // Only once there is a session, because signed out there is nothing to show and no
+          // sign-in form to send them to - the diner signs in at checkout, not up front.
+          isSignedIn && (
+            <Button variant="ghost" className="gap-1.5" onClick={() => navigate("/order/orders")}>
+              <Receipt className="h-4 w-4" />
+              <span className="hidden sm:inline">Your orders</span>
+            </Button>
+          )
         }
       />
 

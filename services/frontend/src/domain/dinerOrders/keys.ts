@@ -3,6 +3,9 @@ import type { DinerCheckoutRequest, DinerTenant } from "./types";
 export const DinerOrderKeys = {
   all: ["dinerOrders"] as const,
   list: (tenant: DinerTenant) => ["dinerOrders", tenant.restaurantId, tenant.locationId] as const,
+  // No tenant in the key, unlike `list` - history spans restaurants, so a per-tenant cache
+  // entry would be a cache of the same answer under several names.
+  history: () => ["dinerOrders", "history"] as const,
   detail: (orderId: string) => ["dinerOrders", "detail", orderId] as const,
   paymentSession: (orderId: string) => ["dinerPaymentSession", orderId] as const,
   // Keyed on the lines themselves, not the cart id: a quote must be refetched when the cart

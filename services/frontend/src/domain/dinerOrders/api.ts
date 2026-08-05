@@ -11,6 +11,7 @@ export const DinerOrdersAPI = {
   quote: () => `${base}/quote`,
   checkout: () => `${base}/checkout`,
   orders: () => `${base}/orders`,
+  history: () => `${base}/history`,
   order: (orderId: string) => `${base}/orders/${orderId}`,
   cancelOrder: (orderId: string) => `${base}/orders/${orderId}/cancel`,
   paymentSession: (orderId: string) => `${payments}/${orderId}/payment-session`,

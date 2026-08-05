@@ -7,6 +7,7 @@ import type {
   DinerOrder,
   DinerPaymentConfirm,
   DinerPaymentSession,
+  DinerOrderSummary,
   DinerTenant,
 } from "./types";
 
@@ -59,6 +60,20 @@ export const DinerOrders = {
   async list(token: string, tenant: DinerTenant): Promise<DinerOrder[]> {
     const { data } = await dinerHttp.get<DinerOrder[]>(DinerOrdersAPI.orders(), {
       headers: headers(token, tenant),
+    });
+    return data;
+  },
+
+  /**
+   * Every order this diner has placed, at any restaurant.
+   *
+   * The only diner call that sends no tenant headers, deliberately: there is no one restaurant
+   * this question is about, and sending whichever one the diner last browsed would imply a
+   * scope the server does not apply. The server ignores them here in any case.
+   */
+  async history(token: string): Promise<DinerOrderSummary[]> {
+    const { data } = await dinerHttp.get<DinerOrderSummary[]>(DinerOrdersAPI.history(), {
+      headers: { Authorization: `Bearer ${token}` },
     });
     return data;
   },
