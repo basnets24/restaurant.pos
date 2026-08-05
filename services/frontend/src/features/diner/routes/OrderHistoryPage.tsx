@@ -12,6 +12,7 @@ import {
 } from "@/domain/dinerOrders";
 
 import { DinerHeader } from "../components/DinerHeader";
+import { DinerNotificationBell } from "../components/DinerNotificationBell";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { rememberDinerTenant } from "../cart/lastTenant";
 import { money } from "../money";
@@ -56,6 +57,7 @@ export default function OrderHistoryPage() {
             Restaurants
           </Button>
         }
+        right={<DinerNotificationBell />}
       />
 
       <main className="mx-auto max-w-[720px] px-4 sm:px-8 py-6">

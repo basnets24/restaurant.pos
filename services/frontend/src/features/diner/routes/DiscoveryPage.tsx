@@ -17,6 +17,7 @@ import {
 import { useCuisines, useDiscoveryListings } from "@/domain/discovery";
 import type { DiscoveryListingDto, DiscoverySort } from "@/domain/discovery";
 import { DinerHeader } from "../components/DinerHeader";
+import { DinerNotificationBell } from "../components/DinerNotificationBell";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 
 const ALL_CUISINES = "__all__";
@@ -68,10 +69,13 @@ export default function DiscoveryPage() {
           // Only once there is a session, because signed out there is nothing to show and no
           // sign-in form to send them to - the diner signs in at checkout, not up front.
           isSignedIn && (
-            <Button variant="ghost" className="gap-1.5" onClick={() => navigate("/order/orders")}>
-              <Receipt className="h-4 w-4" />
-              <span className="hidden sm:inline">Your orders</span>
-            </Button>
+            <>
+              <DinerNotificationBell />
+              <Button variant="ghost" className="gap-1.5" onClick={() => navigate("/order/orders")}>
+                <Receipt className="h-4 w-4" />
+                <span className="hidden sm:inline">Your orders</span>
+              </Button>
+            </>
           )
         }
       />
