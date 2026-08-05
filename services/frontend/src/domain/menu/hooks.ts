@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MenuItems } from "./service";
+import { MenuItems, ModifierGroups } from "./service";
 import { MenuKeys } from "./keys";
-import type { MenuItemDto, PageResult, CreateMenuItemDto, UpdateMenuItemDto } from "./types";
+import type { MenuItemDto, PageResult, CreateMenuItemDto, UpdateMenuItemDto, ModifierGroupDto, UpsertModifierGroupDto } from "./types";
 
 export function useMenuCategories() {
   return useQuery<string[]>({
@@ -61,5 +61,37 @@ export function useRemoveMenuItem() {
       void qc.invalidateQueries({ queryKey: ["menu", "item", id] });
       void qc.invalidateQueries({ queryKey: ["menu", "list"], exact: false });
     },
+  });
+}
+
+export function useModifierGroups(menuItemId: string | undefined) {
+  return useQuery<ModifierGroupDto[]>({
+    queryKey: MenuKeys.modifierGroups(menuItemId ?? ""),
+    queryFn: () => ModifierGroups.forMenuItem(menuItemId!),
+    enabled: !!menuItemId,
+  });
+}
+
+export function useCreateModifierGroup(menuItemId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: UpsertModifierGroupDto) => ModifierGroups.create(menuItemId, dto),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: MenuKeys.modifierGroups(menuItemId) }),
+  });
+}
+
+export function useUpdateModifierGroup(menuItemId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: UpsertModifierGroupDto }) => ModifierGroups.update(id, dto),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: MenuKeys.modifierGroups(menuItemId) }),
+  });
+}
+
+export function useDeleteModifierGroup(menuItemId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => ModifierGroups.remove(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: MenuKeys.modifierGroups(menuItemId) }),
   });
 }

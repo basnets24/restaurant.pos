@@ -12,8 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Utensils, Plus, Pencil, Trash2 } from "lucide-react";
+import { Utensils, Plus, Pencil, Trash2, ListPlus } from "lucide-react";
 import { toast } from "sonner";
+import ModifiersDialog from "./ModifiersDialog";
 
 // Props are optional; you can pass canWrite to disable create/edit when the user lacks rights
 export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean }) {
@@ -60,6 +61,9 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
         setPrevEditOpen(editOpen);
         if (!editOpen) setEditing(null);
     }
+
+    const [modifiersOpen, setModifiersOpen] = useState(false);
+    const [modifiersItem, setModifiersItem] = useState<MenuItemDto | null>(null);
 
     return (
         <Card>
@@ -130,6 +134,7 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                                     busy={mToggle.isPending || mPatch.isPending || mDelete.isPending}
                                     onToggleAvailability={(v) => mToggle.mutate({ id: m.id, value: v })}
                                     onEdit={() => { setEditing(m); setEditOpen(true); }}
+                                    onManageModifiers={() => { setModifiersItem(m); setModifiersOpen(true); }}
                                     onDelete={() =>
                                         mDelete.mutate(m.id, {
                                             onSuccess: () => toast.success("Menu item deleted"),
@@ -180,18 +185,27 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                 }
                 disabled={!canWrite}
             />
+
+            {/* Modifiers dialog */}
+            <ModifiersDialog
+                open={modifiersOpen}
+                onOpenChange={(v) => { setModifiersOpen(v); if (!v) setModifiersItem(null); }}
+                item={modifiersItem}
+                canWrite={canWrite}
+            />
         </Card>
     );
 }
 
 import { useMenuCategories as useMenuCats } from "@/domain/menu/hooks";
 
-function MenuRow({ item, canWrite, busy, onToggleAvailability, onEdit, onDelete }: {
+function MenuRow({ item, canWrite, busy, onToggleAvailability, onEdit, onManageModifiers, onDelete }: {
     item: MenuItemDto;
     canWrite: boolean;
     busy?: boolean;
     onToggleAvailability: (value: boolean) => void;
     onEdit: () => void;
+    onManageModifiers: () => void;
     onDelete: () => void;
 }) {
     return (
@@ -217,6 +231,7 @@ function MenuRow({ item, canWrite, busy, onToggleAvailability, onEdit, onDelete 
                 {canWrite && (
                     <>
                         <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="h-4 w-4 mr-1"/>Edit</Button>
+                        <Button size="sm" variant="outline" onClick={onManageModifiers}><ListPlus className="h-4 w-4 mr-1"/>Modifiers</Button>
                         <Button
                             size="icon"
                             variant="outline"

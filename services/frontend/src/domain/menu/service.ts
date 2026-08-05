@@ -1,8 +1,11 @@
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
 import { withTenantHeaders } from "@/auth/tenantHeaders";
-import { MenuAPI } from "./api";
-import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult } from "./types";
+import { MenuAPI, ModifierGroupsAPI } from "./api";
+import type {
+  MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult,
+  ModifierGroupDto, UpsertModifierGroupDto,
+} from "./types";
 
 export const MenuItems = {
   list: async (
@@ -39,5 +42,33 @@ export const MenuItems = {
     await http.post(MenuAPI.availability(id), value, {
       headers: { "Content-Type": "application/json", ...withTenantHeaders(), Authorization: `Bearer ${token}` },
     });
+  },
+};
+
+export const ModifierGroups = {
+  forMenuItem: async (menuItemId: string): Promise<ModifierGroupDto[]> => {
+    const token = await getApiToken("Catalog", ["menu.read"]);
+    const { data } = await http.get(ModifierGroupsAPI.forMenuItem(menuItemId), {
+      headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
+  create: async (menuItemId: string, dto: UpsertModifierGroupDto): Promise<ModifierGroupDto> => {
+    const token = await getApiToken("Catalog", ["menu.write"]);
+    const { data } = await http.post(ModifierGroupsAPI.create(menuItemId), dto, {
+      headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
+  update: async (id: string, dto: UpsertModifierGroupDto): Promise<ModifierGroupDto> => {
+    const token = await getApiToken("Catalog", ["menu.write"]);
+    const { data } = await http.put(ModifierGroupsAPI.update(id), dto, {
+      headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
+  remove: async (id: string): Promise<void> => {
+    const token = await getApiToken("Catalog", ["menu.write"]);
+    await http.delete(ModifierGroupsAPI.remove(id), { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
 };

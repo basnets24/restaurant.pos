@@ -21,3 +21,12 @@ export const MenuAPI = {
   availability: (id: string) => `${base}/${id}:availability`,
 } as const;
 
+const modifierGroupsBase = `${ENV.CATALOG_URL}/modifier-groups`;
+
+export const ModifierGroupsAPI = {
+  forMenuItem: (menuItemId: string) => `${base}/${menuItemId}/modifier-groups`,
+  create: (menuItemId: string) => `${base}/${menuItemId}/modifier-groups`,
+  update: (id: string) => `${modifierGroupsBase}/${id}`,
+  remove: (id: string) => `${modifierGroupsBase}/${id}`,
+} as const;
+
