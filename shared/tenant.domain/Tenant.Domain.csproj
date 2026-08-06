@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Tenant.Domain</PackageId>
-    <Version>2.1.1</Version>
+    <Version>2.1.2</Version>
     <IsPackable>true</IsPackable>
     <Authors>basnets24</Authors>
     <RepositoryUrl>https://github.com/basnets24/restaurant.pos</RepositoryUrl>
