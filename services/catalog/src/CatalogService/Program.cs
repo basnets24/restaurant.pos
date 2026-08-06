@@ -108,6 +108,12 @@ var app = builder.Build();
 // Auto-migrate DbContext on boot (idempotent; safe to run in every environment)
 using (var scope = app.Services.CreateScope())
 {
+    // Tenant-scoped DbContexts resolve ITenantContext from TenantContextHolder, which is
+    // normally populated per-request by TenantMiddleware. At startup there's no request,
+    // so seed it with the same defaults TenantMiddleware falls back to.
+    scope.ServiceProvider.GetRequiredService<TenantMiddleware.TenantContextHolder>()
+        .Set(new TenantContext { RestaurantId = "acme-bistro", LocationId = "sjc-01" });
+
     var catalogDbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
     catalogDbContext.Database.Migrate();
 }
