@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs all Restaurant POS .NET services + frontend locally against infra
-# started via `docker compose -f infra/docker-compose.yml up -d`.
+# started via `docker compose -f local/docker-compose.yml up -d`.
 set -euo pipefail
 set -m # each background job gets its own process group, so `stop` can kill child processes (e.g. npm's vite child) too
 
@@ -17,7 +17,7 @@ DOTNET_SERVICES=(
   "payment|services/payment/PaymentService/PaymentService.csproj|https://localhost:7182;http://localhost:5238"
 )
 
-# Containers infra/docker-compose.yml defines — waited on before launching services
+# Containers local/docker-compose.yml defines — waited on before launching services
 INFRA_CONTAINERS=(restaurant-postgres restaurant-rabbitmq restaurant-seq)
 
 usage() {
@@ -90,7 +90,7 @@ start_all() {
   : > "$PID_FILE"
 
   echo "Starting infra (postgres, rabbitmq, seq)..."
-  (cd "$ROOT_DIR/infra" && docker compose up -d)
+  (cd "$ROOT_DIR/local" && docker compose up -d)
   wait_for_infra
 
   trap 'stop_all' INT TERM

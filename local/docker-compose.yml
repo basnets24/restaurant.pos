@@ -49,9 +49,15 @@ services:
       - pos-net
 
 volumes:
+  # Named explicitly (rather than left to the default <project>_<volume> pattern)
+  # so this directory's infra->local rename doesn't orphan existing local data -
+  # these are the same physical volumes Docker already created under the old name.
   rabbitmq_data:
+    name: infra_rabbitmq_data
   seq_data:
+    name: infra_seq_data
   postgres-data:
+    name: infra_postgres-data
 
 
 networks:

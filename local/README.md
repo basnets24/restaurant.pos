@@ -1,6 +1,6 @@
-# Infrastructure
+# Local development stack
 
-Infrastructure for the Restaurant POS platform — local Docker Compose stack for development. Production deployment (VM + Caddy + GHCR CI/CD) lives under [`deploy/`](../deploy/) at the repo root, not here — see [`deploy/README.md`](../deploy/README.md).
+The local Docker Compose stack for the Restaurant POS platform. Production deployment (VM + Caddy + GHCR CI/CD) lives under [`deploy/`](../deploy/) at the repo root, not here — see [`deploy/README.md`](../deploy/README.md).
 
 ## Layout
 
@@ -25,7 +25,7 @@ That brings up the compose stack, waits for it to be healthy, then runs all four
 To start just the infrastructure:
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d
+docker compose -f local/docker-compose.yml up -d
 ```
 
 Three containers, all defined in `docker-compose.yml`:
@@ -38,7 +38,6 @@ Three containers, all defined in `docker-compose.yml`:
 
 `scripts/dev.sh` health-waits on all three. `./scripts/dev.sh stop` stops the services the script started and leaves these containers running.
 
-No Jaeger/Prometheus/Grafana locally — traces/metrics have nowhere useful to go in local dev. They're deployed in production only, for demo purposes (ephemeral, no persistence) — see `deploy/README.md`.
 
 ---
 

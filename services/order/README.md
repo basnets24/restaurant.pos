@@ -26,7 +26,7 @@ See [`CLAUDE.md`](./CLAUDE.md) in this folder for saga/consumer gotchas and the 
 
 ### Prerequisites
 - .NET SDK 8.0+
-- PostgreSQL and RabbitMQ (both come from `infra/docker-compose.yml`)
+- PostgreSQL and RabbitMQ (both come from `local/docker-compose.yml`)
 - The identity service running, for JWT validation
 
 Normally you don't run this by hand — `./scripts/dev.sh` from the repo root starts infra plus all four services and the frontend.

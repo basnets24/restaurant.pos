@@ -21,7 +21,7 @@ cp .env.example .env   # first time only — fill in GH_PAT, POSTGRES_PASSWORD, 
 - RabbitMQ management: http://localhost:15672
 - Swagger per service: `<service-url>/swagger`
 
-`infra/docker-compose.yml` defines three containers — postgres, rabbitmq, seq — and `dev.sh` brings all of them up, waiting on all three for health. Jaeger/Prometheus/Grafana are not part of local dev (traces/metrics have nowhere to go locally); they're deployed in prod only, for demo purposes — see `deploy/README.md`.
+`local/docker-compose.yml` defines three containers — postgres, rabbitmq, seq — and `dev.sh` brings all of them up, waiting on all three for health. Jaeger/Prometheus/Grafana are not part of local dev (traces/metrics have nowhere to go locally); they're deployed in prod only, for demo purposes — see `deploy/README.md`.
 
 ### Backend (.NET — mixed TFMs)
 **Target frameworks are not uniform.** `net10.0`: catalog, identity, payment. `net8.0`: order (blocked — MassTransit 9.x went commercially licensed) and all three shared libraries. Check the `.csproj` before assuming language/runtime features are available; .NET 8 goes EOL 2026-11-10.
@@ -106,6 +106,6 @@ Frontend must build `x-restaurant-id`/`x-location-id` headers explicitly from `t
 Each has its own `publish-*.yml` workflow — a change to one of these three folders on `dev`/`main` triggers a pack-and-push, independent of the backend/frontend CI above. **None of these workflows bump the package version** — they just pack whatever `<Version>` is currently in the `.csproj` and push with `--skip-duplicate`, so forgetting to bump it before pushing silently no-ops instead of publishing.
 
 ### Infra
-- Local: `infra/docker-compose.yml` — Postgres, RabbitMQ, Seq. No Jaeger/Prometheus/Grafana locally (see below).
+- Local: `local/docker-compose.yml` — Postgres, RabbitMQ, Seq. No Jaeger/Prometheus/Grafana locally (see below).
 - Deployed: a single VM (Caddy + Docker Compose, images from GHCR) — see `deploy/README.md`. Postgres is Supabase (schema-per-service, Supavisor **session-mode** pooling — port `5432` on the pooler host, not the `6543` transaction-mode port. EF Core's multi-statement migration batches desync the wire protocol over transaction-mode pooling, so session mode is used for both migrations and normal app queries rather than special-casing one connection string per mode). RabbitMQ runs as a container alongside the services, not Azure Service Bus. Jaeger/Prometheus/Grafana are also deployed (public subdomains, demo purposes) but run with **no persistent volumes** — traces/metrics/dashboards reset on every redeploy.
-- An earlier AKS/Emissary Ingress/cert-manager/Helm path (`infra/helm/`, `infra/emissary-ingress/`, `infra/cert-manager/`, per-service `helm/` folders, `infra/terraform/`) was explored but never actually deployed to; it's been removed as dead code. `Common.Library`'s MassTransit setup still supports Azure Service Bus as a config-switched alternative to RabbitMQ (`ServiceSettings:MessageBroker`), but nothing deployed uses it.
+- An earlier AKS/Emissary Ingress/cert-manager/Helm path (formerly `infra/helm/`, `infra/emissary-ingress/`, `infra/cert-manager/`, per-service `helm/` folders, `infra/terraform/` — `infra/` itself was later renamed to `local/` once only the dev compose stack remained) was explored but never actually deployed to; it's been removed as dead code. `Common.Library`'s MassTransit setup still supports Azure Service Bus as a config-switched alternative to RabbitMQ (`ServiceSettings:MessageBroker`), but nothing deployed uses it.

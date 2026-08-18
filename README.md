@@ -34,7 +34,7 @@ cp .env.example .env
 |---|---|
 | NuGet restore fails | `GH_PAT` isn't set in `.env`, or lacks `read:packages` |
 | Postgres auth error | `POSTGRES_PASSWORD` in `.env` doesn't match what services expect — `scripts/dev.sh` derives `PostgresSettings__Password` from it automatically, so don't set that separately |
-| A service can't reach RabbitMQ | Check `docker compose ps` in `infra/` — infra containers may not have come up healthy |
+| A service can't reach RabbitMQ | Check `docker compose ps` in `local/` — infra containers may not have come up healthy |
 | 401s despite a valid login | Check the JWT's tenant claims (`restaurant_id`/`location_id`) match the `X-Restaurant-Id`/`X-Location-Id` headers being sent |
 
 ## Architecture
@@ -69,7 +69,7 @@ Four independent ASP.NET Core services, each owning its own Postgres schema:
 ```
 services/    frontend, identity, catalog, order, payment — see each service's own README
 shared/      Common.Library, Messaging.Contracts, Tenant.Domain — published as NuGet via GitHub Packages
-infra/       docker-compose (local dev stack only) — see infra/README.md
+local/       docker-compose (local dev stack only) — see local/README.md
 deploy/      production compose + Caddyfile for the deployed VM — see deploy/README.md
 docs/        architecture diagrams and migration notes
 ```

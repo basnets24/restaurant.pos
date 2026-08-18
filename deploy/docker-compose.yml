@@ -4,7 +4,7 @@
 # that .env fresh from GitHub Secrets on every deploy, so GitHub Secrets are the
 # source of truth, not this file or anything hand-edited on the VM.
 #
-# Postgres isn't here — it's Supabase (see infra/README.md). rabbitmq, seq,
+# Postgres isn't here — it's Supabase (see local/README.md). rabbitmq, seq,
 # jaeger, and prometheus are internal-only (no published ports); caddy is the
 # only service exposed to the host, proxying grafana/jaeger/prometheus UIs too.
 #

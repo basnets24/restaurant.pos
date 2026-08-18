@@ -32,7 +32,7 @@ a second entity. `Entities/` additionally holds `ModifierGroup`/`ModifierOption`
 
 ### Prerequisites
 - .NET SDK 10.0+
-- PostgreSQL and RabbitMQ (both come from `infra/docker-compose.yml`)
+- PostgreSQL and RabbitMQ (both come from `local/docker-compose.yml`)
 - The identity service running, for JWT validation
 
 Normally you don't run this by hand — `./scripts/dev.sh` from the repo root starts

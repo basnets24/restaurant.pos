@@ -40,7 +40,7 @@ Also exposed: `/swagger` (Development only), `/health/ready`, `/health/live`, an
 
 ### Prerequisites
 - .NET SDK 10.0+
-- PostgreSQL and RabbitMQ (both come from `infra/docker-compose.yml`)
+- PostgreSQL and RabbitMQ (both come from `local/docker-compose.yml`)
 - A Stripe account and a **test-mode secret key**
 
 Normally you don't run this service by hand — `./scripts/dev.sh` from the repo root starts infra plus all four services and the frontend.
