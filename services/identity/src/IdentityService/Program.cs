@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Metrics;
 using Tenant.Domain.Data;
 using Tenant.Domain.Entities;
@@ -111,6 +112,15 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Auto-migrate DbContexts on boot (idempotent; safe to run in every environment)
+using (var scope = app.Services.CreateScope())
+{
+    var applicationDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    applicationDbContext.Database.Migrate();
+    var tenantDbContext = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
+    tenantDbContext.Database.Migrate();
+}
 
 var identitySettings = builder.Configuration.GetSection(nameof(IdentitySettings)).Get<IdentitySettings>();
 
