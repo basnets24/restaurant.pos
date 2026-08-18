@@ -9,7 +9,7 @@
 
     <ItemGroup>
 
-        <PackageReference Include="Common.Library" Version="1.0.25" />
+        <PackageReference Include="Common.Library" Version="1.0.27" />
         <PackageReference Include="Duende.IdentityServer" Version="8.0.4" />
         <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="8.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
