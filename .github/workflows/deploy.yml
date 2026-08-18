@@ -78,4 +78,10 @@ jobs:
 
             docker compose pull
             docker compose up -d
+            # docker compose up -d only recreates a container when its *compose
+            # definition* changes (image tag, env vars, etc) - editing the content
+            # of a bind-mounted file like the Caddyfile doesn't count, so caddy would
+            # otherwise keep running whatever config it last loaded. Reload explicitly,
+            # every deploy, so a Caddyfile change always takes effect.
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
             docker image prune -f
