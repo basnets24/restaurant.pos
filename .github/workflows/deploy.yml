@@ -1,0 +1,78 @@
+name: Deploy to VM
+
+on:
+  workflow_run:
+    workflows: [ "Build and Push Images" ]
+    types: [ completed ]
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (defaults to latest)"
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    env:
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || 'latest' }}
+      DOMAIN: spoontab.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy deploy files to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "deploy/docker-compose.yml,deploy/Caddyfile,deploy/config.js"
+          target: "~/restaurant-pos"
+          strip_components: 1
+
+      - name: Write .env, inject Stripe publishable key, and deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd ~/restaurant-pos/deploy
+
+            cat > .env <<EOF
+            DOMAIN=${{ env.DOMAIN }}
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
+            SUPABASE_DB_HOST=${{ secrets.SUPABASE_DB_HOST }}
+            SUPABASE_DB_PORT=${{ secrets.SUPABASE_DB_PORT }}
+            SUPABASE_DB_USER=${{ secrets.SUPABASE_DB_USER }}
+            SUPABASE_DB_PASSWORD=${{ secrets.SUPABASE_DB_PASSWORD }}
+            SUPABASE_DB_NAME=${{ secrets.SUPABASE_DB_NAME }}
+            IDENTITY_ADMIN_PASSWORD=${{ secrets.IDENTITY_ADMIN_PASSWORD }}
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+            EOF
+
+            sed -i "s/__STRIPE_PUBLISHABLE_KEY__/${{ secrets.STRIPE_PUBLISHABLE_KEY }}/" config.js
+
+            # Written fresh from the same secret every deploy, so the signing key
+            # itself never rotates on its own - previously issued tokens stay valid.
+            mkdir -p certs
+            cat > certs/identity-signing.cer <<'CERTEOF'
+            ${{ secrets.IDENTITY_SIGNING_CERT_PEM }}
+            CERTEOF
+            cat > certs/identity-signing.key <<'KEYEOF'
+            ${{ secrets.IDENTITY_SIGNING_KEY_PEM }}
+            KEYEOF
+            chmod 600 certs/identity-signing.key
+
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u basnets24 --password-stdin
+
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
