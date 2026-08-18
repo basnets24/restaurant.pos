@@ -1,11 +1,13 @@
-# Subdomain-per-service routing. Caddy handles Let's Encrypt HTTPS automatically
-# for each site block below, provided DNS A records for all 5 subdomains point at
-# this VM and 80/443 are reachable (see deploy/README.md).
+# Subdomain-per-service routing, except the frontend, which sits at the root
+# domain rather than app.{$DOMAIN}. Caddy handles Let's Encrypt HTTPS automatically
+# for each site block below, provided DNS records point at this VM and 80/443
+# are reachable (see deploy/README.md) - {$DOMAIN} needs an A record, www needs
+# either its own A record or a CNAME to {$DOMAIN}.
 #
 # reverse_proxy upgrades WebSocket connections automatically — no extra config
 # needed for order's SignalR floor hub.
 
-app.{$DOMAIN} {
+{$DOMAIN}, www.{$DOMAIN} {
 	reverse_proxy frontend:80
 }
 

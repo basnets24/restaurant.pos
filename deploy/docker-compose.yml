@@ -16,11 +16,10 @@ x-backend-env: &backend-env
   PostgresSettings__Password: ${SUPABASE_DB_PASSWORD}
   PostgresSettings__RequireSsl: "true"
   ServiceSettings__Authority: https://identity.${DOMAIN}
-  # Base appsettings.json ships 2 local dev origins; index 1 is stomped here too
-  # (same value as index 0) so ASP.NET Core's index-keyed config merge doesn't
-  # leave "https://localhost:5173" allowed in production.
-  Cors__AllowedOrigins__0: https://app.${DOMAIN}
-  Cors__AllowedOrigins__1: https://app.${DOMAIN}
+  # Frontend sits at the root domain (plus www), not app.{$DOMAIN} - two real
+  # origins here, not a stomp-the-second-index workaround like before.
+  Cors__AllowedOrigins__0: https://${DOMAIN}
+  Cors__AllowedOrigins__1: https://www.${DOMAIN}
   SeqSettings__Host: seq
   SeqSettings__Port: "80"
 

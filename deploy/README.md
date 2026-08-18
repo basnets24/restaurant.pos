@@ -17,9 +17,9 @@ hand-maintained `.env` — GitHub Secrets are the single source of truth, rewrit
    `DEPLOY_SSH_KEY` secret below.
 5. Open inbound ports 80 and 443 on the VM's firewall/security group. No other ports need to be
    public — rabbitmq, seq, and all 4 backend services stay on the internal compose network.
-6. Point DNS **A records** for all 5 subdomains at the VM's public IP:
-   `app.spoontab.com`, `identity.spoontab.com`, `catalog.spoontab.com`, `order.spoontab.com`,
-   `payment.spoontab.com`. Caddy issues Let's Encrypt certs automatically once these resolve.
+6. Point DNS records at the VM's public IP: an **A record** for the root domain (`@`),
+   **A records** for `identity`, `catalog`, `order`, `payment`, and either an A record or a
+   CNAME-to-root for `www`. Caddy issues Let's Encrypt certs automatically once these resolve.
 7. Create `~/restaurant-pos` on the VM (the deploy workflow's `scp` step creates
    `~/restaurant-pos/deploy` on top of it automatically — nothing else to pre-create).
 
@@ -95,7 +95,7 @@ sensitive and there's only one production domain.
 
 - `https://identity.spoontab.com/.well-known/openid-configuration` returns real IdentityServer
   discovery JSON with valid Let's Encrypt TLS.
-- `https://app.spoontab.com` loads the frontend and can sign in.
+- `https://spoontab.com` (and `https://www.spoontab.com`) loads the frontend and can sign in.
 - `docker compose ps` on the VM shows all 7 services (`rabbitmq`, `seq`, 4 backend services,
   `frontend`, `caddy`) healthy/running.
 
