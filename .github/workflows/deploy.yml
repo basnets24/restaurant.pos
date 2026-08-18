@@ -33,7 +33,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           source: "deploy/docker-compose.yml,deploy/Caddyfile,deploy/config.js"
-          target: "~/restaurant-pos"
+          target: "~/restaurant-pos/deploy"
           strip_components: 1
 
       - name: Write .env, inject Stripe publishable key, and deploy
