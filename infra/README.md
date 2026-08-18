@@ -7,7 +7,6 @@ Infrastructure for the Restaurant POS platform — local Docker Compose stack fo
 | Path | What it is |
 |---|---|
 | `docker-compose.yml` | The local dev stack (see below) |
-| `prometheus/`, `grafana/`, `jaeger/` | Observability config consumed by that stack |
 
 Note that **Postgres is not provisioned here**. Deployed environments use Supabase (schema-per-service, Supavisor **session-mode** pooling on port `5432` — transaction mode on `6543` breaks EF Core's migration batches); locally it's the compose container.
 
@@ -29,18 +28,17 @@ To start just the infrastructure:
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-Six containers, all defined in `docker-compose.yml`:
+Three containers, all defined in `docker-compose.yml`:
 
 | Container | URL | Purpose |
 |---|---|---|
 | postgres | `localhost:5432` | All service data, schema-per-service |
 | rabbitmq | http://localhost:15672 | Message broker + management UI |
 | seq | http://localhost:5341 | Structured logs |
-| jaeger | http://localhost:16686 | Distributed traces |
-| prometheus | http://localhost:9090 | Metrics scraping |
-| grafana | http://localhost:3000 | Dashboards |
 
-`scripts/dev.sh` only health-waits on postgres, rabbitmq, and seq — the observability three come up alongside but aren't gated on. `./scripts/dev.sh stop` stops the services the script started and leaves these containers running.
+`scripts/dev.sh` health-waits on all three. `./scripts/dev.sh stop` stops the services the script started and leaves these containers running.
+
+No Jaeger/Prometheus/Grafana locally — traces/metrics have nowhere useful to go in local dev. They're deployed in production only, for demo purposes (ephemeral, no persistence) — see `deploy/README.md`.
 
 ---
 

@@ -27,8 +27,6 @@ cp .env.example .env
 | Swagger (per service) | `<service-url>/swagger` |
 | Seq (logs) | http://localhost:5341 |
 | RabbitMQ management | http://localhost:15672 |
-| Jaeger (traces) | http://localhost:16686 |
-| Prometheus / Grafana | http://localhost:9090 / http://localhost:3000 |
 
 ### Troubleshooting
 
@@ -63,7 +61,7 @@ Four independent ASP.NET Core services, each owning its own Postgres schema:
 - **Backend** — ASP.NET Core Web API (.NET 10, with `order` and shared libraries on .NET 8), EF Core
 - **Data** — PostgreSQL, schema-per-service
 - **Messaging** — MassTransit + RabbitMQ (local and prod)
-- **Observability** — Seq, OpenTelemetry → Jaeger/Prometheus/Grafana (local and prod, prod is ephemeral/no persistence)
+- **Observability** — Seq (local + prod); OpenTelemetry → Jaeger/Prometheus/Grafana (prod only, demo purposes, ephemeral/no persistence)
 - **Infra** — Docker, Caddy, GitHub Actions (build/push to GHCR + deploy)
 
 ## Project Structure
