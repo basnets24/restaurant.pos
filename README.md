@@ -63,7 +63,7 @@ Four independent ASP.NET Core services, each owning its own Postgres schema:
 - **Backend** — ASP.NET Core Web API (.NET 10, with `order` and shared libraries on .NET 8), EF Core
 - **Data** — PostgreSQL, schema-per-service
 - **Messaging** — MassTransit + RabbitMQ (local and prod)
-- **Observability** — Seq, OpenTelemetry → Jaeger/Prometheus/Grafana (local only)
+- **Observability** — Seq, OpenTelemetry → Jaeger/Prometheus/Grafana (local and prod, prod is ephemeral/no persistence)
 - **Infra** — Docker, Caddy, GitHub Actions (build/push to GHCR + deploy)
 
 ## Project Structure
