@@ -32,7 +32,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "deploy/docker-compose.yml,deploy/Caddyfile,deploy/config.js"
+          source: "deploy/docker-compose.yml,deploy/Caddyfile,deploy/config.js,deploy/prometheus.yml,deploy/grafana"
           target: "~/restaurant-pos/deploy"
           strip_components: 1
 
@@ -78,10 +78,14 @@ jobs:
 
             docker compose pull
             docker compose up -d
-            # docker compose up -d only recreates a container when its *compose
-            # definition* changes (image tag, env vars, etc) - editing the content
-            # of a bind-mounted file like the Caddyfile doesn't count, so caddy would
-            # otherwise keep running whatever config it last loaded. Reload explicitly,
-            # every deploy, so a Caddyfile change always takes effect.
-            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+            # A single-file bind mount (./Caddyfile:/etc/caddy/Caddyfile) is bound to
+            # the inode that existed at container *start* time. scp replaces the file
+            # via rename (a new inode), so a running caddy container silently keeps
+            # reading the old file - "caddy reload" against that same stale path is a
+            # no-op ("config is unchanged") even though the host file is current and
+            # correct. A full container restart re-establishes the bind mount against
+            # whatever inode is at that path now, which is the only thing that reliably
+            # picks up a Caddyfile edit. Costs ~1-2s of caddy downtime; worth it for
+            # correctness over `caddy reload`'s zero-downtime-but-sometimes-silently-stale.
+            docker compose restart caddy
             docker image prune -f

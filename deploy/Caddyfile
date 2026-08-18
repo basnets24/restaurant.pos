@@ -26,3 +26,15 @@ order.{$DOMAIN} {
 payment.{$DOMAIN} {
 	reverse_proxy payment:5238
 }
+
+jaeger.{$DOMAIN} {
+	reverse_proxy jaeger:16686
+}
+
+prometheus.{$DOMAIN} {
+	reverse_proxy prometheus:9090
+}
+
+grafana.{$DOMAIN} {
+	reverse_proxy grafana:3000
+}

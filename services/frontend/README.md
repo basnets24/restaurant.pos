@@ -62,24 +62,9 @@ docker run --rm -p 8080:80 \
   restaurant-pos/frontend:1.0.0
 ```
 
-### Build & push for AKS (amd64)
+## Production deployment
 
-```bash
-export version=1.0.0
-export ACR=acrpos
-
-docker buildx build \
-  --platform linux/amd64 \
-  -t "$ACR.azurecr.io/pos.frontend:$version" \
-  --push .
-```
-
-### Install the Helm chart
-
-```bash
-namespace="frontend"
-helm install frontend-client ./helm --create-namespace -n $namespace
-```
+The actual production deploy is a single VM + Caddy + GHCR image pipeline, not AKS/Helm — see [`deploy/README.md`](../../deploy/README.md) at the repo root for the full CI/CD flow.
 
 ---
 

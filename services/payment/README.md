@@ -85,54 +85,9 @@ The repo's Playwright suite covers this end to end in `services/frontend/e2e/pay
 - `Data/` — `PaymentDbContext` (+ design-time factory), `Migrations/`
 - `Metrics/PaymentMetrics.cs` — success/failure counters
 
-## Deployment
+## Production deployment
 
-Container images and Helm charts follow the same pattern as the other services; the shared chart lives in `infra/helm/microservice/`. The Docker build needs a GitHub PAT with `read:packages` to restore the private `Common.Library`/`Messaging.Contracts` NuGet packages.
-
-```bash
-# AKS is amd64; build cross-platform from an ARM Mac
-export version=1.0.2
-export ACR=acrpos
-
-docker buildx build \
-  --platform linux/amd64 \
-  --secret id=GH_OWNER --secret id=GH_PAT \
-  -t "$ACR.azurecr.io/pos.payment:$version" \
-  --push .
-```
-
-```bash
-# namespace + workload identity + Key Vault access
-export namespace="payment"
-kubectl create namespace $namespace
-
-az identity create --resource-group $RG --name $namespace
-export IDENTITY_CLIENT_ID=$(az identity show -g "$RG" -n "$namespace" --query clientId -o tsv)
-export SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-
-az role assignment create \
-  --assignee "$IDENTITY_CLIENT_ID" \
-  --role "Key Vault Secrets User" \
-  --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG/providers/Microsoft.KeyVault/vaults/$KV"
-
-export AKS_OIDC_ISSUER="$(az aks show -n $AKS -g $RG --query "oidcIssuerProfile.issuerUrl" -otsv)"
-az identity federated-credential create \
-  --name ${namespace} --identity-name "${namespace}" --resource-group "${RG}" \
-  --issuer "${AKS_OIDC_ISSUER}" \
-  --subject system:serviceaccount:"${namespace}":"${namespace}-serviceaccount" \
-  --audience api://AzureADTokenExchange
-```
-
-```bash
-# install/upgrade the chart
-helmUser="00000000-0000-0000-0000-000000000000"
-helmPassword=$(az acr login --name $ACR --expose-token --output tsv --query accessToken)
-helm registry login $ACR.azurecr.io --username $helmUser --password $helmPassword
-
-chartVersion="0.1.1"
-helm upgrade pos-$namespace-service oci://$ACR.azurecr.io/helm/pos-microservice \
-  --version $chartVersion -f ./helm/values.yaml -n $namespace --install
-```
+The actual production deploy is a single VM + Caddy + GHCR image pipeline, not AKS/Helm — see [`deploy/README.md`](../../deploy/README.md) at the repo root for the full CI/CD flow.
 
 ---
 

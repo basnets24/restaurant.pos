@@ -18,8 +18,9 @@ hand-maintained `.env` — GitHub Secrets are the single source of truth, rewrit
 5. Open inbound ports 80 and 443 on the VM's firewall/security group. No other ports need to be
    public — rabbitmq, seq, and all 4 backend services stay on the internal compose network.
 6. Point DNS records at the VM's public IP: an **A record** for the root domain (`@`),
-   **A records** for `identity`, `catalog`, `order`, `payment`, and either an A record or a
-   CNAME-to-root for `www`. Caddy issues Let's Encrypt certs automatically once these resolve.
+   **A records** for `identity`, `catalog`, `order`, `payment`, `jaeger`, `prometheus`,
+   `grafana`, and either an A record or a CNAME-to-root for `www`. Caddy issues Let's Encrypt
+   certs automatically once these resolve.
 7. Create `~/restaurant-pos` on the VM (the deploy workflow's `scp` step creates
    `~/restaurant-pos/deploy` on top of it automatically — nothing else to pre-create).
 
@@ -87,19 +88,35 @@ sensitive and there's only one production domain.
 3. `deploy.yml` fires automatically once that completes successfully (`workflow_run` trigger),
    or can be run manually via `workflow_dispatch` (optionally pinning a specific `image_tag`
    instead of `latest` — useful for a quick rollback to a known-good git-sha tag).
-4. It copies `deploy/docker-compose.yml`, `deploy/Caddyfile`, and `deploy/config.js` to the VM,
-   writes `.env` from the secrets above, substitutes the real Stripe publishable key into
-   `config.js`, then runs `docker compose pull && docker compose up -d`.
+4. It copies `deploy/docker-compose.yml`, `deploy/Caddyfile`, `deploy/config.js`,
+   `deploy/prometheus.yml`, and `deploy/grafana/` to the VM, writes `.env` from the secrets
+   above, substitutes the real Stripe publishable key into `config.js`, then runs
+   `docker compose pull && docker compose up -d`.
 
 ## Verifying a deploy
 
 - `https://identity.spoontab.com/.well-known/openid-configuration` returns real IdentityServer
   discovery JSON with valid Let's Encrypt TLS.
 - `https://spoontab.com` (and `https://www.spoontab.com`) loads the frontend and can sign in.
-- `docker compose ps` on the VM shows all 7 services (`rabbitmq`, `seq`, 4 backend services,
-  `frontend`, `caddy`) healthy/running.
+- `docker compose ps` on the VM shows all 10 services (`rabbitmq`, `seq`, `jaeger`,
+  `prometheus`, `grafana`, 4 backend services, `frontend`, `caddy`) healthy/running.
+
+## Observability (Jaeger / Prometheus / Grafana)
+
+Included for demo purposes, not production monitoring rigor: **no persistent volumes**, so
+traces, metrics, and dashboards reset on every redeploy or container restart. Reachable at
+`https://jaeger.spoontab.com`, `https://prometheus.spoontab.com`, `https://grafana.spoontab.com`
+— all public, no auth in front (Grafana runs with anonymous access enabled but pinned to the
+**Viewer** role, not Admin, so a visitor can look but not edit/delete dashboards or touch the
+data source). Don't put anything sensitive in a dashboard panel title or Prometheus label.
+
+Backend services export traces to `jaeger:6831` (`JaegerSettings__Host` in
+`docker-compose.yml`) and expose Prometheus metrics at `/metrics`, scraped per
+`deploy/prometheus.yml`. Grafana's Prometheus datasource is provisioned automatically from
+`deploy/grafana/provisioning/`; add dashboards through the UI (they won't survive a restart) or
+commit dashboard JSON under `deploy/grafana/provisioning/dashboards/` if you want them to.
 
 ## Out of scope
 
 Provisioning the VM itself, buying the domain, creating the Supabase project, and setting any
-secret value — all user actions. Jaeger/Prometheus/Grafana are not part of this deployment.
+secret value — all user actions.
