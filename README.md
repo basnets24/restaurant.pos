@@ -52,7 +52,7 @@ Four independent ASP.NET Core services, each owning its own Postgres schema:
 
 `services/frontend` (port 5173) is the only non-.NET piece — a React SPA that talks to each service directly (no API gateway/BFF).
 
-**Event-driven, not request-chained.** Services publish/consume domain events over RabbitMQ (Azure Service Bus in prod) via MassTransit. A deliberately small saga in `order` covers inventory reservation only — checkout reserves stock, and payment is a separate step requested afterward, not part of the saga. Catalog's menu/stock events are folded into a local read model inside `order` for fast POS reads, the same pattern a `git log`/code read will show repeated for any new cross-service read.
+**Event-driven, not request-chained.** Services publish/consume domain events over RabbitMQ via MassTransit (locally and in prod — Azure Service Bus is a config-switched alternative the codebase supports but nothing deployed uses). A deliberately small saga in `order` covers inventory reservation only — checkout reserves stock, and payment is a separate step requested afterward, not part of the saga. Catalog's menu/stock events are folded into a local read model inside `order` for fast POS reads, the same pattern a `git log`/code read will show repeated for any new cross-service read.
 
 **Multi-tenant on every request.** Each request carries `X-Restaurant-Id`/`X-Location-Id`; middleware scopes that tenant through the request, across published events, and into EF Core query filters on write and read. Nothing in a service's own schema is queryable outside its tenant by default.
 
@@ -62,16 +62,17 @@ Four independent ASP.NET Core services, each owning its own Postgres schema:
 - **Frontend** — React 19, TypeScript, TanStack Query, Tailwind CSS, SignalR, oidc-client-ts
 - **Backend** — ASP.NET Core Web API (.NET 10, with `order` and shared libraries on .NET 8), EF Core
 - **Data** — PostgreSQL, schema-per-service
-- **Messaging** — MassTransit + RabbitMQ (local) / Azure Service Bus (prod)
-- **Observability** — Seq, OpenTelemetry → Jaeger/Prometheus/Grafana
-- **Infra** — Docker, AKS, Helm, GitHub Actions
+- **Messaging** — MassTransit + RabbitMQ (local and prod)
+- **Observability** — Seq, OpenTelemetry → Jaeger/Prometheus/Grafana (local only)
+- **Infra** — Docker, Caddy, GitHub Actions (build/push to GHCR + deploy)
 
 ## Project Structure
 
 ```
 services/    frontend, identity, catalog, order, payment — see each service's own README
 shared/      Common.Library, Messaging.Contracts, Tenant.Domain — published as NuGet via GitHub Packages
-infra/       docker-compose (local), Helm charts, Azure/AKS bootstrap — see infra/README.md
+infra/       docker-compose (local dev stack only) — see infra/README.md
+deploy/      production compose + Caddyfile for the deployed VM — see deploy/README.md
 docs/        architecture diagrams and migration notes
 ```
 
@@ -79,5 +80,6 @@ Each service and the frontend has its own `README.md`/`CLAUDE.md` with service-s
 
 ## Cloud Deployment
 
-- **AKS** for orchestration, **Azure Container Registry** for images, **Azure Service Bus** for messaging, **Supabase Postgres** for data (schema-per-service), **Azure Key Vault** for secrets
-- GitHub Actions builds/publishes; Helm charts in `infra/helm/` deploy — see [`infra/README.md`](./infra/README.md) for the full bootstrap
+- A single VM running Docker Compose behind **Caddy** (automatic Let's Encrypt TLS), images pulled from **GHCR**, data on **Supabase Postgres** (schema-per-service, session-mode pooling)
+- GitHub Actions builds/pushes images then deploys over SSH — see [`deploy/README.md`](./deploy/README.md) for the full CI/CD flow and required secrets
+- An earlier AKS/ACR/Azure Key Vault/Azure Service Bus design was explored but never actually deployed to; that path (Helm charts, Emissary Ingress, cert-manager) has been removed as dead code
