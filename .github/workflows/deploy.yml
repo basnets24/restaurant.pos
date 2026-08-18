@@ -69,7 +69,10 @@ jobs:
             cat > certs/identity-signing.key <<'KEYEOF'
             ${{ secrets.IDENTITY_SIGNING_KEY_PEM }}
             KEYEOF
-            chmod 600 certs/identity-signing.key
+            # 644, not 600: identity's container runs as a non-root appuser (uid 5678),
+            # and the bind mount shares host permissions as-is - a root-only-readable
+            # file on the host is unreadable to that container user.
+            chmod 644 certs/identity-signing.key
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u basnets24 --password-stdin
 
