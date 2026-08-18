@@ -13,7 +13,7 @@ Infrastructure for the Restaurant POS platform — local Docker Compose stack fo
 | `cert-manager/` | `cluster-issuer.yaml`, `acme-challenge.yaml` |
 | `terraform/` | **Empty** — only a `.gitignore` is tracked. The Azure CLI bootstrap below is the current path. |
 
-Note that **Postgres is not provisioned here**. Deployed environments use Supabase (schema-per-service, Supavisor transaction pooling); locally it's the compose container.
+Note that **Postgres is not provisioned here**. Deployed environments use Supabase (schema-per-service, Supavisor **session-mode** pooling on port `5432` — transaction mode on `6543` breaks EF Core's migration batches); locally it's the compose container.
 
 ---
 
