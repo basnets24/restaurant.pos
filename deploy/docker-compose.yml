@@ -1,0 +1,134 @@
+# Production compose for the VM. Images are pulled from GHCR, not built here —
+# see .github/workflows/build-and-push-images.yml for that. This file expects a
+# .env alongside it (see deploy/README.md for the full variable list); CD writes
+# that .env fresh from GitHub Secrets on every deploy, so GitHub Secrets are the
+# source of truth, not this file or anything hand-edited on the VM.
+#
+# Postgres isn't here — it's Supabase (see infra/README.md). rabbitmq and seq are
+# internal-only (no published ports); caddy is the only service exposed to the host.
+
+x-backend-env: &backend-env
+  ASPNETCORE_ENVIRONMENT: Production
+  PostgresSettings__Host: ${SUPABASE_DB_HOST}
+  PostgresSettings__Port: ${SUPABASE_DB_PORT}
+  PostgresSettings__Database: ${SUPABASE_DB_NAME}
+  PostgresSettings__Username: ${SUPABASE_DB_USER}
+  PostgresSettings__Password: ${SUPABASE_DB_PASSWORD}
+  PostgresSettings__RequireSsl: "true"
+  ServiceSettings__Authority: https://identity.${DOMAIN}
+  # Base appsettings.json ships 2 local dev origins; index 1 is stomped here too
+  # (same value as index 0) so ASP.NET Core's index-keyed config merge doesn't
+  # leave "https://localhost:5173" allowed in production.
+  Cors__AllowedOrigins__0: https://app.${DOMAIN}
+  Cors__AllowedOrigins__1: https://app.${DOMAIN}
+  SeqSettings__Host: seq
+  SeqSettings__Port: "80"
+
+services:
+  rabbitmq:
+    image: masstransit/rabbitmq:latest
+    hostname: rabbitmq
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks: [pos-net]
+    restart: unless-stopped
+
+  seq:
+    image: datalust/seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    volumes:
+      - seq_data:/data
+    networks: [pos-net]
+    restart: unless-stopped
+
+  identity:
+    image: ghcr.io/basnets24/pos-identity:${IMAGE_TAG:-latest}
+    environment:
+      <<: *backend-env
+      IdentitySettings__AdminUserPassword: ${IDENTITY_ADMIN_PASSWORD}
+      # IdentityServer refuses to boot outside Development without a real signing
+      # cert (AddDeveloperSigningCredential is dev-only — its key isn't persisted,
+      # so every restart would invalidate all previously issued tokens). CD writes
+      # these files from the IDENTITY_SIGNING_CERT_PEM/_KEY_PEM secrets - generate
+      # them once and keep them stable; see deploy/README.md.
+      IdentitySettings__CertificateCerFilePath: /app/certs/identity-signing.cer
+      IdentitySettings__CertificateKeyFilePath: /app/certs/identity-signing.key
+      # Caddy sits in the same compose network, not on loopback, so ASP.NET Core's
+      # default (trust loopback only) would ignore its X-Forwarded-Proto header and
+      # make IdentityServer report http:// endpoints/cookies behind an https:// proxy.
+      # 172.16.0.0/12 covers Docker's whole default bridge-network range.
+      ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
+    volumes:
+      - ./certs:/app/certs:ro
+    depends_on: [seq]
+    networks: [pos-net]
+    restart: unless-stopped
+
+  catalog:
+    image: ghcr.io/basnets24/pos-catalog:${IMAGE_TAG:-latest}
+    environment:
+      <<: *backend-env
+      RabbitMqSettings__Host: rabbitmq
+    depends_on: [rabbitmq, seq]
+    networks: [pos-net]
+    restart: unless-stopped
+
+  order:
+    image: ghcr.io/basnets24/pos-order:${IMAGE_TAG:-latest}
+    environment:
+      <<: *backend-env
+      RabbitMqSettings__Host: rabbitmq
+    depends_on: [rabbitmq, seq]
+    networks: [pos-net]
+    restart: unless-stopped
+
+  payment:
+    image: ghcr.io/basnets24/pos-payment:${IMAGE_TAG:-latest}
+    environment:
+      <<: *backend-env
+      RabbitMqSettings__Host: rabbitmq
+      StripeSettings__SecretKey: ${STRIPE_SECRET_KEY}
+    depends_on: [rabbitmq, seq]
+    networks: [pos-net]
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/basnets24/pos-frontend:${IMAGE_TAG:-latest}
+    volumes:
+      # Overrides the dev-pointed config.js baked into the image at build time —
+      # the image itself is identical across environments, only this differs.
+      - ./config.js:/usr/share/nginx/html/config.js:ro
+    networks: [pos-net]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [identity, catalog, order, payment, frontend]
+    networks: [pos-net]
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+  seq_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  pos-net:
+    driver: bridge
