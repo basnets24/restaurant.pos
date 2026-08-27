@@ -9,18 +9,8 @@ public static class TableModulesExtensions
     
     public static void AddTablesModule(this IServiceCollection services)
     {
-    // CORS for SignalR (allow your UI origins)
-        services.AddCors(opt =>
-        {
-            opt.AddPolicy("frontend", b => b
-                .WithOrigins(
-                    "http://localhost:5173" // Vite/Next dev
-                )
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials());
-        });
-
+    // CORS policy ("frontend") is registered once, centrally, in Program.cs
+    // from Cors:AllowedOrigins - it also covers this module's SignalR hub.
 
     // SignalR with useful defaults (JSON casing preserved)
         services.AddSignalR(options =>

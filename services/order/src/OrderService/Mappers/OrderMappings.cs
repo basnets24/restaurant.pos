@@ -13,7 +13,10 @@ public static class OrderMappings
             TableId = order.TableId,
             ServerId = order.ServerId,
             ServerName = order.ServerName,
+            CustomerId = order.CustomerId,
             GuestCount = order.GuestCount,
+            OrderType = order.OrderType,
+            PickupTime = order.PickupTime,
             Items = order.Items,
             Status = order.Status,
             CreatedAt = order.CreatedAt,
@@ -28,6 +31,8 @@ public static class OrderMappings
             GrandTotal = order.GrandTotal,
             ReceiptUrl = order.ReceiptUrl,
             PaidAt = order.PaidAt,
+            LastPaymentError = order.LastPaymentError,
+            LastPaymentFailedAt = order.LastPaymentFailedAt,
         };
     }
 

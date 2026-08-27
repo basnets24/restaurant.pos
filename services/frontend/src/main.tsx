@@ -7,26 +7,20 @@ import { queryClient } from "./lib/react-query";
 
 import { AuthProvider } from "./api-authorization/AuthProvider";
 import { AppRouter } from "./app/router";
-import { TenantProvider } from "./app/TenantContext";
 import { RestaurantUserProfileProvider } from "@/domain/restaurantUserProfile/Provider";
 import { EmployeeProvider } from "@/domain/employee/Provider";
 import { TenantDomainProvider } from "@/domain/tenant/Provider";
 import { TenantInfoProvider } from "@/app/TenantInfoProvider";
+import { FloorHubProvider } from "@/domain/realtime/FloorHubProvider";
+import { Toaster } from "@/components/ui/sonner";
 import "./index.css";
-import { bootstrapAuth } from "@/auth/bootstrap";
 
-async function start() {
-  try {
-    await bootstrapAuth();
-  } catch {
-    // ignore bootstrap failures; UI will still render and AuthProvider will hydrate
-  }
-
+function start() {
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <TenantProvider>
+          <FloorHubProvider>
             <RestaurantUserProfileProvider>
               <TenantDomainProvider>
                 <EmployeeProvider>
@@ -36,8 +30,13 @@ async function start() {
                 </EmployeeProvider>
               </TenantDomainProvider>
             </RestaurantUserProfileProvider>
-          </TenantProvider>
+          </FloorHubProvider>
         </AuthProvider>
+        {/* Several surfaces already call toast() but no Toaster was ever mounted, so none
+            of them rendered anything. Mounting it here makes those existing calls visible. */}
+        {/* top-center, not the sonner default of bottom-right: that corner is where the
+            cart sheet's checkout button sits, and the toast covered it. */}
+        <Toaster richColors closeButton position="top-center" />
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </React.StrictMode>

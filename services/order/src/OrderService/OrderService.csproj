@@ -7,13 +7,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Common.Library" Version="1.0.19" />
-        <PackageReference Include="MassTransit.MongoDb" Version="8.5.1" />
-        <PackageReference Include="Messaging.Contracts" Version="1.0.4" />
+        <PackageReference Include="Common.Library" Version="1.0.27" />
+        <!-- Pinned below the rest of the MassTransit 8.5.1 family deliberately:
+             8.5.0+ requires Microsoft.EntityFrameworkCore.Relational 9.0.1, which
+             conflicts with this codebase's EF Core 8.0.19/Npgsql 8.0.11 stack
+             (Npgsql 8.0.11's NpgsqlHistoryRepository is compiled against EF Core 8's
+             ABI - resolving to EF 9 at runtime throws MissingMethodException on
+             get_LockReleaseBehavior). 8.4.0 is the last version still on EF Core 8. -->
+        <PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.4.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.11" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.19">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+        <PackageReference Include="Messaging.Contracts" Version="1.0.8" />
     </ItemGroup>
 
-
-    
 </Project>

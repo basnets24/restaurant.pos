@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useAuth } from "@/api-authorization/AuthProvider";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Users as UsersIcon } from "lucide-react";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function StaffUsersCard() {
   // Filters & paging
@@ -29,7 +30,7 @@ export default function StaffUsersCard() {
   const { profile } = useAuth();
   const rp = useRestaurantUserProfile();
   const { data: status } = rp.useOnboardingStatus({ rid: rid ?? undefined }, { retry: 1 });
-  const rawRoles = (profile as any)?.role as string | string[] | undefined;
+  const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canManage = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
 
@@ -96,8 +97,15 @@ export default function StaffUsersCard() {
               {items.map((e) => (
                 <TableRow key={e.userId}>
                   <TableCell>
-                    <div className="font-medium">{e.displayName || e.userName || "(no name)"}</div>
-                    <div className="text-xs opacity-70">{e.userName}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
+                        {(e.displayName || e.userName || "?").trim()[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium">{e.displayName || e.userName || "(no name)"}</div>
+                        <div className="text-xs opacity-70">{e.userName}</div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>{e.email ?? "—"}</TableCell>
                   <TableCell>
@@ -171,8 +179,8 @@ function AddEmployeeForm({ rid, roles, locations, onClose }: { rid: string; role
       });
       setUserId(""); setDefaultLocationId(""); setSelectedRoles([]);
       onClose();
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to add employee");
+    } catch (e: unknown) {
+      setError(errorMessage(e) ?? "Failed to add employee");
     }
   };
 
@@ -208,7 +216,7 @@ function AddEmployeeForm({ rid, roles, locations, onClose }: { rid: string; role
           </div>
         </div>
       </div>
-      {error && <div className="text-sm text-red-600 mt-2">{error}</div>}
+      {error && <div className="text-sm text-destructive mt-2">{error}</div>}
       <DialogFooter className="mt-3">
         <Button variant="outline" onClick={onClose}>Cancel</Button>
         <Button onClick={submit} disabled={!canSubmit || add.isPending}>Add Employee</Button>

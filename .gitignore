@@ -13,6 +13,9 @@ obj/
 .idea/
 *.sln.iml
 
+# Visual Studio
+.vs/
+
 # VS Code (in case)
 .vscode/
 
@@ -27,6 +30,7 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+!.env.example
 
 # Temporary files
 *.swp
@@ -40,6 +44,9 @@ Thumbs.db
 # Docker
 secrets/
 infra/secrets/
+
+# IdentityServer auto-generated signing keys (per-machine, Data Protection-wrapped)
+services/identity/src/IdentityService/keys/
 
 # Launch profiles
 **/launchSettings.json

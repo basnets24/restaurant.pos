@@ -1,5 +1,6 @@
 using System.Net;
-using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using OrderService.Exceptions;
 
 namespace OrderService.Middleware;
 
@@ -25,125 +26,46 @@ public class GlobalExceptionMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "An unhandled exception occurred in Order Service. TraceId: {TraceId}", context.TraceIdentifier);
-            await HandleExceptionAsync(context, ex);
+            await WriteProblemAsync(context, ex);
         }
     }
 
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    // Same response contract ASP.NET Core's own model-validation failures already use
+    // (ValidationProblemDetails is a ProblemDetails) - previously this middleware emitted
+    // a differently-shaped, hand-rolled JSON body for every other kind of failure.
+    private async Task WriteProblemAsync(HttpContext context, Exception exception)
     {
-        context.Response.ContentType = "application/json";
+        var (status, title, detail) = Classify(exception, _environment.IsDevelopment());
 
-        var response = CreateErrorResponse(exception, context.TraceIdentifier);
-
-        context.Response.StatusCode = response.StatusCode;
-
-        var jsonResponse = JsonSerializer.Serialize(response.Body, new JsonSerializerOptions
+        var problem = new ProblemDetails
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        await context.Response.WriteAsync(jsonResponse);
-    }
-
-    private ErrorResponse CreateErrorResponse(Exception exception, string traceId)
-    {
-        return exception switch
-        {
-            ArgumentException argEx => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.BadRequest,
-                Body = new ErrorDetails
-                {
-                    Title = "Invalid Argument",
-                    Detail = argEx.Message,
-                    Type = "https://httpstatuses.com/400",
-                    TraceId = traceId
-                }
-            },
-            UnauthorizedAccessException => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.Unauthorized,
-                Body = new ErrorDetails
-                {
-                    Title = "Unauthorized",
-                    Detail = "Authentication required",
-                    Type = "https://httpstatuses.com/401",
-                    TraceId = traceId
-                }
-            },
-            InvalidOperationException invalidOpEx when invalidOpEx.Message.Contains("not found") => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.NotFound,
-                Body = new ErrorDetails
-                {
-                    Title = "Resource Not Found",
-                    Detail = invalidOpEx.Message,
-                    Type = "https://httpstatuses.com/404",
-                    TraceId = traceId
-                }
-            },
-            InvalidOperationException invalidOpEx when invalidOpEx.Message.Contains("cart") && invalidOpEx.Message.Contains("empty") => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.BadRequest,
-                Body = new ErrorDetails
-                {
-                    Title = "Invalid Cart Operation",
-                    Detail = invalidOpEx.Message,
-                    Type = "https://httpstatuses.com/400",
-                    TraceId = traceId
-                }
-            },
-            InvalidOperationException invalidOpEx when invalidOpEx.Message.Contains("order") && invalidOpEx.Message.Contains("status") => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.Conflict,
-                Body = new ErrorDetails
-                {
-                    Title = "Order State Conflict",
-                    Detail = invalidOpEx.Message,
-                    Type = "https://httpstatuses.com/409",
-                    TraceId = traceId
-                }
-            },
-            TimeoutException => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.RequestTimeout,
-                Body = new ErrorDetails
-                {
-                    Title = "Request Timeout",
-                    Detail = "The request took too long to process",
-                    Type = "https://httpstatuses.com/408",
-                    TraceId = traceId
-                }
-            },
-            _ => new ErrorResponse
-            {
-                StatusCode = (int)HttpStatusCode.InternalServerError,
-                Body = new ErrorDetails
-                {
-                    Title = "Internal Server Error",
-                    Detail = _environment.IsDevelopment()
-                        ? exception.Message
-                        : "An error occurred while processing your request",
-                    Type = "https://httpstatuses.com/500",
-                    TraceId = traceId,
-                    StackTrace = _environment.IsDevelopment() ? exception.StackTrace : null
-                }
-            }
+            Status = status,
+            Title = title,
+            Detail = detail,
+            Type = $"https://httpstatuses.com/{status}",
+            Instance = context.Request.Path,
         };
+        problem.Extensions["traceId"] = context.TraceIdentifier;
+        if (status == (int)HttpStatusCode.InternalServerError && _environment.IsDevelopment())
+            problem.Extensions["stackTrace"] = exception.StackTrace;
+
+        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode = status;
+        await context.Response.WriteAsJsonAsync(problem);
     }
 
-    private class ErrorResponse
-    {
-        public int StatusCode { get; set; }
-        public ErrorDetails Body { get; set; } = null!;
-    }
-
-    private class ErrorDetails
-    {
-        public string Title { get; set; } = null!;
-        public string Detail { get; set; } = null!;
-        public string Type { get; set; } = null!;
-        public string TraceId { get; set; } = null!;
-        public string? StackTrace { get; set; }
-    }
+    // Classified purely by exception type - no message-content sniffing. A message
+    // wording change can no longer silently change the client-facing status code.
+    private static (int Status, string Title, string Detail) Classify(Exception exception, bool isDevelopment) =>
+        exception switch
+        {
+            ArgumentException argEx => ((int)HttpStatusCode.BadRequest, "Invalid Argument", argEx.Message),
+            BusinessRuleException ruleEx => ((int)HttpStatusCode.BadRequest, "Business Rule Violation", ruleEx.Message),
+            UnauthorizedAccessException => ((int)HttpStatusCode.Unauthorized, "Unauthorized", "Authentication required"),
+            KeyNotFoundException notFoundEx => ((int)HttpStatusCode.NotFound, "Resource Not Found", notFoundEx.Message),
+            ConflictException conflictEx => ((int)HttpStatusCode.Conflict, "Conflict", conflictEx.Message),
+            TimeoutException => ((int)HttpStatusCode.RequestTimeout, "Request Timeout", "The request took too long to process"),
+            _ => ((int)HttpStatusCode.InternalServerError, "Internal Server Error",
+                isDevelopment ? exception.Message : "An error occurred while processing your request"),
+        };
 }

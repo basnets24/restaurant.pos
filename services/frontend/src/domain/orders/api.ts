@@ -2,16 +2,10 @@
 import { ENV } from "@/config/env";
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
 import type { FinalizeOrderDto, OrderDto, TenantHeaders, PageResult } from "./types";
 
 const BASE = ENV.ORDER_URL; // e.g. https://localhost:7288
-
-function withTenantHeaders(tenant?: TenantHeaders) {
-    const headers: Record<string, string> = {};
-    if (tenant?.restaurantId) headers["x-restaurant-id"] = tenant.restaurantId;
-    if (tenant?.locationId) headers["x-location-id"] = tenant.locationId;
-    return headers;
-}
 
 export async function listOrders(tenant?: TenantHeaders): Promise<PageResult<OrderDto>> {
     const token = await getApiToken('Order', ['order.read']);
@@ -45,4 +39,18 @@ export async function finalizeOrder(
         headers: { ...withTenantHeaders(opts?.tenant), Authorization: `Bearer ${token}` },
     });
     return data;
+}
+
+export async function requestPayment(orderId: string, tenant?: TenantHeaders) {
+    const token = await getApiToken('Order', ['order.write']);
+    await http.post(`${BASE}/orders/${orderId}/request-payment`, null, {
+        headers: { ...withTenantHeaders(tenant), Authorization: `Bearer ${token}` },
+    });
+}
+
+export async function cancelOrder(orderId: string, tenant?: TenantHeaders) {
+    const token = await getApiToken('Order', ['order.write']);
+    await http.post(`${BASE}/orders/${orderId}/cancel`, null, {
+        headers: { ...withTenantHeaders(tenant), Authorization: `Bearer ${token}` },
+    });
 }

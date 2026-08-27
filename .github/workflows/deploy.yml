@@ -32,8 +32,8 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "deploy/docker-compose.yml,deploy/Caddyfile,deploy/config.js"
-          target: "~/restaurant-pos"
+          source: "deploy/docker-compose.yml,deploy/Caddyfile,deploy/config.js,deploy/prometheus.yml,deploy/grafana"
+          target: "~/restaurant-pos/deploy"
           strip_components: 1
 
       - name: Write .env, inject Stripe publishable key, and deploy
@@ -69,10 +69,23 @@ jobs:
             cat > certs/identity-signing.key <<'KEYEOF'
             ${{ secrets.IDENTITY_SIGNING_KEY_PEM }}
             KEYEOF
-            chmod 600 certs/identity-signing.key
+            # 644, not 600: identity's container runs as a non-root appuser (uid 5678),
+            # and the bind mount shares host permissions as-is - a root-only-readable
+            # file on the host is unreadable to that container user.
+            chmod 644 certs/identity-signing.key
 
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u basnets24 --password-stdin
 
             docker compose pull
             docker compose up -d
+            # A single-file bind mount (./Caddyfile:/etc/caddy/Caddyfile) is bound to
+            # the inode that existed at container *start* time. scp replaces the file
+            # via rename (a new inode), so a running caddy container silently keeps
+            # reading the old file - "caddy reload" against that same stale path is a
+            # no-op ("config is unchanged") even though the host file is current and
+            # correct. A full container restart re-establishes the bind mount against
+            # whatever inode is at that path now, which is the only thing that reliably
+            # picks up a Caddyfile edit. Costs ~1-2s of caddy downtime; worth it for
+            # correctness over `caddy reload`'s zero-downtime-but-sometimes-silently-stale.
+            docker compose restart caddy
             docker image prune -f

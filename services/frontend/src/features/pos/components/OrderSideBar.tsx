@@ -1,46 +1,123 @@
-import type {
-    Order as POSOrder,
-    Table as DiningTable,
-    OrderItem as POSOrderItem,
-} from "../../../types/pos";
-
 import { Card } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
-import { Badge } from "../../../components/ui/badge";
 import { Separator } from "../../../components/ui/separator";
 import {
     Sheet,
     SheetContent,
 } from "../../../components/ui/sheet";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../../../components/ui/dropdown-menu";
+import {
     X,
     ShoppingCart,
     CreditCard,
-    Users,
     Plus,
     Minus,
     Trash2,
-    Receipt,
-    Clock,
+    ReceiptText,
+    MoreVertical,
 } from "lucide-react";
-import { Flame, Check, Loader2 } from "lucide-react";
+import { Flame, Check, Loader2, Ban } from "lucide-react";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
-import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Props
+// Props — deliberately narrower than the canonical domain Order/Table (types/pos):
+// this sidebar is a view built from a cart + table lookup in MenuPage, not the
+// full domain entities, and only ever renders these fields.
 // ─────────────────────────────────────────────────────────────────────────────
+export type SidebarOrderItem = {
+    id: string;
+    quantity: number;
+    notes?: string | null;
+    menuItem: { name: string; price: number };
+};
+
+export type SidebarOrderEstimate = {
+    subtotal: number;
+    discountTotal: number;
+    serviceChargeTotal: number;
+    taxTotal: number;
+    grandTotal: number;
+};
+
+export type SidebarOrder = {
+    id: string;
+    items: SidebarOrderItem[];
+    // Server-computed via the real PricingService config (tax rate, service
+    // charges, discounts) - absent only while the cart is still empty.
+    estimate?: SidebarOrderEstimate | null;
+};
+
+export type SidebarTable = {
+    id: string;
+    number: string | number;
+    section?: string;
+};
+
 interface OrderSidebarProps {
-    order: POSOrder | null;
-    table: DiningTable | null;
+    order: SidebarOrder | null;
+    table: SidebarTable | null;
     isOpen: boolean;
     onClose: () => void;
     onUpdateItem: (itemId: string, quantity: number) => void;
     onRemoveItem: (itemId: string) => void;
     // Matches POSShell usage: no argument needed
-    onCheckout: () => void;
+    onFire: () => void | Promise<void>;
+    onPay: () => void;
+    onCancel?: () => void;
+    isCancellable?: boolean;
     isMobile?: boolean;
-    checkoutLoading?: boolean;
+    firing?: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compact −/qty/+ stepper (Spoontab cart rail)
+// ─────────────────────────────────────────────────────────────────────────────
+function Stepper({
+                     value,
+                     onChange,
+                     min = 0,
+                     max = 99,
+                     disabled = false,
+                 }: {
+    value: number;
+    onChange: (v: number) => void;
+    min?: number;
+    max?: number;
+    disabled?: boolean;
+}) {
+    const btn =
+        "h-[26px] w-[26px] rounded-[7px] border border-border bg-background text-foreground " +
+        "flex items-center justify-center transition-colors hover:bg-secondary disabled:opacity-40 disabled:pointer-events-none";
+    return (
+        <div className="flex items-center gap-2">
+            <button
+                type="button"
+                aria-label="Decrease quantity"
+                onClick={() => onChange(value - 1)}
+                disabled={disabled || value <= min}
+                className={btn}
+            >
+                <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="w-[18px] text-center text-sm font-semibold font-numeric text-foreground">
+                {value}
+            </span>
+            <button
+                type="button"
+                aria-label="Increase quantity"
+                onClick={() => onChange(value + 1)}
+                disabled={disabled || value >= max}
+                className={btn}
+            >
+                <Plus className="h-3.5 w-3.5" />
+            </button>
+        </div>
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,70 +127,52 @@ function OrderItemRow({
                           item,
                           onUpdateQuantity,
                           onRemove,
+                          disabled,
                       }: {
-    item: POSOrderItem;
+    item: SidebarOrderItem;
     onUpdateQuantity: (quantity: number) => void;
     onRemove: () => void;
+    disabled?: boolean;
 }) {
     return (
-        <div className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
+        <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium text-sm truncate">
-                        {item.menuItem.name}
-                    </h4>
-                    <Badge variant="outline" className="text-xs">
-                        ${item.menuItem.price.toFixed(2)}
-                    </Badge>
-                </div>
-
+                {/* Item name stays an <h4> — matched by the POS ordering E2E spec */}
+                <h4 className="text-sm font-medium text-foreground truncate">
+                    {item.menuItem.name}
+                </h4>
+                <p className="mt-0.5 text-xs text-muted-foreground font-numeric">
+                    ${item.menuItem.price.toFixed(2)} each
+                </p>
                 {item.notes && (
-                    <p className="text-xs text-muted-foreground italic">
+                    <p className="mt-1 text-xs text-muted-foreground italic truncate">
                         {item.notes}
                     </p>
                 )}
-
-                <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center gap-1 bg-secondary rounded-md">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onUpdateQuantity(Math.max(1, item.quantity - 1))}
-                            disabled={item.quantity <= 1}
-                            className="h-6 w-6 p-0 hover:bg-background"
-                        >
-                            <Minus className="h-3 w-3" />
-                        </Button>
-
-                        <span className="px-2 text-sm font-medium min-w-[2rem] text-center">
-              {item.quantity}
-            </span>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onUpdateQuantity(item.quantity + 1)}
-                            className="h-6 w-6 p-0 hover:bg-background"
-                        >
-                            <Plus className="h-3 w-3" />
-                        </Button>
-                    </div>
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onRemove}
-                        className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                        <Trash2 className="h-3 w-3" />
-                    </Button>
+                <div className="mt-2">
+                    {/* min 1: minus at 1 hands off to the trash affordance for removal */}
+                    <Stepper
+                        value={item.quantity}
+                        min={1}
+                        onChange={onUpdateQuantity}
+                        disabled={disabled}
+                    />
                 </div>
             </div>
 
-            <div className="text-right ml-3">
-                <div className="font-medium text-sm">
+            <div className="flex flex-col items-end gap-2 shrink-0">
+                <span className="text-sm font-medium font-numeric text-foreground">
                     ${(item.menuItem.price * item.quantity).toFixed(2)}
-                </div>
+                </span>
+                <button
+                    type="button"
+                    aria-label={`Remove ${item.menuItem.name}`}
+                    onClick={onRemove}
+                    disabled={disabled}
+                    className="text-muted-foreground/70 hover:text-destructive transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                    <Trash2 className="h-4 w-4" />
+                </button>
             </div>
         </div>
     );
@@ -128,114 +187,93 @@ function OrderSidebarContent({
                                  onClose,
                                  onUpdateItem,
                                  onRemoveItem,
-                                 onCheckout,
-                                 checkoutLoading,
+                                 onFire,
+                                 onPay,
+                                 onCancel,
+                                 isCancellable,
+                                 firing,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
+    const kitchen = useKitchen();
     if (!table) return null;
 
-    // compute money safely from order items
+    // Prefer the server-computed estimate (real configured tax rate + any
+    // service charges/discounts from PricingService) over a client-side
+    // guess - only falls back to a subtotal-only figure for the brief moment
+    // before the cart's first estimate has loaded.
     const subtotal =
-        order?.items.reduce(
-            (sum, it) => sum + it.menuItem.price * it.quantity,
-            0,
-        ) ?? 0;
+        order?.estimate?.subtotal ??
+        order?.items.reduce((sum, it) => sum + it.menuItem.price * it.quantity, 0) ??
+        0;
+    const discount = order?.estimate?.discountTotal ?? 0;
+    const serviceCharge = order?.estimate?.serviceChargeTotal ?? 0;
+    const tax = order?.estimate?.taxTotal ?? 0;
+    const total = order?.estimate?.grandTotal ?? subtotal;
 
-    const TAX_RATE = 0.08; // 8% (adjust if needed)
-    const tax = +(subtotal * TAX_RATE).toFixed(2);
-    const total = +(subtotal + tax).toFixed(2);
-
-    const hasCreatedAt =
-        !!order && (order as any).createdAt instanceof Date;
-    const kitchen = useKitchen();
+    const itemCount = order?.items.reduce((n, it) => n + it.quantity, 0) ?? 0;
     const isFired = order ? kitchen.isFired(order.id) : false;
-
-    const formatTime = (date: Date) =>
-        new Intl.DateTimeFormat("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-        }).format(date);
-
-    const getElapsedTime = (startDate: Date) => {
-        const now = new Date();
-        const elapsed = Math.floor(
-            (now.getTime() - startDate.getTime()) / 60000,
-        ); // minutes
-        if (elapsed < 60) return `${elapsed}m`;
-        const hours = Math.floor(elapsed / 60);
-        const minutes = elapsed % 60;
-        return `${hours}h ${minutes}m`;
-    };
 
     return (
         <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                        <Receipt className="h-4 w-4 text-primary-foreground" />
+            <div className="flex items-start justify-between px-5 pt-5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-[8px] bg-brand-soft text-brand-strong flex items-center justify-center shrink-0">
+                        <ReceiptText className="h-4 w-4" />
                     </div>
-                    <div>
-                        <h3 className="font-medium">Table {table.number}</h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{table.section}</span>
-                            {table.partySize && (
-                                <>
-                                    <span>•</span>
-                                    <div className="flex items-center gap-1">
-                                        <Users className="h-3 w-3" />
-                                        <span>{table.partySize} guests</span>
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                    <div className="min-w-0">
+                        <h3 className="font-semibold text-[15px] text-foreground truncate">
+                            Table <span className="font-numeric">{table.number}</span>
+                        </h3>
+                        <p className="text-xs text-muted-foreground truncate">
+                            {table.section ?? "—"}
+                            {itemCount > 0 && ` · ${itemCount} item${itemCount === 1 ? "" : "s"}`}
+                        </p>
                     </div>
                 </div>
 
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClose}
-                    className="h-8 w-8 p-0"
-                >
-                    <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                    {isCancellable && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    onClick={onCancel}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <Ban className="h-4 w-4 mr-2" /> Void Order
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClose}
+                        className="h-8 w-8 p-0"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
 
-            {/* Order Info (optional time) */}
-            {order && hasCreatedAt && (
-                <div className="px-4 py-3 bg-muted/30 border-b border-border">
-                    <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                Started {formatTime((order as any).createdAt)}
-              </span>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                            {getElapsedTime((order as any).createdAt)}
-                        </Badge>
-                    </div>
-                </div>
-            )}
+            <Separator className="mt-4" />
 
             {/* Order Items */}
             <div className="flex-1 overflow-y-auto">
                 {!order || order.items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-8 text-center">
-                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                            <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h4 className="font-medium mb-2">No items yet</h4>
-                        <p className="text-sm text-muted-foreground mb-4 max-w-xs">
+                    <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+                        <ShoppingCart className="h-8 w-8 text-muted-foreground mb-3" />
+                        <h4 className="font-semibold text-foreground mb-1">No items yet</h4>
+                        <p className="text-sm text-muted-foreground max-w-[16rem]">
                             Start adding items from the menu to build this order.
                         </p>
-                        <Button variant="outline" size="sm" onClick={onClose}>
-                            Browse Menu
-                        </Button>
                     </div>
                 ) : (
-                    <div className="p-4">
+                    <div className="px-5 py-4 flex flex-col gap-4">
                         {order.items.map((item) => (
                             <OrderItemRow
                                 key={item.id}
@@ -244,6 +282,7 @@ function OrderSidebarContent({
                                     onUpdateItem(item.id, quantity)
                                 }
                                 onRemove={() => onRemoveItem(item.id)}
+                                disabled={isFired}
                             />
                         ))}
                     </div>
@@ -252,65 +291,67 @@ function OrderSidebarContent({
 
             {/* Fire to Kitchen + Order Summary & Checkout */}
             {order && order.items.length > 0 && (
-                <div className="border-t border-border p-4 bg-card">
-                    {/* Fire to Kitchen */}
-                    <div className="mb-3">
-                        <Button
-                            type="button"
-                            variant={isFired ? "outline" : "default"}
-                            disabled={isFired || order.items.length === 0}
-                            onClick={() => {
-                                if (!table || !order) return;
-                                kitchen.fire({
-                                    id: order.id,
-                                    tableId: (table as any).id ?? String(table.number ?? ""),
-                                    tableNumber: String(table.number ?? ""),
-                                    items: order.items.map(i => ({ name: i.menuItem.name, quantity: i.quantity })),
-                                    firedAt: Date.now(),
-                                });
-                                toast.success("Fired to kitchen");
-                            }}
-                            className="w-full"
-                        >
-                            {isFired ? (
-                                <>
-                                    <Check className="h-4 w-4 mr-2" /> Fired ✓
-                                </>
-                            ) : (
-                                <>
-                                    <Flame className="h-4 w-4 mr-2" /> Fire to Kitchen
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                    <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
+                <div className="border-t border-border p-5 bg-card">
+                    <div className="space-y-1.5 mb-3">
+                        <div className="flex justify-between text-[13px] text-muted-foreground">
                             <span>Subtotal</span>
-                            <span>${subtotal.toFixed(2)}</span>
+                            <span className="font-numeric">${subtotal.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                            <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
-                            <span>${tax.toFixed(2)}</span>
+                        {discount > 0 && (
+                            <div className="flex justify-between text-[13px] text-muted-foreground">
+                                <span>Discount</span>
+                                <span className="font-numeric">-${discount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {serviceCharge > 0 && (
+                            <div className="flex justify-between text-[13px] text-muted-foreground">
+                                <span>Service charge</span>
+                                <span className="font-numeric">${serviceCharge.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between text-[13px] text-muted-foreground">
+                            <span>Tax</span>
+                            <span className="font-numeric">${tax.toFixed(2)}</span>
                         </div>
-                        <Separator />
-                        <div className="flex justify-between font-medium">
+                        <div className="flex justify-between items-baseline pt-1 font-semibold text-[17px] text-foreground">
                             <span>Total</span>
-                            <span>${total.toFixed(2)}</span>
+                            <span className="font-numeric">${total.toFixed(2)}</span>
                         </div>
                     </div>
 
-                    <Button onClick={onCheckout} className="w-full" size="lg" disabled={!!checkoutLoading}>
-                        {checkoutLoading ? (
+                    {/* Fire to Kitchen — this is what actually creates the order and
+                        reserves inventory; payment happens later, separately, below. */}
+                    <Button
+                        type="button"
+                        variant={isFired ? "outline" : "default"}
+                        disabled={isFired || firing || order.items.length === 0}
+                        onClick={onFire}
+                        className="w-full mb-2"
+                    >
+                        {isFired ? (
                             <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Preparing Payment…
+                                <Check className="h-4 w-4 mr-2" /> Fired ✓
+                            </>
+                        ) : firing ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Firing…
                             </>
                         ) : (
                             <>
-                                <CreditCard className="h-4 w-4 mr-2" />
-                                Checkout – ${total.toFixed(2)}
+                                <Flame className="h-4 w-4 mr-2" /> Fire to Kitchen
                             </>
                         )}
+                    </Button>
+
+                    <Button
+                        onClick={onPay}
+                        variant="outline"
+                        className="w-full"
+                        disabled={!isFired}
+                        title={!isFired ? "Fire the order to the kitchen before paying" : undefined}
+                    >
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Pay – ${total.toFixed(2)}
                     </Button>
                 </div>
             )}
@@ -343,7 +384,7 @@ export function OrderSidebar(props: OrderSidebarProps) {
 
     return (
         <div className="fixed right-4 sm:right-6 top-20 sm:top-24 bottom-4 sm:bottom-6 w-72 lg:w-80 xl:w-96 z-40">
-            <Card className="h-full shadow-xl border-border bg-card">
+            <Card className="h-full overflow-hidden shadow-md border-border bg-card">
                 <OrderSidebarContent {...props} />
             </Card>
         </div>

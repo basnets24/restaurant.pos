@@ -2,9 +2,8 @@ using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
-using Microsoft.Extensions.Options;
 using PaymentService.Entities;
-using PaymentService.Settings;
+using Stripe;
 
 namespace PaymentService.Consumers;
 
@@ -12,36 +11,38 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
 {
     private readonly IRepository<Payment> _paymentsRepo;
     private readonly ILogger<PaymentRequestedConsumer> _logger;
-    private readonly FrontendSettings _frontend;
     private readonly ITenantContext _tenant;
+    private readonly IStripeClient _stripeClient;
 
     public PaymentRequestedConsumer(
         ILogger<PaymentRequestedConsumer> logger,
-        IRepository<Payment> repository, 
-        ITenantContext tenant, IOptions<FrontendSettings> frontend)
+        IRepository<Payment> repository,
+        ITenantContext tenant,
+        IStripeClient stripeClient)
     {
         _logger = logger;
         _paymentsRepo = repository;
         _tenant = tenant;
-        _frontend = frontend.Value;
+        _stripeClient = stripeClient;
     }
 
     public async Task Consume(ConsumeContext<PaymentRequested> context)
     {
         var msg = context.Message;
-        // need to maintain idempotency, one payment for one orderID 
+        // need to maintain idempotency, one payment for one orderID
         var existing = await _paymentsRepo.GetAsync(p => p.OrderId == msg.OrderId);
         if (existing != null && existing.Status == "Succeeded")
         {
             _logger.LogWarning("Payment has already succeeded for Order {OrderId}. Ignoring. ", msg.OrderId);
             return;
         }
-        
+
         var payment = existing ?? new Payment
         {
             Id = Guid.NewGuid(),
             OrderId = msg.OrderId,
             CorrelationId = msg.CorrelationId,
+            CustomerId = msg.CustomerId,
             Amount = msg.AmountCents,
             Currency = "usd",
             Provider = "Stripe",
@@ -54,82 +55,42 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         {
             await _paymentsRepo.CreateAsync(payment);
         }
-
-        var tableId = msg.TableId;
-        
-        // Build a Stripe Checkout Session
-        
-        var success = $"{_frontend.PublicBaseUrl}/pos/table/{tableId}/checkout/success?order={msg.OrderId}&session_id={{CHECKOUT_SESSION_ID}}";
-        var cancel  = $"{_frontend.PublicBaseUrl}/pos/table/{tableId}/checkout/cancel?order={msg.OrderId}";
-        
-        var create = new Stripe.Checkout.SessionCreateOptions
+        else
         {
-            Mode = "payment",
-            SuccessUrl = success,
-            CancelUrl  = cancel,
-            ClientReferenceId = payment.Id.ToString(),
-            Metadata   = new()
+            // Starting a new attempt on a previously failed payment - reset all
+            // attempt-scoped fields together, not just PaymentIntentId/ClientSecret below,
+            // so GetPaymentSession/ConfirmPayment don't keep seeing the old decline.
+            // CustomerId is deliberately left alone: it is set once, when the payment is
+            // created, and a later event must never be able to hand ownership to someone else.
+            payment.Status = "Pending";
+            payment.ErrorMessage = null;
+        }
+
+        // Create a PaymentIntent - the frontend confirms it directly with Stripe.js
+        // via an embedded card form (Stripe Elements), no redirect involved.
+        var create = new PaymentIntentCreateOptions
+        {
+            Amount = msg.AmountCents,
+            Currency = "usd",
+            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions { Enabled = true },
+            Metadata = new()
             {
                 ["orderId"]      = msg.OrderId.ToString(),
                 ["paymentId"]    = payment.Id.ToString(),
                 ["restaurantId"] = _tenant.RestaurantId,
                 ["locationId"]   = _tenant.LocationId
-            },
-            PaymentIntentData = new Stripe.Checkout.SessionPaymentIntentDataOptions
-            {
-                Metadata = new()
-                {
-                    ["orderId"]      = msg.OrderId.ToString(),
-                    ["paymentId"]    = payment.Id.ToString(),
-                    ["restaurantId"] = _tenant.RestaurantId!,
-                    ["locationId"]   = _tenant.LocationId!
-                }
-            },
-            LineItems  =
-            [
-                new Stripe.Checkout.SessionLineItemOptions
-                {
-                    Quantity = 1,
-                    PriceData = new Stripe.Checkout.SessionLineItemPriceDataOptions
-                    {
-                        Currency = "usd",
-                        UnitAmount = msg.AmountCents,
-                        ProductData = new Stripe.Checkout.SessionLineItemPriceDataProductDataOptions
-                        {
-                            Name = $"Order {msg.OrderId}"
-                        }
-                    }
-                }
-            ]
+            }
         };
-        
-        var session = await new Stripe.Checkout.SessionService().CreateAsync(create);
-        payment.ProviderRef = session.Id; 
-        payment.SessionUrl  = session.Url; 
-        
+
+        var intent = await new PaymentIntentService(_stripeClient).CreateAsync(create);
+        payment.PaymentIntentId = intent.Id;
+        payment.ClientSecret    = intent.ClientSecret;
+
         payment.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _paymentsRepo.UpdateAsync(payment);
-        
+
         await context.Publish(new PaymentSessionCreated(
-            msg.CorrelationId, msg.OrderId, session.Url!, _tenant.RestaurantId, _tenant.LocationId));
-        
-        
-        
-        
-        // payment.UpdatedAt = DateTimeOffset.UtcNow;
-        // _logger.LogInformation("Received payment request for Order {OrderId} (Amount: {Amount})", msg.OrderId, msg.AmountCents);;
-        // // DEMO: auto-approve after a tiny delay
-        // await Task.Delay(300); // simulate gateway latency
-        // payment.Status = "Succeeded";
-        // payment.ProviderRef = $"demo_{payment.Id:N}";
-        // payment.UpdatedAt = DateTimeOffset.UtcNow;
-        //
-        // if (existing is null) await _paymentsRepo.CreateAsync(payment);
-        // else await _paymentsRepo.UpdateAsync(payment);
-        //
-        // _logger.LogInformation("Payment Succeeded for Order {OrderId}", msg.OrderId);
-        // await context.Publish(new PaymentSucceeded(msg.CorrelationId, msg.OrderId,  
-        //     _tenant.RestaurantId, _tenant.LocationId));
+            msg.CorrelationId, msg.OrderId, intent.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));
     }
 }

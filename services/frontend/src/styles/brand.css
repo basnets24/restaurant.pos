@@ -1,0 +1,219 @@
+/* =============================================================================
+ * Spoontab brand tokens — single source of truth for the design system.
+ *
+ * Imported by src/index.css right after the Tailwind import. Two layers:
+ *   1. :root         - raw palette scales + Spoontab/shadcn semantic tokens.
+ *   2. theme block   - exposes tokens as Tailwind color/radius/font utilities.
+ *
+ * Components reference the semantic utilities (e.g. text-destructive,
+ * bg-status-available-soft, bg-table-occupied) - never raw hex - so a palette
+ * change here reskins the whole app. Olive and earth, flat, no gradients.
+ * ========================================================================== */
+
+:root {
+    /* ---------------------------------------------------------------------
+     * Raw palette scales.
+     * ------------------------------------------------------------------- */
+    --olive-50: #f5f7ed;
+    --olive-100: #e6ebd2;
+    --olive-200: #ccd6a3;
+    --olive-300: #aebd6b;
+    --olive-400: #8da432;
+    --olive-500: #708823;
+    --olive-600: #577116;
+    --olive-700: #425d0b;
+    --olive-800: #365004;
+    --olive-900: #293c03;
+
+    --sand-50: #fbf9e6;
+    --sand-100: #f5f0bb;
+    --sand-200: #ede383;
+    --sand-300: #d6c264;
+    --sand-400: #c0a145;
+    --sand-500: #a67b22;
+    --sand-600: #925e06;
+    --sand-700: #6d4205;
+    --sand-800: #4f2c04;
+    --sand-900: #351903;
+
+    --clay-400: #c0a145;
+    --clay-500: #925e06;
+    --clay-600: #6d4205;
+    --rust-500: #b5482f;
+    --rust-600: #973b26;
+    --ochre-500: #c9973a;
+    --ochre-600: #a67b22;
+    --forest-500: #577116;
+    --forest-600: #425d0b;
+
+    /* Spoontab semantic aliases */
+    --bg: var(--sand-50);
+    --surface: #ffffff;
+    --surface-sunken: var(--sand-100);
+    --ink: var(--sand-900);
+    --ink-muted: var(--sand-700);
+    --border: var(--sand-200);
+    --border-strong: var(--sand-300);
+
+    --brand: var(--olive-500);
+    --brand-strong: var(--olive-700);
+    --brand-soft: var(--olive-100);
+    --brand-ink: #ffffff;
+
+    --accent: var(--clay-500);
+    --accent-soft: #f3e4c8;
+    --accent-ink: #ffffff;
+
+    --destructive: var(--rust-600);
+    --destructive-soft: #f6ddd6;
+    --destructive-ink: #ffffff;
+
+    --ring: var(--olive-400);
+
+    /* Table / floor-plan status (earthy, distinguishable) */
+    --status-available: var(--forest-500);
+    --status-available-soft: #e8ecd6;
+    --status-occupied: var(--rust-500);
+    --status-occupied-soft: #f3ded7;
+    --status-reserved: var(--ochre-500);
+    --status-reserved-soft: #f4ecd3;
+    --status-dirty: var(--sand-500);
+    --status-dirty-soft: var(--sand-200);
+
+    /* Warm-tinted elevation (never neutral black) */
+    --shadow-xs: 0 1px 2px rgba(37, 31, 24, 0.06);
+    --shadow-sm: 0 1px 3px rgba(37, 31, 24, 0.08), 0 1px 2px rgba(37, 31, 24, 0.05);
+    --shadow-md: 0 6px 16px rgba(37, 31, 24, 0.1);
+    --shadow-lg: 0 16px 32px rgba(37, 31, 24, 0.16);
+
+    /* ---------------------------------------------------------------------
+     * shadcn semantic tokens — mapped onto the Spoontab palette so the
+     * existing component tree adopts the new look without edits.
+     * ------------------------------------------------------------------- */
+    --font-size: 16px;
+    --background: var(--bg);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--surface);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-ink);
+    --secondary: var(--surface-sunken);
+    --secondary-foreground: var(--ink);
+    --muted: var(--surface-sunken);
+    --muted-foreground: var(--ink-muted);
+    /* accent = soft hover surface + on-brand ink (shadcn hover semantics) */
+    --accent: var(--brand-soft);
+    --accent-foreground: var(--brand-strong);
+    --destructive-foreground: var(--destructive-ink);
+    --input: var(--border);
+    --input-background: var(--surface);
+    --switch-background: var(--border-strong);
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
+
+    /* Earthy categorical charts */
+    --chart-1: var(--olive-500);
+    --chart-2: var(--ochre-500);
+    --chart-3: var(--clay-500);
+    --chart-4: var(--forest-500);
+    --chart-5: var(--rust-500);
+
+    /* Spoontab radii: sm 6 (chips), md 10 (buttons/inputs), lg 16 (cards), xl 22 (feature tiles) */
+    --radius: 10px;
+
+    --sidebar: var(--surface);
+    --sidebar-foreground: var(--ink);
+    --sidebar-primary: var(--brand);
+    --sidebar-primary-foreground: var(--brand-ink);
+    --sidebar-accent: var(--brand-soft);
+    --sidebar-accent-foreground: var(--brand-strong);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
+
+    /* Table Status Colors (consumed by floor plan via --color-table-*) */
+    --table-available: var(--status-available);
+    --table-available-border: var(--forest-600);
+    --table-occupied: var(--status-occupied);
+    --table-occupied-border: var(--rust-600);
+    --table-reserved: var(--status-reserved);
+    --table-reserved-border: var(--ochre-600);
+    --table-dirty: var(--status-dirty);
+    --table-dirty-border: var(--sand-600);
+}
+
+@theme inline {
+    /* Font families */
+    --font-sans: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-display: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-input-background: var(--input-background);
+    --color-switch-background: var(--switch-background);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    /* Brand & status colors exposed as Tailwind utilities */
+    --color-brand: var(--brand);
+    --color-brand-strong: var(--brand-strong);
+    --color-brand-soft: var(--brand-soft);
+
+    /* Semantic status colors (earthy) — solid + soft surface pairs.
+     * available=forest, occupied=rust, reserved=ochre, dirty=warm sand */
+    --color-status-available: var(--status-available);
+    --color-status-available-soft: var(--status-available-soft);
+    --color-status-occupied: var(--status-occupied);
+    --color-status-occupied-soft: var(--status-occupied-soft);
+    --color-status-reserved: var(--status-reserved);
+    --color-status-reserved-soft: var(--status-reserved-soft);
+    --color-status-dirty: var(--status-dirty);
+    --color-status-dirty-soft: var(--status-dirty-soft);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Table Status Colors for Tailwind */
+    --color-table-available: var(--table-available);
+    --color-table-available-border: var(--table-available-border);
+    --color-table-occupied: var(--table-occupied);
+    --color-table-occupied-border: var(--table-occupied-border);
+    --color-table-reserved: var(--table-reserved);
+    --color-table-reserved-border: var(--table-reserved-border);
+    --color-table-dirty: var(--table-dirty);
+    --color-table-dirty-border: var(--table-dirty-border);
+}

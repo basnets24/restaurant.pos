@@ -1,12 +1,13 @@
 import { http as api } from "@/lib/http";
 import { ENV } from "@/config/env";
 import { getApiToken } from "@/auth/getApiToken";
-import { tenantAccessor } from "@/auth/runtime";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
 import {
   type BulkLayoutUpdateDto,
   type CreateTableDto,
   type JoinTablesDto,
   type LinkOrderDto,
+  type SeatResultDto,
   type SetTableStatusDto,
   type SplitTablesDto,
   type TableViewDto,
@@ -15,22 +16,6 @@ import {
 
 // Uses shared axios instance with auth headers/interceptors
 // Adds explicit multi-tenant headers where available
-
-function getTenant() {
-  try {
-    return tenantAccessor();
-  } catch {
-    return undefined;
-  }
-}
-
-function withTenantHeaders(tenant?: { restaurantId?: string; locationId?: string }) {
-  const t = tenant ?? getTenant() ?? {};
-  const headers: Record<string, string> = {};
-  if (t.restaurantId) headers["x-restaurant-id"] = String(t.restaurantId);
-  if (t.locationId) headers["x-location-id"] = String(t.locationId);
-  return headers;
-}
 
 // Point Tables API to the Order service base URL from env
 const base = `${ENV.ORDER_URL}/api/tables`;
@@ -74,9 +59,10 @@ export const TablesApi = {
     const token = await getApiToken('Order', ['order.write']);
     await api.patch(`${base}/${id}/status`, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
-  async seat(id: string, party: number): Promise<void> {
+  async seat(id: string, party: number): Promise<SeatResultDto> {
     const token = await getApiToken('Order', ['order.write']);
-    await api.post(`${base}/${id}/seat`, { partySize: party }, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
+    const { data } = await api.post<SeatResultDto>(`${base}/${id}/seat`, { partySize: party }, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
+    return data;
   },
   async clear(id: string): Promise<void> {
     const token = await getApiToken('Order', ['order.write']);

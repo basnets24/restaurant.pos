@@ -21,23 +21,21 @@ const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</di
 
 // ---- Public top-level ----
 const LandingView = lazy(() => import("@/features/landing/LandingView"));
+const EngineeringView = lazy(() => import("@/features/landing/EngineeringView"));
 const HomePage    = lazy(() => import("@/features/home/HomePage"));
 
 // ---- Management ----
 const ManagementLayout  = lazy(() => import("@/features/management/ManagementLayout"));
 const AnalyticsTab      = lazy(() => import("@/features/management/tabs/AnalyticsTab"));
 const StaffTab          = lazy(() => import("@/features/management/tabs/StaffTab"));
-const InventoryTab      = lazy(() => import("@/features/management/tabs/InventoryTab"));
 const MenuTab           = lazy(() => import("@/features/management/tabs/MenuTab"));
 const ReservationsTab   = lazy(() => import("@/features/management/tabs/ReservationsTab"));
 
-// ---- Admin (role-gated) ----
-const AdminLayout        = lazy(() => import("@/features/admin/AdminLayout"));
+// ---- Admin (nested under Management, role-gated) ----
+const AdminTab           = lazy(() => import("@/features/management/tabs/AdminTab"));
 const OrganizationPage   = lazy(() => import("@/features/admin/pages/OrganizationPage"));
 const FloorPlanDesigner  = lazy(() => import("@/features/admin/pages/FloorPlanDesigner"));
 const RolesPage          = lazy(() => import("@/features/admin/pages/RolesPage"));
-const LocationsPage      = lazy(() => import("@/features/admin/pages/LocationsPage"));
-const IntegrationsPage   = lazy(() => import("@/features/admin/pages/IntegrationsPage"));
 
 // ---- Settings (profile only) ----
 const SettingsLayout     = lazy(() => import("@/features/settings/SettingsLayout"));
@@ -54,13 +52,23 @@ const OrderPage     = lazy(() => import("@/features/pos/routes/OrderPage"));
 const ActiveOrdersPage = lazy(() => import("@/features/pos/routes/ActiveOrdersPage"));
 const OrdersPage    = lazy(() => import("@/features/pos/routes/OrdersPage"));
 
+// ---- Diner ordering (public, customer-facing) ----
+const DinerLayout    = lazy(() => import("@/features/diner/DinerLayout"));
+const DiscoveryPage  = lazy(() => import("@/features/diner/routes/DiscoveryPage"));
+const RestaurantMenuPage = lazy(() => import("@/features/diner/routes/RestaurantMenuPage"));
+const DinerCheckoutPage  = lazy(() => import("@/features/diner/routes/CheckoutPage"));
+const DinerOrderStatusPage = lazy(() => import("@/features/diner/routes/OrderStatusPage"));
+const DinerOrderHistoryPage = lazy(() => import("@/features/diner/routes/OrderHistoryPage"));
+
 // ---- 404 ----
 const NotFoundPage  = lazy(() => import("@/features/misc/NotFoundPage"));
 const JoinPage      = lazy(() => import("@/features/join/JoinPage"));
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const router = createBrowserRouter([
   // ========= PUBLIC =========
   { path: "/", element: <Suspense fallback={<Fallback />}><LandingView /></Suspense> },
+  { path: "/engineering", element: <Suspense fallback={<Fallback />}><EngineeringView /></Suspense> },
 
   // Auth endpoints (public)
   { path: AuthorizationPaths.Login,           element: <LoginPage /> },
@@ -69,6 +77,22 @@ export const router = createBrowserRouter([
   { path: AuthorizationPaths.LogOut,          element: <LogoutPage /> },
   { path: AuthorizationPaths.LogOutCallback,  element: <LogoutCallbackPage /> },
   { path: AuthorizationPaths.LoggedOut,       element: <LoggedOutPage /> },
+
+  // Diner ordering — public by design. Browsing restaurants and menus must work
+  // signed out; only placing an order requires an account, gated further in.
+  {
+    path: "/order",
+    element: <Suspense fallback={<Fallback />}><DinerLayout /></Suspense>,
+    children: [
+      { index: true, element: <Suspense fallback={<Fallback />}><DiscoveryPage /></Suspense> },
+      // Static segments before the :restaurantId/:locationId pattern, or "checkout" would
+      // match as a restaurant id.
+      { path: "checkout", element: <Suspense fallback={<Fallback />}><DinerCheckoutPage /></Suspense> },
+      { path: "orders", element: <Suspense fallback={<Fallback />}><DinerOrderHistoryPage /></Suspense> },
+      { path: "orders/:orderId", element: <Suspense fallback={<Fallback />}><DinerOrderStatusPage /></Suspense> },
+      { path: ":restaurantId/:locationId", element: <Suspense fallback={<Fallback />}><RestaurantMenuPage /></Suspense> },
+    ],
+  },
 
   // ========= PROTECTED (everything from /home onward) =========
   { path: "/join",
@@ -98,27 +122,22 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="analytics" replace /> },
       { path: "analytics",    element: <Suspense fallback={<Fallback />}><AnalyticsTab /></Suspense> },
       { path: "staff",        element: <Suspense fallback={<Fallback />}><StaffTab /></Suspense> },
-      { path: "inventory",    element: <Suspense fallback={<Fallback />}><InventoryTab /></Suspense> },
       { path: "menu",         element: <Suspense fallback={<Fallback />}><MenuTab /></Suspense> },
       { path: "reservations", element: <Suspense fallback={<Fallback />}><ReservationsTab /></Suspense> },
-    ],
-  },
-
-  // Admin (Admin/Manager only)
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRoute roles={["Admin", "Manager"]}>
-        <Suspense fallback={<Fallback />}><AdminLayout /></Suspense>
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, element: <Navigate to="organization" replace /> },
-      { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
-      { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
-      { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
-      { path: "locations",    element: <Suspense fallback={<Fallback />}><LocationsPage /></Suspense> },
-      { path: "integrations", element: <Suspense fallback={<Fallback />}><IntegrationsPage /></Suspense> },
+      {
+        path: "admin",
+        element: (
+          <ProtectedRoute roles={["Admin", "Manager"]}>
+            <Suspense fallback={<Fallback />}><AdminTab /></Suspense>
+          </ProtectedRoute>
+        ),
+        children: [
+          { index: true, element: <Navigate to="organization" replace /> },
+          { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
+          { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
+          { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
+        ],
+      },
     ],
   },
 

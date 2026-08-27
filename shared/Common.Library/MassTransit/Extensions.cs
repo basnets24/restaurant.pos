@@ -154,8 +154,11 @@ public static class Extensions
             var serviceSettings = configuration.GetRequiredSection(nameof(ServiceSettings)).Get<ServiceSettings>()!;
             var rabbit          = configuration.GetRequiredSection(nameof(RabbitMqSettings)).Get<RabbitMqSettings>()!;
 
-            // Host config (expand if you have vhost/user/pass)
-            //bus.Host(rabbit.Host /*, h => { h.Username(...); h.Password(...); } */);
+            // Host config (expand if you have vhost/user/pass). Without this, MassTransit
+            // silently falls back to its localhost:5672/guest default, which only happens
+            // to work in local dev because RabbitMQ's container ports are published to the
+            // host - it breaks the moment services and RabbitMQ run in separate containers.
+            bus.Host(rabbit.Host);
 
             // Bus middleware
             bus.UseTenantPropagation(context);

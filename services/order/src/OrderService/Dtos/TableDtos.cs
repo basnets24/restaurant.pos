@@ -37,7 +37,10 @@ public record UpdateTableLayoutDto(
     double? Height,
     double Rotation, // reserved for future use
     string Shape,
-    int Version
+    int Version,
+    string? Number = null,
+    string? Section = null,
+    int? Seats = null
 );
 
 
@@ -49,7 +52,10 @@ public record BulkLayoutItemDto(
     double? Height,
     double Rotation,
     string Shape,
-    int Version
+    int Version,
+    string? Number = null,
+    string? Section = null,
+    int? Seats = null
 );
 
 
@@ -67,6 +73,7 @@ public record SetTableStatusDto(
 
 public record LinkOrderDto(Guid OrderId);
 public record SeatPartyDto(int PartySize, string? ServerId);
+public record SeatResultDto(Guid CartId);
 
 
 public record JoinTablesDto(IReadOnlyList<Guid> TableIds, string? GroupLabel);

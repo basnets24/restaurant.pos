@@ -1,14 +1,18 @@
 import { http } from "@/lib/http";
 import { getApiToken } from "@/auth/getApiToken";
-import { MenuAPI } from "./api";
-import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult } from "./types";
+import { withTenantHeaders } from "@/auth/tenantHeaders";
+import { MenuAPI, ModifierGroupsAPI } from "./api";
+import type {
+  MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto, PageResult,
+  ModifierGroupDto, UpsertModifierGroupDto,
+} from "./types";
 
 export const MenuItems = {
   list: async (
     q?: Parameters<typeof MenuAPI.list>[0]
   ): Promise<PageResult<MenuItemDto>> => {
     const token = await getApiToken("Catalog", ["menu.read"]);
-    const { data } = await http.get(MenuAPI.list(q), { headers: { Authorization: `Bearer ${token}` } });
+    const { data } = await http.get(MenuAPI.list(q), { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
     if (Array.isArray(data)) {
       const items = data as MenuItemDto[];
       return { items, page: 1, pageSize: items.length, total: items.length };
@@ -17,26 +21,54 @@ export const MenuItems = {
   },
   categories: async (): Promise<string[]> => {
     const token = await getApiToken("Catalog", ["menu.read"]);
-    const { data } = await http.get(MenuAPI.categories, { headers: { Authorization: `Bearer ${token}` } });
+    const { data } = await http.get(MenuAPI.categories, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
     return data;
   },
   create: async (dto: CreateMenuItemDto): Promise<MenuItemDto> => {
     const token = await getApiToken("Catalog", ["menu.write"]);
-    const { data } = await http.post(MenuAPI.create, dto, { headers: { Authorization: `Bearer ${token}` } });
+    const { data } = await http.post(MenuAPI.create, dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
     return data;
   },
   patch: async (id: string, dto: UpdateMenuItemDto): Promise<void> => {
     const token = await getApiToken("Catalog", ["menu.write"]);
-    await http.patch(MenuAPI.patch(id), dto, { headers: { Authorization: `Bearer ${token}` } });
+    await http.patch(MenuAPI.patch(id), dto, { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   remove: async (id: string): Promise<void> => {
     const token = await getApiToken("Catalog", ["menu.write"]);
-    await http.delete(MenuAPI.remove(id), { headers: { Authorization: `Bearer ${token}` } });
+    await http.delete(MenuAPI.remove(id), { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
   setAvailability: async (id: string, value: boolean): Promise<void> => {
     const token = await getApiToken("Catalog", ["menu.write"]);
     await http.post(MenuAPI.availability(id), value, {
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json", ...withTenantHeaders(), Authorization: `Bearer ${token}` },
     });
+  },
+};
+
+export const ModifierGroups = {
+  forMenuItem: async (menuItemId: string): Promise<ModifierGroupDto[]> => {
+    const token = await getApiToken("Catalog", ["menu.read"]);
+    const { data } = await http.get(ModifierGroupsAPI.forMenuItem(menuItemId), {
+      headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
+  create: async (menuItemId: string, dto: UpsertModifierGroupDto): Promise<ModifierGroupDto> => {
+    const token = await getApiToken("Catalog", ["menu.write"]);
+    const { data } = await http.post(ModifierGroupsAPI.create(menuItemId), dto, {
+      headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
+  update: async (id: string, dto: UpsertModifierGroupDto): Promise<ModifierGroupDto> => {
+    const token = await getApiToken("Catalog", ["menu.write"]);
+    const { data } = await http.put(ModifierGroupsAPI.update(id), dto, {
+      headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` },
+    });
+    return data;
+  },
+  remove: async (id: string): Promise<void> => {
+    const token = await getApiToken("Catalog", ["menu.write"]);
+    await http.delete(ModifierGroupsAPI.remove(id), { headers: { ...withTenantHeaders(), Authorization: `Bearer ${token}` } });
   },
 };

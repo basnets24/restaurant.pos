@@ -13,9 +13,6 @@ window.CATALOG_SERVICE_URL = window.CATALOG_SERVICE_URL || 'http://localhost:506
 window.MENU_ITEMS_API_URL = `${window.CATALOG_SERVICE_URL}/menu-items`;
 window.MENU_CATEGORIES_API_URL = `${window.CATALOG_SERVICE_URL}/menu-items/categories`;
 
-window.INVENTORY_SERVICE_URL = window.INVENTORY_SERVICE_URL || 'http://localhost:5094';
-window.INVENTORY_ITEMS_API_URL = `${window.INVENTORY_SERVICE_URL}/inventory-items`;
-
 window.IDENTITY_SERVICE_URL = window.IDENTITY_SERVICE_URL || 'http://localhost:5265';
 
 window.USERS_API_URL = `${window.IDENTITY_SERVICE_URL}/users`;
@@ -28,5 +25,3 @@ window.PAYMENT_SERVICE_URL = window.PAYMENT_SERVICE_URL || 'http://localhost:523
 // Payment session endpoint pattern: `${PAYMENT_SERVICE_URL}/orders/{orderId}/payment-session`
 
 window.RABBITMQ_URL = window.RABBITMQ_URL || 'http://localhost:15672';
-
-window.TENANT_SERVICE_URL = window.TENANT_SERVICE_URL || 'http://localhost:5200'; 

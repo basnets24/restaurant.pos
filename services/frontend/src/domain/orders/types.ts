@@ -1,5 +1,7 @@
 // src/features/pos/order/types.ts
 
+import type { AppliedDiscount, AppliedTax, ServiceCharge } from "@/domain/cart/types";
+
 export type OrderStatus = "Pending" | "Paid" | string;
 
 export interface OrderItem {
@@ -34,10 +36,10 @@ export interface OrderDto {
     status: OrderStatus;
     createdAt: string;
 
-    // Pricing details (exact shapes come from Pricing types server-side)
-    appliedDiscounts: any[];
-    appliedTaxes: any[];
-    serviceCharges: any[];
+    // Pricing details — mirror OrderService.Pricing.Contracts.cs records (see domain/cart/types.ts)
+    appliedDiscounts: AppliedDiscount[];
+    appliedTaxes: AppliedTax[];
+    serviceCharges: ServiceCharge[];
 
     tipAmount?: number | null;
     subtotal: number;
@@ -48,12 +50,11 @@ export interface OrderDto {
 
     receiptUrl?: string | null;
     paidAt?: string | null;
+    lastPaymentError?: string | null;
+    lastPaymentFailedAt?: string | null;
 }
 
-export interface TenantHeaders {
-    restaurantId?: string;
-    locationId?: string;
-}
+export type { TenantHeaders } from "@/auth/tenantHeaders";
 
 export interface PageResult<T> {
     items: T[];

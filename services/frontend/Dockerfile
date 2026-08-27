@@ -26,7 +26,10 @@ COPY public/config.js /usr/share/nginx/html/config.js
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost/ || exit 1
+# 127.0.0.1, not localhost: nginx's "listen 80" only binds IPv4, but Alpine's
+# getaddrinfo resolves "localhost" to ::1 first, so wget would hit connection
+# refused on IPv6 despite the container being perfectly healthy on IPv4.
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1/ || exit 1
 
 # Default command: serve static files
 CMD ["nginx", "-g", "daemon off;"]

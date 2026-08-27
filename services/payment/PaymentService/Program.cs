@@ -1,22 +1,31 @@
 using Common.Library.Configuration;
 using Common.Library.HealthChecks;
 using Common.Library.Identity;
+using Common.Library.Logging;
 using Common.Library.MassTransit;
-using Common.Library.MongoDB;
+using Common.Library.OpenTelemetry;
+using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OpenTelemetry.Metrics;
 using PaymentService.Auth;
+using PaymentService.Data;
 using PaymentService.Entities;
 using PaymentService.Settings;
+using Serilog;
 using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureAzureKeyVault();
+builder.Services.AddSeqLogging(builder.Configuration);
+builder.Host.UseSerilog();
+builder.Services.AddTracing(builder.Configuration);
+builder.Services.AddMetrics(builder.Configuration);
 builder.Services.AddControllers();
 
 // Bind options
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(nameof(StripeSettings)));
-builder.Services.Configure<FrontendSettings>(builder.Configuration.GetSection(nameof(FrontendSettings)));
 
 builder.Services.AddScoped<IStripeClient>(sp =>
 {
@@ -43,20 +52,35 @@ builder.Services.AddCors(options =>
 });
 
 // Persistence / bus
-builder.Services.AddMongo();
+var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
+    ?? throw new InvalidOperationException("PostgresSettings is not configured.");
+builder.Services.AddDbContext<PaymentDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddMongoDb();
+    .AddPostgres<PaymentDbContext>();
 builder.Services.AddTenancy();
-builder.Services.AddTenantMongoRepository<Payment>("payments");
+builder.Services.AddTenantEfRepository<Payment, PaymentDbContext>();
 builder.Services.AddPaymentPolicies().AddPosJwtBearer();
 builder.Services.AddMassTransitWithMessageBroker(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddLogging();
 
 var app = builder.Build();
+
+// Auto-migrate DbContext on boot (idempotent; safe to run in every environment)
+using (var scope = app.Services.CreateScope())
+{
+    // Tenant-scoped DbContexts resolve ITenantContext from TenantContextHolder, which is
+    // normally populated per-request by TenantMiddleware. At startup there's no request,
+    // so seed it with the same defaults TenantMiddleware falls back to.
+    scope.ServiceProvider.GetRequiredService<TenantMiddleware.TenantContextHolder>()
+        .Set(new TenantContext { RestaurantId = "acme-bistro", LocationId = "sjc-01" });
+
+    var paymentDbContext = scope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    paymentDbContext.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -69,10 +93,13 @@ if (app.Environment.IsDevelopment())
 // Uncomment the following line if running service directly (without API Gateway):
 // app.UseHttpsRedirection();
 
+app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>());
+
 app.UseRouting();
 
 // Enable CORS for all environments (frontend needs to call payment service)
 app.UseCors(CorsPolicy);
+app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();

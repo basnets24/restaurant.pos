@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 import { getOrder } from "@/domain/orders/api";
 import type { OrderDto } from "@/domain/orders/types";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function SuccessView() {
   const { tableId = "" } = useParams();
@@ -34,10 +35,10 @@ export default function SuccessView() {
         if (!mounted) return;
         setOrder(data);
         setLoading(false);
-        toast.success("Payment confirmed! 🎉");
-      } catch (e: any) {
+        toast.success("Order placed!");
+      } catch (e: unknown) {
         if (!mounted) return;
-        setError(e?.message || "Could not load order");
+        setError(errorMessage(e) || "Could not load order");
         setLoading(false);
       }
     })();
@@ -52,8 +53,8 @@ export default function SuccessView() {
       <Card className="border-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-            Payment Successful
+            <CheckCircle2 className="h-5 w-5 text-status-available" />
+            Order Placed
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -77,7 +78,7 @@ export default function SuccessView() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm">Amount</span>
-                <span className="font-medium">{amount != null ? `$${amount.toFixed(2)}` : "—"}</span>
+                <span className="font-medium font-numeric">{amount != null ? `$${amount.toFixed(2)}` : "—"}</span>
               </div>
               <div className="flex gap-2 pt-2">
                 {receiptUrl ? (
@@ -85,13 +86,16 @@ export default function SuccessView() {
                     href={receiptUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-brand-strong"
                   >
                     <ExternalLink className="h-4 w-4 mr-2" /> View Receipt
                   </a>
                 ) : null}
                 <Button
-                  onClick={() => navigate(`/pos/table/${tableId}/order`, { state: { orderId: order?.id } })}
+                  onClick={() => navigate(
+                    `/pos/table/${tableId}/order?order=${encodeURIComponent(order?.id ?? "")}`,
+                    { state: { orderId: order?.id } }
+                  )}
                   variant={receiptUrl ? "outline" : "default"}
                 >
                   Go to Order

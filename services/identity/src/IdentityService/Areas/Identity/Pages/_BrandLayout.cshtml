@@ -6,22 +6,31 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] - Sign In</title>
+    <title>@ViewData["Title"] - Spoontab</title>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/Identity/css/brand.css" asp-append-version="true" />
 </head>
 <body>
 <div class="auth-shell">
     <div class="brand-pane">
         <div class="brand-inner">
-            <div class="logo">🍽️</div>
-            <h1 class="brand-title">Restaurant POS</h1>
-            <p class="brand-sub">Simple. Fast. Delightful service.</p>
+            <svg class="brand-mark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="60" cy="60" r="48" fill="#fbf9e6" />
+                <path d="M48 20 Q40 44 48 58 Q52 65 60 65 Q68 65 72 58 Q80 44 72 20 Z" fill="#708823" />
+                <rect x="56" y="62" width="8" height="38" rx="4" fill="#708823" />
+            </svg>
+            <h1 class="brand-title">Spoontab</h1>
+            <p class="brand-sub">One system for orders, kitchen, staff, and sales.</p>
         </div>
     </div>
     <main class="auth-pane">
         <div class="card">
             @RenderBody()
         </div>
+        <script src="~/lib/jquery/dist/jquery.js"></script>
         @await RenderSectionAsync("Scripts", required: false)
     </main>
 </div>

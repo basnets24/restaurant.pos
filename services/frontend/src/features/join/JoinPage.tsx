@@ -11,16 +11,18 @@ import { CircleUserRound, Building2, MapPin, Clock, KeySquare, PlusCircle, LogIn
 import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { createEmployeeApi } from "@/domain/employee";
+import { getApiToken } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
-import { useTenant } from "@/app/TenantContext";
+import { useTenant } from "@/auth/tenant";
+import { errorMessage } from "@/lib/apiErrors";
 
 export default function JoinPage() {
-  const { profile, signOut, getAccessToken } = useAuth();
+  const { profile, signOut } = useAuth();
   const hooks = useRestaurantUserProfile();
   const { rid, lid, setRid, setLid } = useTenant();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const alreadyOnboarded = useMemo(() => !!((profile as any)?.restaurant_id ?? (profile as any)?.restaurantId), [profile]);
+  const alreadyOnboarded = useMemo(() => !!(profile?.restaurant_id ?? profile?.restaurantId), [profile]);
 
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -32,15 +34,17 @@ export default function JoinPage() {
   const [error, setError] = useState<string | undefined>();
 
   const displayName =
-    (profile as any)?.name ||
-    [(profile as any)?.given_name, (profile as any)?.family_name].filter(Boolean).join(" ") ||
-    (profile as any)?.preferred_username ||
-    (profile as any)?.email ||
+    profile?.name ||
+    [profile?.given_name, profile?.family_name].filter(Boolean).join(" ") ||
+    profile?.preferred_username ||
+    profile?.email ||
     "User";
-  const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
+  const onLogout = () => void signOut(`${window.location.origin}${AuthorizationPaths.LoggedOut}`);
 
   useEffect(() => {
     const prefill = params.get("code");
+    // Prefilling from the URL (an external system), guarded so it never clobbers user input.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (prefill && !code) setCode(prefill);
   }, [params]);
 
@@ -59,14 +63,14 @@ export default function JoinPage() {
       // Optionally capture display name right after onboarding (user is Admin)
       if (displayNameInput.trim()) {
         try {
-          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
-          const userId = (profile as any)?.sub as string | undefined;
+          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
+          const userId = profile?.sub;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
-        } catch { }
+        } catch (e) { console.warn("JoinPage: failed to set display name after onboarding", e); }
       }
       navigate("/home", { replace: true });
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to create restaurant");
+    } catch (err: unknown) {
+      setError(errorMessage(err) ?? "Failed to create restaurant");
     } finally { setCreating(false); }
   };
 
@@ -82,14 +86,14 @@ export default function JoinPage() {
       // Best-effort: update display name (may fail if not admin)
       if (displayNameInput.trim()) {
         try {
-          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getAccessToken()) ?? null });
-          const userId = (profile as any)?.sub as string | undefined;
+          const api = createEmployeeApi({ baseURL: ENV.IDENTITY_URL, getAccessToken: async () => (await getApiToken("IdentityServerApi", ["IdentityServerApi"])) ?? null });
+          const userId = profile?.sub;
           if (userId) await api.updateEmployee(res.restaurantId, userId, { displayName: displayNameInput.trim() });
-        } catch { }
+        } catch (e) { console.warn("JoinPage: failed to set display name after joining", e); }
       }
       navigate("/home", { replace: true });
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to join restaurant");
+    } catch (err: unknown) {
+      setError(errorMessage(err) ?? "Failed to join restaurant");
     } finally { setJoining(false); }
   };
 
@@ -121,6 +125,8 @@ export default function JoinPage() {
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (tz && NA_TIMEZONES.some(t => t.id === tz)) {
+          // Detecting from the browser's Intl API (an external system).
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setTimeZoneId(tz);
         }
       } catch {
@@ -129,17 +135,22 @@ export default function JoinPage() {
     }
   }, [timeZoneId]);
 
+  // Fetch status, redirect if already has membership (safety) — skipped once
+  // alreadyOnboarded already answers that, but the hook itself must still run
+  // unconditionally every render (Rules of Hooks).
+  const { data: status } = hooks.useOnboardingStatus(
+    { rid: rid ?? undefined, lid: lid ?? undefined },
+    { retry: 1, enabled: !alreadyOnboarded }
+  );
+  useEffect(() => {
+    if (status?.hasMembership) navigate("/home", { replace: true });
+  }, [status]);
+
   if (alreadyOnboarded) {
     // If a token refresh happened elsewhere, bounce to app
     navigate("/home", { replace: true });
     return null;
   }
-
-  // On mount: fetch status, redirect if already has membership (safety)
-  const { data: status } = hooks.useOnboardingStatus({ rid: rid ?? undefined, lid: lid ?? undefined }, { retry: 1 });
-  useEffect(() => {
-    if (status?.hasMembership) navigate("/home", { replace: true });
-  }, [status]);
 
   return (
     <div>
@@ -181,7 +192,7 @@ export default function JoinPage() {
         <p className="text-muted-foreground mt-1">Create a new restaurant or join an existing one.</p>
 
         {error && (
-          <div className="mt-4 p-3 rounded-md border border-red-300 text-red-700 bg-red-50">
+          <div className="mt-4 p-3 rounded-md border border-destructive/30 text-destructive bg-destructive/10">
             {error}
           </div>
         )}

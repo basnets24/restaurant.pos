@@ -20,6 +20,10 @@ public class TenantDbContext : DbContext
         {
             e.HasIndex(x => new { x.RestaurantId, x.Name }).IsUnique();
             e.HasIndex(x => new { x.RestaurantId, x.IsActive });
+            // Diner discovery scans across restaurants, not within one, so it needs its
+            // own index - the composite above is useless without a RestaurantId predicate.
+            e.HasIndex(x => new { x.IsDiscoverable, x.IsActive });
+            e.Property(x => x.DisplayDistanceMiles).HasPrecision(5, 2);
             e.HasOne<Restaurant>().WithMany()
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);

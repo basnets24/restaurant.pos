@@ -23,14 +23,14 @@ public class TableController : ControllerBase
 
     // --------- Reads ---------
     [HttpGet]
-    [Authorize] // adjust policy/roles
+    [Authorize(Policy = OrderPolicyExtensions.Read)]
     [ProducesResponseType(typeof(IReadOnlyList<TableViewDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
         => Ok(await _svc.GetAllAsync(ct));
 
 
     [HttpGet("{id}")]
-    [Authorize]
+    [Authorize(Policy = OrderPolicyExtensions.Read)]
     [ProducesResponseType(typeof(TableViewDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
@@ -40,7 +40,7 @@ public class TableController : ControllerBase
 
     // --------- Runtime ops ---------
     [HttpPatch("{id}/status")]
-    [Authorize] // Server/Host
+    [Authorize(Policy = OrderPolicyExtensions.ManageTables)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetTableStatusDto body, CancellationToken ct)
     {
@@ -50,17 +50,17 @@ public class TableController : ControllerBase
 
 
     [HttpPost("{id}/seat")]
-    [Authorize]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Authorize(Policy = OrderPolicyExtensions.ManageTables)]
+    [ProducesResponseType(typeof(SeatResultDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Seat(Guid id, [FromBody] SeatPartyDto body, CancellationToken ct)
     {
-        await _svc.SetStatusAsync(id, new SetTableStatusDto("occupied", body.PartySize), ct);
-        return NoContent();
+        var cartId = await _svc.SeatAsync(id, body, ct);
+        return Ok(new SeatResultDto(cartId));
     }
 
 
     [HttpPost("{id}/clear")]
-    [Authorize]
+    [Authorize(Policy = OrderPolicyExtensions.ManageTables)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Clear(Guid id, CancellationToken ct)
     {
@@ -69,7 +69,7 @@ public class TableController : ControllerBase
     }
 
     [HttpPost("{id}/link-order")]
-    [Authorize]
+    [Authorize(Policy = OrderPolicyExtensions.ManageTables)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> LinkOrder(Guid id, [FromBody] LinkOrderDto body, CancellationToken ct)
     {
@@ -79,7 +79,7 @@ public class TableController : ControllerBase
 
 
     [HttpPost("{id}/unlink-order")]
-    [Authorize]
+    [Authorize(Policy = OrderPolicyExtensions.ManageTables)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> UnlinkOrder(Guid id, [FromBody] LinkOrderDto body, CancellationToken ct)
     {
@@ -90,7 +90,7 @@ public class TableController : ControllerBase
     // --------- Layout / Designer ---------
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Manager")] // adjust
+    [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> Create([FromBody] CreateTableDto body, CancellationToken ct)
     {
@@ -100,7 +100,7 @@ public class TableController : ControllerBase
 
 
     [HttpPatch("{id}/layout")]
-    [Authorize(Roles = "Admin,Manager")] // adjust
+    [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> UpdateLayout(Guid id, [FromBody] UpdateTableLayoutDto body, CancellationToken ct)
     {
@@ -110,7 +110,7 @@ public class TableController : ControllerBase
 
 
     [HttpPost("layout/bulk")]
-    [Authorize(Roles = "Admin,Manager")] // adjust
+    [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> BulkLayout([FromBody] BulkLayoutUpdateDto body, CancellationToken ct)
     {
@@ -120,7 +120,7 @@ public class TableController : ControllerBase
 
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin,Manager")] // adjust
+    [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete( Guid id, CancellationToken ct)
     {
@@ -130,7 +130,7 @@ public class TableController : ControllerBase
 
     // --------- Join / Split (optional) ---------
     [HttpPost("join")]
-    [Authorize(Roles = "Admin,Manager")] // adjust
+    [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> Join([FromBody] JoinTablesDto body, CancellationToken ct)
     {
@@ -140,7 +140,7 @@ public class TableController : ControllerBase
 
 
     [HttpPost("split")]
-    [Authorize(Roles = "Admin,Manager")] // adjust
+    [Authorize(Roles = "Admin,Manager")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Split([FromBody] SplitTablesDto body, CancellationToken ct)
     {

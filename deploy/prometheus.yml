@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: identity
+    static_configs:
+      - targets: ["identity:5265"]
+
+  - job_name: catalog
+    static_configs:
+      - targets: ["catalog:5062"]
+
+  - job_name: order
+    static_configs:
+      - targets: ["order:5236"]
+
+  - job_name: payment
+    static_configs:
+      - targets: ["payment:5238"]

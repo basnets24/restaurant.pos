@@ -33,11 +33,26 @@ public class DiningTable : IEntity, ITenantEntity
     public int Version { get; set; }
 }
 
+/// <summary>
+/// Single source of truth for table status values and their canonical (PascalCase)
+/// storage form - shared by CartService and DiningTableService, which previously
+/// each hardcoded their own casing convention for the same concept.
+/// </summary>
 public static class DiningTableStatus
 {
-    public static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "available", "occupied", "reserved", "dirty"
-    };
-    public static bool IsValid(string status) => Allowed.Contains(status);
+    public const string Available = "Available";
+    public const string Occupied = "Occupied";
+    public const string Reserved = "Reserved";
+    public const string Dirty = "Dirty";
+
+    /// <summary>Case-insensitively maps a status string to its canonical storage form. Throws on anything else.</summary>
+    public static string Normalize(string? status) =>
+        (status ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "available" => Available,
+            "reserved" => Reserved,
+            "occupied" => Occupied,
+            "dirty" => Dirty,
+            _ => throw new ArgumentException("Invalid status. Use: available|reserved|occupied|dirty.")
+        };
 }

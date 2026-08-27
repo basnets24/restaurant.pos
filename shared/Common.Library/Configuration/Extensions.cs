@@ -21,8 +21,11 @@ public static class Extensions
                         .Get<ServiceSettings>()
                         ?? throw new InvalidOperationException("ServiceSettings section is missing or empty.");
 
+                    // Key Vault is an opt-in enhancement, not a hard requirement of running in
+                    // Production - a Production deployment with no Azure Key Vault (e.g. the VM +
+                    // Supabase path, which deliberately has no Azure dependency) should boot cleanly.
                     if (string.IsNullOrWhiteSpace(serviceSettings.KeyVaultName))
-                        throw new InvalidOperationException("ServiceSettings:KeyVaultName must be configured for Azure Key Vault.");
+                        return;
 
                     configurationBuilder.AddAzureKeyVault(
                         new Uri($"https://{serviceSettings.KeyVaultName}.vault.azure.net/"),

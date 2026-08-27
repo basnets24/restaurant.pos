@@ -1,10 +1,13 @@
 using Common.Library;
 using Common.Library.Tenancy;
 using MassTransit;
+using Messaging.Contracts.Events.Inventory;
 using Messaging.Contracts.Events.Order;
 using OrderService.Dtos;
 using OrderService.Entities;
+using OrderService.Exceptions;
 using OrderService.Interfaces;
+using OrderService.Mappers;
 
 namespace OrderService.Services;
 
@@ -16,20 +19,29 @@ public class FinalOrderService : IOrderService
     private readonly IRepository<DiningTable> _tables;
     private readonly IPricingService _pricingService;
     private readonly ITenantContext _tenant;
-    
-    public FinalOrderService(IRepository<Order> orders, 
-        ILogger<FinalOrderService> logger, 
-        IPublishEndpoint publishEndpoint, 
-        IPricingService pricingService, 
-        IRepository<DiningTable> tables, 
-        ITenantContext tenant)
+    private readonly INotificationService _notifications;
+    private readonly ICustomerOrderHistory _history;
+    private readonly ICustomerNotifier _customerNotifications;
+
+    public FinalOrderService(IRepository<Order> orders,
+        ILogger<FinalOrderService> logger,
+        IPublishEndpoint publishEndpoint,
+        IPricingService pricingService,
+        IRepository<DiningTable> tables,
+        ITenantContext tenant,
+        INotificationService notifications,
+        ICustomerOrderHistory history,
+        ICustomerNotifier customerNotifications)
     {
+        _history = history;
+        _customerNotifications = customerNotifications;
         _orders = orders;
         _logger = logger;
         _publishEndpoint = publishEndpoint;
         _pricingService = pricingService;
         _tables = tables;
         _tenant = tenant;
+        _notifications = notifications;
     }
 
 
@@ -39,85 +51,108 @@ public class FinalOrderService : IOrderService
         CancellationToken cancellationToken = default)
     {
         var orderId = idempotencyKey ?? Guid.NewGuid();
-        var correlationId = Guid.NewGuid();
         var existingOrder = await _orders.GetAsync(orderId);
-        if ( existingOrder is not null ) return existingOrder;
-        
-        
-        var subtotal = dto.Subtotal;
-        var tip = dto.TipAmount ?? 0m;
-        
+        if (existingOrder is not null) return existingOrder;
+
         // NEW: config-driven pricing
         // (non-stacking discounts,
         // taxable service charges,
         // multiple taxes)
-        var p = _pricingService.Calculate(subtotal, tip, 
+        var pricing = _pricingService.Calculate(dto.Subtotal, dto.TipAmount ?? 0m,
             new PricingContext(dto.GuestCount, DineIn: dto.TableId != null));
-        
-        var order = new Order
-        {
-            CreatedAt = DateTimeOffset.UtcNow,
-            Id = orderId,
-            Items = dto.Items,
-            Status = "Pending",
-            
-            // Context
-            TableId = dto.TableId,
-            ServerId = dto.ServerId,
-            ServerName = dto.ServerName,
-            GuestCount = dto.GuestCount,
-            
-            // order-level itemized lines (all are Scope="Order")
-            AppliedDiscounts = p.AppliedDiscounts.ToList(),
-            ServiceCharges   = p.ServiceCharges.ToList(),
-            AppliedTaxes     = p.AppliedTaxes.ToList(),
-            
-            // Totals
-            Subtotal = subtotal,
-            DiscountTotal = p.DiscountTotal,
-            ServiceChargeTotal = p.ServiceChargeTotal,
-            TaxTotal = p.TaxTotal,
-            TipAmount = p.Tip,
-            GrandTotal = p.GrandTotal,
-            
-        };
-        
+
+        var order = dto.ToOrder(orderId, pricing);
+
         await _orders.CreateAsync(order);
         _logger.LogInformation("Order {OrderId} created", orderId);
-        _logger.LogInformation( "Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
-                                "grand total is {grandTotal}", subtotal, p.TaxTotal, p.ServiceChargeTotal, p.Tip, p.GrandTotal);;
+
+        // Written here rather than projected off OrderSubmitted: this service is both the
+        // publisher and the only consumer of that event, so the broker round trip would buy
+        // nothing but a window where a diner's own order is missing from their history.
+        await _history.RecordAsync(order, cancellationToken);
+        _logger.LogInformation("Subtotal is {subtotal}, tax is {tax}, service charge is {serviceCharge}, tip is {tip}, " +
+                                "grand total is {grandTotal}", dto.Subtotal, pricing.TaxTotal, pricing.ServiceChargeTotal, pricing.Tip, pricing.GrandTotal);
 
         // when pos only, table id is present
         await _publishEndpoint.Publish(new OrderSubmitted(
-            correlationId,
+            Guid.NewGuid(),
             orderId,
             TableId: dto.TableId ?? Guid.Empty,
             dto.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
-            p.GrandTotal, 
+            pricing.GrandTotal,
             _tenant.RestaurantId, _tenant.LocationId
-        ), cancellationToken); 
-        
+        ), cancellationToken);
+
         return order;
     }
     
     public async Task MarkPaidAsync(Guid orderId, CancellationToken ct = default)
     {
         var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
-        if (order.Status == "Paid") return;
+        if (order.Status == OrderStatus.Paid) return;
 
-        order.Status = "Paid";
+        order.Status = OrderStatus.Paid;
+        order.PaidAt = DateTimeOffset.UtcNow;
         await _orders.UpdateAsync(order);
+        await _history.RecordAsync(order, ct);
+
+        // No amount in the text, deliberately. Formatting money is the frontend's job - `money()`
+        // owns the one currency assumption in the app - and a ":C" here renders in whatever
+        // culture the server host happens to run under, which on a dev machine is not the
+        // diner's. The notification links to the order, which shows the total properly.
+        await _customerNotifications.NotifyAsync(order,
+            CustomerNotificationType.OrderPaid,
+            "Payment received",
+            "Your order is paid. We'll have it ready for pickup.", ct);
 
         if (order.TableId is Guid tableId)
         {
             var table = await _tables.GetAsync(tableId);
             if (table != null)
             {
-                table.Status = "Available";
+                table.Status = DiningTableStatus.Available;
                 table.ActiveCartId = null;
                 await _tables.UpdateAsync(table);
             }
         }
+    }
+
+    public async Task CancelAsync(Guid orderId, string? reason = null, CancellationToken ct = default)
+    {
+        var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
+        if (order.Status == OrderStatus.Paid)
+            throw new ConflictException("Order is already paid and cannot be cancelled.");
+        if (order.Status == OrderStatus.Rejected)
+            throw new ConflictException("Order was never fulfilled and cannot be cancelled.");
+        if (order.Status == OrderStatus.Cancelled)
+            return; // idempotent
+
+        order.Status = OrderStatus.Cancelled;
+        order.CancelledAt = DateTimeOffset.UtcNow;
+        await _orders.UpdateAsync(order);
+        await _history.RecordAsync(order, ct);
+
+        await _publishEndpoint.Publish(new ReleaseInventory(
+            CorrelationId: order.Id,
+            OrderId: order.Id,
+            Items: order.Items.Select(i => new OrderItemMessage(i.MenuItemId, i.Quantity)).ToList(),
+            RestaurantId: order.RestaurantId,
+            LocationId: order.LocationId
+        ), ct);
+
+        _logger.LogInformation("Order {OrderId} cancelled", orderId);
+
+        await _notifications.NotifyAsync(
+            NotificationType.OrderCancelled,
+            "Order cancelled",
+            null, "Order", order.Id, ct);
+
+        // Raised for the diner's own cancel too, not just the sweep's and the staff's. It is the
+        // one record of the order ending that outlives the screen they tapped it on.
+        await _customerNotifications.NotifyAsync(order,
+            CustomerNotificationType.OrderCancelled,
+            "Order cancelled",
+            reason ?? "Your order was cancelled. You haven't been charged.", ct);
     }
 
 }

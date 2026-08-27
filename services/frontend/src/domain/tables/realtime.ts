@@ -1,35 +1,33 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as signalR from "@microsoft/signalr";
 import { tableKeys } from "./keys";
-import { ENV } from "@/config/env";
+import { useFloorHubConnection } from "@/domain/realtime/FloorHubProvider";
 
-type FloorHubOpts = {
-  baseUrl?: string;
-  restaurantId: string;
-  locationId: string;
-  accessTokenFactory?: () => string | Promise<string>;
-};
+// Every event DiningTableService actually broadcasts to the tenant group.
+const TABLE_EVENTS = [
+  "TableStatusChanged",
+  "OrderLinked",
+  "OrderUnlinked",
+  "TableLayoutChanged",
+  "TableRemoved",
+  "TablesJoined",
+  "TablesSplit",
+] as const;
 
-export function useFloorHub({ baseUrl = ENV.ORDER_URL, restaurantId, locationId, accessTokenFactory }: FloorHubOpts) {
+// Subscribes to table events on the shared connection FloorHubProvider owns
+// (mounted once in main.tsx, for the whole login session) — this hook no
+// longer opens/closes a connection of its own, so it's safe to call from any
+// page without causing reconnect churn on navigation.
+export function useFloorHub() {
   const qc = useQueryClient();
-  const connRef = useRef<signalR.HubConnection | null>(null);
+  const conn = useFloorHubConnection();
 
   useEffect(() => {
-    if (!restaurantId || !locationId) return;
-    const url = `${baseUrl}/hubs/floor?restaurantId=${restaurantId}&locationId=${locationId}`;
-    const conn = new signalR.HubConnectionBuilder()
-      .withUrl(url, { accessTokenFactory, withCredentials: true })
-      .withAutomaticReconnect()
-      .build();
-
+    if (!conn) return;
     const onUpdated = () => qc.invalidateQueries({ queryKey: tableKeys.all });
-    conn.on("TableUpdated", onUpdated);
-    conn.start().catch(console.error);
-    connRef.current = conn;
-
+    TABLE_EVENTS.forEach((event) => conn.on(event, onUpdated));
     return () => {
-      try { conn.off("TableUpdated", onUpdated); } finally { conn.stop().catch(() => { }); }
+      TABLE_EVENTS.forEach((event) => conn.off(event, onUpdated));
     };
-  }, [baseUrl, restaurantId, locationId, accessTokenFactory, qc]);
+  }, [conn, qc]);
 }

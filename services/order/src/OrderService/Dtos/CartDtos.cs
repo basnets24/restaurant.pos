@@ -13,11 +13,20 @@ public record AddCartItemDto(
     string? Notes);
 
 public record CartItemDto(
-    Guid MenuItemId, 
-    string MenuItemName, 
-    int Quantity, 
-    decimal UnitPrice, 
-    string? Notes);
+    Guid MenuItemId,
+    string MenuItemName,
+    int Quantity,
+    decimal UnitPrice,
+    string? Notes,
+    Guid LineId,
+    IReadOnlyList<SelectedModifierDto> SelectedModifiers);
+
+public record SelectedModifierDto(
+    Guid GroupId,
+    string GroupName,
+    Guid OptionId,
+    string OptionName,
+    decimal PriceDelta);
 
 public record CartEstimateDto(
     decimal Subtotal,

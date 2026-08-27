@@ -1,15 +1,23 @@
 using Common.Library.Identity;
 using Common.Library.Logging;
-using Common.Library.MongoDB;
+using Common.Library.OpenTelemetry;
+using Common.Library.PostgreSQL;
 using Common.Library.Tenancy;
+using Microsoft.EntityFrameworkCore;
+using OrderService.Data;
 using OrderService.Entities;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
 using OrderService;
 using OrderService.Auth;
 using OrderService.Extensions;
 using OrderService.Interfaces;
 using OrderService.Services;
 using OrderService.Settings;
+using OrderService.Projections;
+using OrderService.Services.Catalog;
+using OrderService.Services.Tenancy;
+using Common.Library.Settings;
 using Serilog;
 using Common.Library.Configuration;
 using Common.Library.HealthChecks;
@@ -21,29 +29,58 @@ builder.Host.ConfigureAzureKeyVault();
 // Add services to the container.
 builder.Services.AddSeqLogging(builder.Configuration);
 builder.Host.UseSerilog();
+builder.Services.AddTracing(builder.Configuration);
+builder.Services.AddMetrics(builder.Configuration);
 
-// OrderService/Program.cs
-builder.Services.AddMongo();
+var postgresSettings = builder.Configuration.GetSection(nameof(PostgresSettings)).Get<PostgresSettings>()
+    ?? throw new InvalidOperationException("PostgresSettings is not configured.");
+builder.Services.AddDbContext<OrderDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()).UseTenantModelCache());
+builder.Services.AddDbContext<OrderStateDbContext>(options =>
+    options.UseNpgsql(postgresSettings.GetConnectionString()));
+
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
-    .AddMongoDb();
+    .AddPostgres<OrderDbContext>();
 builder.Services.AddTenancy();
 
-builder.Services.AddPosCatalogReadModel();
-builder.Services.AddTenantMongoRepository<Cart>("carts");
-builder.Services.AddTenantMongoRepository<DiningTable>("diningtables");
-builder.Services.AddTenantMongoRepository<InventoryItem>("inventoryitems");
-builder.Services.AddTenantMongoRepository<MenuItem>("menuitems");
-builder.Services.AddTenantMongoRepository<Order>("orders");
+builder.Services.AddTenantEfRepository<Cart, OrderDbContext>();
+builder.Services.AddTenantEfRepository<DiningTable, OrderDbContext>();
+builder.Services.AddTenantEfRepository<PosCatalogItem, OrderDbContext>();
+builder.Services.AddTenantEfRepository<Order, OrderDbContext>();
+builder.Services.AddTenantEfRepository<Notification, OrderDbContext>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddTablesModule();
 builder.Services.AddMassTransitWithSaga(builder.Configuration);
 builder.Services.Configure<PricingSettings>(
     builder.Configuration.GetSection("Pricing"));
+builder.Services.Configure<AbandonedOrderSettings>(
+    builder.Configuration.GetSection("AbandonedOrders"));
+builder.Services.AddHostedService<AbandonedOrderSweeper>();
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, FinalOrderService>();
-builder.Services.AddScoped<IDiningTableService, DiningTableService>();
+builder.Services.AddScoped<IDinerOrderService, DinerOrderService>();
+builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
+builder.Services.AddScoped<ICustomerOrderHistory, CustomerOrderHistoryService>();
+builder.Services.AddScoped<ICustomerNotifier, CustomerNotificationService>();
 builder.Services.AddSingleton<IPricingService, PricingService>();
+
+builder.Services.AddScoped<ICatalogMenuClient, CatalogMenuClient>();
+
+// Identity's public discovery endpoint, reusing the authority already configured for JWT
+// validation rather than adding a second setting that points at the same service. Only ever
+// called to decorate an order-history row, so a slow identity delays nothing that matters -
+// hence a timeout short enough that it cannot hold up a checkout.
+var serviceSettings = builder.Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>()
+    ?? throw new InvalidOperationException("ServiceSettings is not configured.");
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<ITenantDirectoryClient, TenantDirectoryClient>(c =>
+{
+    c.BaseAddress = new Uri(serviceSettings.Authority.TrimEnd('/') + "/");
+    c.Timeout = TimeSpan.FromSeconds(3);
+});
 
 
 
@@ -62,7 +99,6 @@ builder.Services.AddControllers(options =>
 {
     options.SuppressAsyncSuffixInActionNames = false;
 });
-builder.Services.AddSignalR();
 
 // Add error handling
 builder.Services.AddErrorHandling();
@@ -74,6 +110,21 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Auto-migrate DbContexts on boot (idempotent; safe to run in every environment)
+using (var scope = app.Services.CreateScope())
+{
+    // Tenant-scoped DbContexts resolve ITenantContext from TenantContextHolder, which is
+    // normally populated per-request by TenantMiddleware. At startup there's no request,
+    // so seed it with the same defaults TenantMiddleware falls back to.
+    scope.ServiceProvider.GetRequiredService<TenantMiddleware.TenantContextHolder>()
+        .Set(new TenantContext { RestaurantId = "acme-bistro", LocationId = "sjc-01" });
+
+    var orderDbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+    orderDbContext.Database.Migrate();
+    var orderStateDbContext = scope.ServiceProvider.GetRequiredService<OrderStateDbContext>();
+    orderStateDbContext.Database.Migrate();
+}
 
 // Global exception handling middleware (must be first)
 app.UseGlobalExceptionHandling();
@@ -90,10 +141,13 @@ if (app.Environment.IsDevelopment())
 // Uncomment the following line if running service directly (without API Gateway):
 // app.UseHttpsRedirection();
 
+app.UseOpenTelemetryPrometheusScrapingEndpoint(app.Services.GetRequiredService<MeterProvider>());
+
 app.UseRouting();
 
 // Enable CORS for all environments (frontend needs to call order service)
 app.UseCors(corsPolicy);
+app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseTenancy();

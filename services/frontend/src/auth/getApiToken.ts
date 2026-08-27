@@ -1,9 +1,10 @@
-import { oidc, BASE_ID_SCOPES } from "./oidc";
-import { useAuth } from "./store";
+import { userManager, BASE_ID_SCOPES } from "@/api-authorization/oidc";
+import { addGrantedScopes } from "./permissions";
 import { logToken } from "./debug";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
+import { errorMessage } from "@/lib/apiErrors";
 
-type Audience = "Tenant" | "Catalog" | "Order" | "Inventory" | "Payment" | "IdentityServerApi";
+type Audience = "Tenant" | "Catalog" | "Order" | "Payment" | "IdentityServerApi";
 
 const cache = new Map<string, { token: string; exp: number }>();
 
@@ -35,11 +36,24 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   if (hit && hit.exp > now) return hit.token;
 
   const scope = `${BASE_ID_SCOPES} ${neededScopes.join(" ")}`.trim();
-  let user: Awaited<ReturnType<typeof oidc.signinSilent>> | null = null;
+  let user: Awaited<ReturnType<typeof userManager.signinSilent>>;
   try {
-    user = await oidc.signinSilent({ scope });
-  } catch (err: any) {
-    const msg = String(err?.message || err || "signinSilent failed").toLowerCase();
+    user = await userManager.signinSilent({ scope });
+  } catch (err: unknown) {
+    // A demo session (password grant, see AuthProvider.signInDemoAdmin) has no real
+    // Authorization Code session at the IdP for signinSilent's prompt=none iframe to renew
+    // against - it will always fail here. If the token already on hand covers every scope
+    // this call needs, reuse it instead of treating that as a real "need to log in" failure.
+    const current = await userManager.getUser();
+    if (current && !current.expired && neededScopes.every((s) => current.scopes.includes(s))) {
+      const token = current.access_token;
+      const exp = parseExp(token) ?? (Math.floor(Date.now() / 1000) + 60);
+      cache.set(key, { token, exp });
+      addGrantedScopes(neededScopes);
+      return token;
+    }
+
+    const msg = String(errorMessage(err) || err || "signinSilent failed").toLowerCase();
     // If the OP requires interactive login, send user to login preserving returnUrl
     if (msg.includes("login_required") || msg.includes("consent_required") || msg.includes("interaction_required")) {
       const returnUrl = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -58,12 +72,10 @@ export async function getApiToken(_resource: Audience, neededScopes: string[]) {
   const exp = parseExp(token) ?? (Math.floor(Date.now() / 1000) + 60); // fallback short cache
   cache.set(key, { token, exp });
 
-  // merge granted scopes into UI store so permissions update
-  const st = useAuth.getState();
-  const merged = Array.from(new Set([...(st.grants?.scopes ?? []), ...neededScopes]));
-  useAuth.setGrants({ ...(st.grants ?? { roles: [] }), scopes: merged });
+  // merge granted scopes into the accumulator so permission checks update
+  addGrantedScopes(neededScopes);
 
-  if (import.meta.env.DEV && (window as any)?.AUTH_DEBUG) {
+  if (import.meta.env.DEV && window.AUTH_DEBUG) {
     logToken(token, `scoped token (scopes=${neededScopes.join(" ")})`);
   }
 

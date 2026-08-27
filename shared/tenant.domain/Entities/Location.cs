@@ -18,5 +18,18 @@ public class Location
     public string? TimeZoneId { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
+
+    // Diner-facing discovery. Defaults keep every existing location unlisted until
+    // someone opts it in explicitly - adding these fields must not publish anyone.
+    [MaxLength(250)]
+    public string? Address { get; set; }
+
+    /// <summary>Static seeded distance shown on discovery cards. Not derived from the
+    /// diner's position - there is no geolocation anywhere in the platform.</summary>
+    public decimal? DisplayDistanceMiles { get; set; }
+
+    public int? EstimatedPickupMinutes { get; set; }
+
+    public bool IsDiscoverable { get; set; } = false;
 }
 

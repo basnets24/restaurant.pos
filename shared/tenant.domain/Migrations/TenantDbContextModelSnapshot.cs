@@ -29,10 +29,24 @@ namespace Tenant.Domain.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("DisplayDistanceMiles")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int?>("EstimatedPickupMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDiscoverable")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -50,6 +64,10 @@ namespace Tenant.Domain.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsDiscoverable", "IsActive");
+
+                    b.HasIndex("RestaurantId", "IsActive");
+
                     b.HasIndex("RestaurantId", "Name")
                         .IsUnique();
 
@@ -64,6 +82,10 @@ namespace Tenant.Domain.Migrations
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Cuisine")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -105,6 +127,8 @@ namespace Tenant.Domain.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.HasIndex("UserId", "RestaurantId")
                         .IsUnique();
 
@@ -131,6 +155,8 @@ namespace Tenant.Domain.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "RestaurantId");
 
                     b.HasIndex("UserId", "RestaurantId", "RoleName")
                         .IsUnique();

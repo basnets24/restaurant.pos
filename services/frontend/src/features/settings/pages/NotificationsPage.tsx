@@ -25,7 +25,7 @@ function readNotif(): NotifCfg {
 }
 
 function writeNotif(cfg: NotifCfg) {
-  try { localStorage.setItem(NOTIF_LS, JSON.stringify(cfg)); } catch {}
+  try { localStorage.setItem(NOTIF_LS, JSON.stringify(cfg)); } catch (e) { console.warn("NotificationsPage: failed to persist settings to localStorage", e); }
 }
 
 export default function NotificationsPage() {

@@ -22,6 +22,7 @@ export interface MenuItem {
     category: string;
     description: string;
     price: number;
+    isAvailable: boolean;
 }
 
 export interface OrderItem {

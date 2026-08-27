@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: restaurant-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - pos-net
+
+  rabbitmq:
+    image: masstransit/rabbitmq:latest
+    container_name: restaurant-rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    hostname: rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - pos-net
+
+  seq:
+    image: datalust/seq
+    container_name: restaurant-seq
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    ports:
+      - 5341:80
+    volumes:
+      - seq_data:/data
+    networks:
+      - pos-net
+
+volumes:
+  # Named explicitly (rather than left to the default <project>_<volume> pattern)
+  # so this directory's infra->local rename doesn't orphan existing local data -
+  # these are the same physical volumes Docker already created under the old name.
+  rabbitmq_data:
+    name: infra_rabbitmq_data
+  seq_data:
+    name: infra_seq_data
+  postgres-data:
+    name: infra_postgres-data
+
+
+networks:
+  pos-net:
+    driver: bridge

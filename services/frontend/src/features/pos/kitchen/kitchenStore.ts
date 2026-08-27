@@ -24,11 +24,12 @@ function read(): KitchenState {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return { tickets: [], selectedCartId: null };
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return { tickets: [], selectedCartId: null };
-    const t = Array.isArray((parsed as any).tickets) ? (parsed as any).tickets : [];
-    const selectedCartId = (parsed as any).selectedCartId ?? null;
-    return { tickets: t, selectedCartId } as KitchenState;
+    const obj = parsed as Record<string, unknown>;
+    const tickets = Array.isArray(obj.tickets) ? (obj.tickets as KitchenTicket[]) : [];
+    const selectedCartId = typeof obj.selectedCartId === "string" ? obj.selectedCartId : null;
+    return { tickets, selectedCartId };
   } catch {
     return { tickets: [], selectedCartId: null };
   }
@@ -37,7 +38,9 @@ function read(): KitchenState {
 function write(s: KitchenState) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(s));
-  } catch {}
+  } catch (e) {
+    console.warn("kitchenStore: failed to persist state to localStorage", e);
+  }
 }
 
 let state: KitchenState = read();
@@ -54,6 +57,13 @@ function subscribe(cb: () => void) {
   return () => subs.delete(cb);
 }
 
+// Plain (non-hook) reset for callers outside React, e.g. AuthProvider clearing
+// tenant-local caches on sign-out - useKitchen()'s clearAll requires being
+// inside a component.
+export function clearKitchenState() {
+  setState({ tickets: [], selectedCartId: null });
+}
+
 export function useKitchen() {
   // Only client-side; server snapshot not needed
   const current = useSyncExternalStore(subscribe, () => state);
@@ -61,8 +71,13 @@ export function useKitchen() {
   const actions = useMemo(() => {
     return {
       fire: (ticket: Omit<KitchenTicket, "status">) => {
-        // If already present, no-op
-        if (state.tickets.some((t) => t.id === ticket.id && t.status === "fired")) return;
+        // If a live ticket already exists for this cart (fired or already
+        // served), no-op - only a voided ticket frees the id up to be fired
+        // again. Matching on "fired" alone let a served-but-unpaid order get
+        // re-fired as a brand new duplicate ticket once it dropped out of the
+        // "fired" bucket, showing the kitchen more items than the guest's
+        // order/bill actually has.
+        if (state.tickets.some((t) => t.id === ticket.id && t.status !== "voided")) return;
         setState({ tickets: [...state.tickets, { ...ticket, status: "fired" }] });
       },
       void: (cartId: string) => {
@@ -82,8 +97,12 @@ export function useKitchen() {
       remove: (cartId: string) => {
         setState({ tickets: state.tickets.filter((t) => t.id !== cartId) });
       },
+      // "served" means the kitchen delivered the food, not that the guest paid -
+      // the cart must stay locked (no more adding items / re-firing) until the
+      // order reaches a terminal state. Only "voided" - which also releases the
+      // table - actually reopens the cart.
       isFired: (cartId?: string | null) =>
-        !!cartId && state.tickets.some((t) => t.id === cartId && t.status === "fired"),
+        !!cartId && state.tickets.some((t) => t.id === cartId && t.status !== "voided"),
       active: () => state.tickets.filter((t) => t.status === "fired"),
       all: () => state.tickets.slice(),
       setSelected: (cartId: string | null) => setState({ selectedCartId: cartId }),

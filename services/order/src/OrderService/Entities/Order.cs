@@ -18,10 +18,17 @@ public class Order : IEntity, ITenantEntity
     
     public Guid? CustomerId { get; set; }
     public int? GuestCount { get; set; }
-    
+
+    /// <summary>See <see cref="Cart.OrderType"/>. Only Pickup orders are routed automatically
+    /// to payment (InventoryReservedConsumer); dine-in keeps the deliberate two-step
+    /// fire-then-pay flow.</summary>
+    public string OrderType { get; set; } = OrderTypes.DineIn;
+
+    public DateTimeOffset? PickupTime { get; set; }
+
     public List<OrderItem> Items { get; set; } = new();
-    
-    public string Status { get; set; } = "Pending";
+
+    public string Status { get; set; } = OrderStatus.Pending;
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     
     // Adjustments (order-level)
@@ -44,13 +51,38 @@ public class Order : IEntity, ITenantEntity
     // Payment linkage (Stripe)
     public string? ReceiptUrl { get; set; }
     public DateTimeOffset? PaidAt { get; set; }
+
+    // Set when a payment attempt fails; cleared implicitly once PaidAt is set.
+    // Order stays Pending/retryable - a declined card is not an order rejection.
+    public string? LastPaymentError { get; set; }
+    public DateTimeOffset? LastPaymentFailedAt { get; set; }
+
+    public DateTimeOffset? CancelledAt { get; set; }
+}
+
+/// <summary>Single source of truth for Order.Status values - previously hardcoded
+/// independently across FinalOrderService, OrderController, and two consumers.</summary>
+public static class OrderStatus
+{
+    public const string Pending = "Pending";
+    public const string Paid = "Paid";
+    public const string Rejected = "Rejected";
+    public const string Cancelled = "Cancelled";
 }
 
 public class OrderItem
 {
+    /// <summary>Carried over from the cart line. See <see cref="CartItem.LineId"/>.</summary>
+    public Guid LineId { get; set; } = Guid.NewGuid();
+
     public Guid MenuItemId { get; set; }
     public string MenuItemName { get; set; } = null!;
     public int Quantity { get; set; }
+
+    /// <summary>All-in: base price plus modifier deltas. See <see cref="CartItem.UnitPrice"/>.</summary>
     public decimal UnitPrice { get; set; }
+
     public string? Notes { get; set; }
+
+    public List<SelectedModifier> SelectedModifiers { get; set; } = new();
 }

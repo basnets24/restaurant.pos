@@ -19,7 +19,7 @@ function readCfg(): SecurityCfg {
 }
 
 function writeCfg(cfg: SecurityCfg) {
-  try { localStorage.setItem(SEC_LS, JSON.stringify(cfg)); } catch {}
+  try { localStorage.setItem(SEC_LS, JSON.stringify(cfg)); } catch (e) { console.warn("SecurityPage: failed to persist settings to localStorage", e); }
 }
 
 export default function SecurityPage() {
