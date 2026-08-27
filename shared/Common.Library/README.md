@@ -4,7 +4,7 @@ Reusable .NET 8 building blocks for Restaurant POS microservices: logging, tenan
 
 ## Installation
 
-Add your GitHub NuGet source/credentials (see [`shared/docs/SHARED_PACKAGES.md`](../docs/SHARED_PACKAGES.md) if you haven't set that up), then reference the package:
+Add your GitHub NuGet source/credentials (see the root [README](../../README.md#prerequisites) if you haven't set that up), then reference the package:
 
 ```xml
 <ItemGroup>
