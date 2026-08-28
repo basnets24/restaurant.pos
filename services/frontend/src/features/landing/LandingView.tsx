@@ -91,11 +91,14 @@ export default function LandingView() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* No full nav bar on this page - just a small, unobtrusive Log In link so real
-                staff (not the one-click demo flows below) can still reach the sign-in page.
-                pointer-events-none on the wrapper keeps it from blocking hero content it
-                overlaps; pointer-events-auto on the button opts back in. */}
-            <div className="sticky top-0 z-40 flex justify-end px-4 sm:px-6 lg:px-8 py-3 pointer-events-none">
+            {/* No full nav bar on this page - just the brand mark and a small, unobtrusive
+                Log In link so real staff (not the one-click demo flows below) can still reach
+                the sign-in page. pointer-events-none on the wrapper keeps it from blocking hero
+                content it overlaps; pointer-events-auto on the row opts back in. */}
+            <div className="sticky top-0 z-40 relative flex items-center justify-end px-4 sm:px-6 lg:px-8 py-3 pointer-events-none">
+                <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+                    <img src="/favicon.svg" alt="Spoontab" className="w-8 h-8 shrink-0" />
+                </div>
                 <Button variant="outline" size="sm" onClick={logIn} className="pointer-events-auto">Log In</Button>
             </div>
 
