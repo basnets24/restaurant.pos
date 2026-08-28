@@ -101,7 +101,7 @@ export default function LandingView() {
             <header
                 className="sticky top-0 z-40 border-b border-border"
                 style={{
-                    background: "color-mix(in srgb, var(--olive-300) 90%, transparent)",
+                    background: "var(--header-bg)",
                     backdropFilter: "blur(8px)",
                     WebkitBackdropFilter: "blur(8px)",
                 }}

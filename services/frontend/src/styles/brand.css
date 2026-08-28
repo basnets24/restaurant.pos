@@ -67,6 +67,11 @@
     --brand-soft: var(--olive-100);
     --brand-ink: #ffffff;
 
+    /* App/diner header translucent backdrop — was copy-pasted as a raw
+     * var(--olive-300) color-mix() in AppHeader/DinerHeader/EngineeringView/
+     * LandingView; centralized here so all four track together. */
+    --header-bg: color-mix(in srgb, var(--olive-300) 90%, transparent);
+
     --brand-accent: var(--clay-500);
     --brand-accent-soft: #f3e4c8;
     --brand-accent-ink: #ffffff;
@@ -121,8 +126,11 @@
     --input-background: var(--surface);
     --switch-background: var(--border-strong);
 
-    /* Earthy categorical charts */
-    --chart-1: var(--olive-500);
+    /* Earthy categorical charts. chart-1 tracks --brand (not a raw
+     * olive-N step) since it IS the brand color in chart form — it should
+     * move whenever --brand does, same as every other brand-colored
+     * surface. */
+    --chart-1: var(--brand);
     --chart-2: var(--ochre-500);
     --chart-3: var(--clay-500);
     --chart-4: var(--forest-500);
