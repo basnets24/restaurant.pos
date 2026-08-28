@@ -11,4 +11,15 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      // silent-renew.html is a second, minimal entry point for oidc.ts's silent_redirect_uri
+      // (see silentRenew.ts) - it must build to its own small chunk, not get pulled into the
+      // main app bundle that automaticSilentRenew's hidden iframe would otherwise have to load.
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        silentRenew: fileURLToPath(new URL('./silent-renew.html', import.meta.url)),
+      },
+    },
+  },
 })

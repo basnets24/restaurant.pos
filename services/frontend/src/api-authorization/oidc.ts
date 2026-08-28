@@ -19,6 +19,11 @@ export const userManager = new UserManager({
     post_logout_redirect_uri: `${origin}${AuthorizationPaths.LogOutCallback}`,
     automaticSilentRenew: true,
     includeIdTokenInSilentRenew: true,
+    // Without this, silent renewal (the automaticSilentRenew timer, plus signinSilent() calls
+    // from AuthProvider.signIn() and getApiToken.ts) defaults to reusing redirect_uri, loading
+    // the full SPA - React, every provider, the router - inside a hidden iframe just to read a
+    // postMessage response. silent-renew.html is a dedicated, near-empty page for that instead.
+    silent_redirect_uri: `${origin}/silent-renew.html`,
     userStore: new WebStorageStateStore({ prefix: ApplicationName }),
 });
 
