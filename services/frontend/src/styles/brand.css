@@ -58,7 +58,11 @@
     --border: var(--sand-200);
     --border-strong: var(--sand-300);
 
-    --brand: var(--olive-500);
+    /* olive-500 measures ~4.01:1 for white text — below the 4.5:1 AA
+     * minimum for normal text, which matters here since --brand feeds
+     * --primary (buttons, badges) as a solid fill with white text/icons.
+     * olive-600 measures ~5.56:1, comfortably clearing AA. */
+    --brand: var(--olive-600);
     --brand-strong: var(--olive-700);
     --brand-soft: var(--olive-100);
     --brand-ink: #ffffff;
