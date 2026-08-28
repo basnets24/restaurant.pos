@@ -23,7 +23,7 @@ export default function SettingsLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader title="Settings" subtitle="Account & preferences" logo="RMS" />
+      <AppHeader title="Settings" subtitle="Account & preferences" />
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8 items-stretch md:items-start">
         <Tabs

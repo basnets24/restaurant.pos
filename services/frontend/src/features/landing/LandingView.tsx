@@ -107,7 +107,7 @@ export default function LandingView() {
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 shrink-0 bg-primary rounded-[10px] flex items-center justify-center">
-                            <span className="text-primary-foreground font-bold text-xs">RMS</span>
+                            <span className="text-primary-foreground font-bold text-xs">S</span>
                         </div>
                         <span className="text-lg font-semibold text-foreground">Spoontab</span>
                     </div>

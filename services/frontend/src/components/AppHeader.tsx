@@ -45,7 +45,7 @@ export interface AppHeaderProps {
   title: string;
   /** Secondary line — location, "Point of Sale System", etc. */
   subtitle?: string;
-  /** Short text in the brand mark box (e.g. "RMS", "POS", "A") */
+  /** Short text in the brand mark box (e.g. "S", "POS") */
   logo?: string;
   /** Where clicking the brand mark navigates (default: /home) */
   brandTo?: string;
@@ -60,7 +60,7 @@ export interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
-  logo = "RMS",
+  logo = "S",
   brandTo = "/home",
   nav,
   menuItems,

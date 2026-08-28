@@ -166,7 +166,6 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
             <AppHeader
                 title={restaurantName}
                 subtitle={locationLabel || undefined}
-                logo="RMS"
             />
 
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">

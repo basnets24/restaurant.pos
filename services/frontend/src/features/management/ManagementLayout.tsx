@@ -47,7 +47,6 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
             <AppHeader
                 title="Management Dashboard"
                 subtitle={nameFromTenant ?? userData?.restaurantName}
-                logo="RMS"
                 menuItems={[
                     { label: "Account", icon: User, onClick: () => navigate("/settings/account") },
                     { label: "Security", icon: Shield, onClick: () => navigate("/settings/security") },
