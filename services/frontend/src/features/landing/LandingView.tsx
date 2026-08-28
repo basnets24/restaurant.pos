@@ -91,30 +91,13 @@ export default function LandingView() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            {/* No background color (unlike the other headers, which use --header-bg) - but
-                still needs *some* backdrop, or scrolled content shows straight through and
-                collides with the logo/nav text. A colorless blur keeps it transparent while
-                staying legible over whatever section is scrolled underneath. */}
-            <header
-                className="sticky top-0 z-40"
-                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
-            >
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 shrink-0 bg-primary rounded-[10px] flex items-center justify-center">
-                            <span className="text-primary-foreground font-bold text-xs">S</span>
-                        </div>
-                        <span className="text-lg font-semibold text-foreground">Spoontab</span>
-                    </div>
-                    <nav className="hidden md:flex items-center gap-7">
-                        <a href="#demos" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Demos</a>
-                        <a href="#architecture" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Architecture</a>
-                        <Link to="/engineering" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Engineering</Link>
-                    </nav>
-                    <Button variant="outline" onClick={logIn}>Log In</Button>
-                </div>
-            </header>
+            {/* No full nav bar on this page - just a small, unobtrusive Log In link so real
+                staff (not the one-click demo flows below) can still reach the sign-in page.
+                pointer-events-none on the wrapper keeps it from blocking hero content it
+                overlaps; pointer-events-auto on the button opts back in. */}
+            <div className="sticky top-0 z-40 flex justify-end px-4 sm:px-6 lg:px-8 py-3 pointer-events-none">
+                <Button variant="outline" size="sm" onClick={logIn} className="pointer-events-auto">Log In</Button>
+            </div>
 
             {/* 1. Hero — honest, project-focused */}
             <section className="relative overflow-hidden">
