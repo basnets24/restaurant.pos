@@ -60,9 +60,9 @@
     --brand-soft: var(--olive-100);
     --brand-ink: #ffffff;
 
-    --accent: var(--clay-500);
-    --accent-soft: #f3e4c8;
-    --accent-ink: #ffffff;
+    --brand-accent: var(--clay-500);
+    --brand-accent-soft: #f3e4c8;
+    --brand-accent-ink: #ffffff;
 
     --destructive: var(--rust-600);
     --destructive-soft: #f6ddd6;
@@ -103,7 +103,9 @@
     --secondary-foreground: var(--ink);
     --muted: var(--surface-sunken);
     --muted-foreground: var(--ink-muted);
-    /* accent = soft hover surface + on-brand ink (shadcn hover semantics) */
+    /* shadcn accent = soft hover surface + on-brand ink (hover semantics) —
+     * distinct from Spoontab's own --brand-accent above; the two used to
+     * share the --accent name, and this declaration silently won every time. */
     --accent: var(--brand-soft);
     --accent-foreground: var(--brand-strong);
     --destructive-foreground: var(--destructive-ink);
@@ -181,6 +183,8 @@
     --color-brand: var(--brand);
     --color-brand-strong: var(--brand-strong);
     --color-brand-soft: var(--brand-soft);
+    --color-brand-accent: var(--brand-accent);
+    --color-brand-accent-soft: var(--brand-accent-soft);
 
     /* Semantic status colors (earthy) — solid + soft surface pairs.
      * available=forest, occupied=rust, reserved=ochre, dirty=warm sand */
