@@ -92,13 +92,13 @@ export default function LandingView() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
+            {/* No background color (unlike the other headers, which use --header-bg) - but
+                still needs *some* backdrop, or scrolled content shows straight through and
+                collides with the logo/nav text. A colorless blur keeps it transparent while
+                staying legible over whatever section is scrolled underneath. */}
             <header
-                className="sticky top-0 z-40 border-b border-border"
-                style={{
-                    background: "var(--header-bg)",
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                }}
+                className="sticky top-0 z-40"
+                style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
             >
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
