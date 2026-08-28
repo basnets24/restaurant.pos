@@ -4,11 +4,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImageWithFallback } from "@/figma/ImageWithFallback";
 import {
     Star, ArrowRight, CheckCircle2, Zap, Users, Menu as MenuIcon,
-    ShoppingCart, CreditCard, BarChart3, Code2, Clock, PlayCircle,
+    ShoppingCart, CreditCard, BarChart3, Code2, PlayCircle,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
@@ -57,7 +56,6 @@ const EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
 export default function LandingView() {
     const navigate = useNavigate();
     const { isAuthenticated, signInDemoAdmin } = useAuth();
-    const [demoOpen, setDemoOpen] = useState(false);
     const [adminDemoLoading, setAdminDemoLoading] = useState(false);
     const [customerDemoLoading, setCustomerDemoLoading] = useState(false);
 
@@ -131,41 +129,53 @@ export default function LandingView() {
                             <div className="space-y-4">
                                 <Badge className={EYEBROW}>
                                     <Star className="w-4 h-4 mr-2" />
-                                    Modern Restaurant Technology
+                                    Portfolio Project
                                 </Badge>
                                 <h1 className="text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight">
                                     Run the Floor
                                     <span className="block italic text-brand-strong">Without the Chaos</span>
                                 </h1>
                                 <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
-                                    One system for orders, kitchen, staff, and sales.
+                                    Explore a full restaurant workflow, from floor planning and ordering to kitchen fulfillment and payment, built on an observable .NET microservices architecture.
                                 </p>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <Button size="lg" onClick={go} className="text-lg px-8 py-4 shadow-md hover:shadow-lg transition-all duration-200">
-                                    Start Free Trial
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                                <Button
+                                    size="lg"
+                                    onClick={goAdminDemo}
+                                    disabled={adminDemoLoading}
+                                    className="text-lg px-8 py-4 shadow-md hover:shadow-lg transition-all duration-200"
+                                >
+                                    {adminDemoLoading ? "Signing in…" : "Explore Admin Demo"}
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                                 <Button
                                     variant="outline"
                                     size="lg"
+                                    onClick={goCustomerDemo}
+                                    disabled={customerDemoLoading}
                                     className="text-lg px-8 py-4 border-2 hover:bg-accent"
-                                    onClick={() => setDemoOpen(true)}
                                 >
-                                    Watch Demo
+                                    {customerDemoLoading ? "Signing in…" : "Try Customer Experience"}
                                 </Button>
+                                <Link
+                                    to="/engineering"
+                                    className="inline-flex items-center text-base font-medium text-muted-foreground hover:text-foreground"
+                                >
+                                    View Engineering Details
+                                    <ArrowRight className="ml-1.5 h-4 w-4" />
+                                </Link>
                             </div>
-                            <p className="text-sm text-muted-foreground">Free 14-day trial &middot; No credit card required &middot; Cancel anytime</p>
 
                             <div className="flex items-center gap-6 pt-2">
                                 <div className="flex items-center gap-2">
                                     <CheckCircle2 className="w-5 h-5 text-primary" />
-                                    <span className="text-muted-foreground">No installation required</span>
+                                    <span className="text-muted-foreground">Live, deployed system</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <CheckCircle2 className="w-5 h-5 text-primary" />
-                                    <span className="text-muted-foreground">Works on any device</span>
+                                    <span className="text-muted-foreground">No sign-up needed to explore</span>
                                 </div>
                             </div>
                         </div>
@@ -180,23 +190,17 @@ export default function LandingView() {
                                     />
                                     <div className="p-6 bg-card space-y-4">
                                         <div>
-                                            <h3 className="font-medium text-foreground">Live Demo Available</h3>
-                                            <p className="text-sm text-muted-foreground">Two ways to experience it</p>
+                                            <h3 className="font-medium text-foreground">What Each Demo Shows</h3>
+                                            <p className="text-sm text-muted-foreground">Two views into the same system</p>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-2">
-                                                <span className="text-sm font-medium text-foreground">Business View</span>
+                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-1.5">
+                                                <span className="text-sm font-medium text-foreground">Admin Demo</span>
                                                 <span className="text-xs text-muted-foreground">Staff POS — floor plan, ordering, kitchen, payments</span>
-                                                <Button size="sm" className="mt-1 shadow-md" onClick={goAdminDemo} disabled={adminDemoLoading}>
-                                                    {adminDemoLoading ? "Signing in…" : "Admin Demo"}
-                                                </Button>
                                             </div>
-                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-2">
-                                                <span className="text-sm font-medium text-foreground">Customer View</span>
+                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-1.5">
+                                                <span className="text-sm font-medium text-foreground">Customer Experience</span>
                                                 <span className="text-xs text-muted-foreground">Browse Momo &amp; Burger&apos;s menu and order as a guest</span>
-                                                <Button size="sm" variant="outline" className="mt-1" onClick={goCustomerDemo} disabled={customerDemoLoading}>
-                                                    {customerDemoLoading ? "Signing in…" : "Customer Demo"}
-                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -300,57 +304,26 @@ export default function LandingView() {
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
                         <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-2">
-                            <Clock className="w-4 h-4 mr-2" />
-                            Ready to Start
+                            <PlayCircle className="w-4 h-4 mr-2" />
+                            Explore Further
                         </Badge>
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">Transform Your Restaurant Today</h2>
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See It For Yourself</h2>
                         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                            Join restaurants using our POS system to deliver exceptional dining experiences. No setup fees, no long-term contracts.
+                            Browse the live demo, read the architecture writeup, or reach out if you&apos;d like to talk through the engineering decisions.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                             <Button size="lg" asChild className="text-lg px-10 py-4 shadow-md hover:shadow-lg transition-all duration-200">
-                                <a href="mailto:snehabasnet224@gmail.com?subject=Schedule%20a%20Walkthrough">
-                                    Schedule Walkthrough
+                                <a href="mailto:snehabasnet224@gmail.com?subject=Let%27s%20Talk">
+                                    Get in Touch
                                 </a>
                             </Button>
-                        </div>
-                        <p className="text-sm text-muted-foreground">Free 14-day trial &middot; No credit card required</p>
-
-                        <div className="flex items-center justify-center gap-8 pt-4">
-                            <div className="text-center">
-                                <div className="text-2xl font-numeric text-brand-strong">5 min</div>
-                                <div className="text-sm text-muted-foreground">Setup Time</div>
-                            </div>
-                            <div className="w-px h-8 bg-border" />
-                            <div className="text-center">
-                                <div className="text-2xl font-numeric text-brand-strong">24/7</div>
-                                <div className="text-sm text-muted-foreground">Support</div>
-                            </div>
-                            <div className="w-px h-8 bg-border" />
-                            <div className="text-center">
-                                <div className="text-2xl font-numeric text-brand-strong">99%</div>
-                                <div className="text-sm text-muted-foreground">Uptime</div>
-                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
             <AppFooter onCta={go} />
-
-            {/* Watch Demo — video placeholder */}
-            <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Product Demo</DialogTitle>
-                    </DialogHeader>
-                    <div className="aspect-video rounded-lg bg-muted/50 border border-border flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                        <PlayCircle className="w-12 h-12" />
-                        <p className="text-sm font-medium">Demo video coming soon</p>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
