@@ -232,6 +232,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const completeSignIn = async () => {
         const u = await userManager.signinCallback(window.location.href);
         setFromUser(u);
+
+        // automaticSilentRenew (see oidc.ts) loads this same route inside a hidden iframe on
+        // every token-expiry check rather than the top window. signinCallback() above already
+        // does what that renewal needs - it resolves oidc-client-ts's internal postMessage
+        // handshake back to the pending signinSilent() promise in the parent frame. Nothing
+        // past this point should run there: no onboarding check, no redirect. This used to run
+        // unconditionally, so both a successful renewal (a redundant onboarding-status fetch on
+        // every silent refresh) and a failed one (error=login_required falling through to
+        // LoginCallbackPage's catch-all redirect) wasted a full bundle reload trying to
+        // navigate the iframe itself to /home - work oidc-client-ts's own iframe teardown then
+        // aborted anyway.
+        if (window.self !== window.top) return;
+
         const suggested =
             (u?.state as SignInState | undefined)?.returnUrl ??
             `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`;
