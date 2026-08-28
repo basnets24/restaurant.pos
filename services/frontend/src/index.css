@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/brand.css";
+@import "./styles/fonts.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -10,13 +11,19 @@
 
     body {
         @apply bg-background text-foreground;
-        font-family: var(--font-sans);
+        font-family: var(--font-body);
     }
 
-    /* Lora display serif for headlines & dialog titles (Spoontab brand) */
+    /* Lora display serif for headlines & dialog titles (Spoontab brand).
+     * font-weight defaults to 500 (the lightest loaded Lora weight — see
+     * fonts.css) rather than the browser's normal-weight default, so a
+     * heading with no explicit font-weight utility never requests the
+     * unloaded 400 face. Any font-medium/semibold/bold utility on the
+     * element itself still wins — utilities are a later cascade layer. */
     h1,
     h2 {
         font-family: var(--font-display);
+        font-weight: var(--font-weight-medium);
     }
 }
 
@@ -30,8 +37,8 @@
   .cols-2-3 { grid-template-columns: 2fr 3fr; }
   .cols-1-1 { grid-template-columns: 1fr 1fr; }
   .cols-1-2 { grid-template-columns: 1fr 2fr; }
-  /* Mono for money amounts, table/order numbers, receipt figures */
-  .font-numeric { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  /* font-numeric (money amounts, table/order numbers, receipt figures) is
+   * defined in fonts.css alongside the rest of the typography system. */
 }
 
 /**
