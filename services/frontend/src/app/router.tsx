@@ -25,6 +25,7 @@ import CancelView from "@/components/CancelView";
 // so deferring their JS is a real win rather than pure overhead.
 import LandingView from "@/features/landing/LandingView";
 import EngineeringView from "@/features/landing/EngineeringView";
+import AboutView from "@/features/landing/AboutView";
 
 // ---- Shared fallback ----
 const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</div>;
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
   // there's nothing to suspend on and no fallback flash to show.
   { path: "/", element: <LandingView /> },
   { path: "/engineering", element: <EngineeringView /> },
+  { path: "/about", element: <AboutView /> },
 
   // Auth endpoints (public)
   { path: AuthorizationPaths.Login,           element: <LoginPage /> },

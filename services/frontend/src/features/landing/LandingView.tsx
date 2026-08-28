@@ -98,7 +98,10 @@ export default function LandingView() {
                 matches the hero section's own tint directly below - this bar is a sibling before
                 that section in the DOM, not stacked on top of it, so it doesn't inherit the
                 hero's tint automatically. */}
-            <div className="sticky top-0 z-40 relative flex items-center justify-end px-4 sm:px-6 lg:px-8 py-3 pointer-events-none bg-brand-soft/30">
+            <div className="sticky top-0 z-40 relative flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 pointer-events-none bg-brand-soft/30">
+                <Link to="/about" className="pointer-events-auto text-sm font-medium text-muted-foreground hover:text-foreground">
+                    About
+                </Link>
                 <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
                     <img src="/favicon.svg" alt="Spoontab" className="w-8 h-8 shrink-0" />
                 </div>
