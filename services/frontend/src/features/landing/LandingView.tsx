@@ -2,12 +2,11 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ImageWithFallback } from "@/figma/ImageWithFallback";
 import {
     Star, ArrowRight, CheckCircle2, Zap, Users, Menu as MenuIcon,
-    ShoppingCart, CreditCard, BarChart3, Code2, PlayCircle,
+    ShoppingCart, CreditCard, Code2, PlayCircle,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
@@ -20,28 +19,6 @@ import { DEMO_DINER_EMAIL, DEMO_DINER_PASSWORD } from "@/features/landing/demoCr
 const DEMO_RESTAURANT_ID = "momo-and-burger";
 const DEMO_LOCATION_ID = "main";
 
-const HERO_IMAGE = "https://images.unsplash.com/photo-1669131196140-49591336b13e?auto=format&fit=crop&w=1200&q=80";
-const FEATURE_IMAGE = "https://images.unsplash.com/photo-1609951734391-b79a50460c6c?auto=format&fit=crop&w=1200&q=80";
-
-const FEATURES = [
-    {
-        icon: Users, title: "Interactive Table Management", highlight: "Visual Floor Plan", featured: true, image: FEATURE_IMAGE,
-        description: "Drag-and-drop floor plan editor with real-time table status tracking. Manage seating and capacity with intuitive visual controls.",
-    },
-    {
-        icon: MenuIcon, title: "Smart Menu System", highlight: "Easy Ordering", featured: false,
-        description: "Organized menu categories with item customization and instant availability updates. Built for complex restaurant menus.",
-    },
-    {
-        icon: CreditCard, title: "Streamlined Checkout", highlight: "Fast Payment", featured: false,
-        description: "Embedded Stripe payments with automatic tax calculation and receipt generation. Complete transactions in seconds.",
-    },
-    {
-        icon: BarChart3, title: "Order Analytics", highlight: "Business Insights", featured: true, image: FEATURE_IMAGE,
-        description: "Track performance metrics, popular items, and revenue patterns to make data-driven decisions for your restaurant.",
-    },
-];
-
 const SERVICES = [
     { icon: Users, name: "Identity", highlight: "OAuth2 · multi-tenant" },
     { icon: MenuIcon, name: "Catalog", highlight: "Event-published inventory" },
@@ -49,9 +26,28 @@ const SERVICES = [
     { icon: CreditCard, name: "Payment", highlight: "Stripe, no webhooks" },
 ];
 
+const PROBLEM_POINTS = [
+    {
+        title: "One data model, not five",
+        description: "Menu, inventory, and orders share one event-driven backbone instead of syncing across disconnected tools that each have their own idea of what's in stock.",
+    },
+    {
+        title: "Multi-tenant from day one",
+        description: "Every request is scoped to a restaurant and location, enforced at the database layer via EF query filters — not bolted on later as a client-side check.",
+    },
+    {
+        title: "Payment kept deliberately separate",
+        description: "A small, understandable order saga hands off to payment as its own flow, rather than one sprawling state machine trying to own every outcome.",
+    },
+];
+
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
 
 const EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
+
+function scrollToId(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 export default function LandingView() {
     const navigate = useNavigate();
@@ -112,154 +108,166 @@ export default function LandingView() {
                         <span className="text-lg font-semibold text-foreground">Spoontab</span>
                     </div>
                     <nav className="hidden md:flex items-center gap-7">
-                        <a href="#features" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
+                        <a href="#demos" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Demos</a>
+                        <a href="#architecture" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Architecture</a>
                         <Link to="/engineering" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Engineering</Link>
-                        <a href="#cta" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Get Started</a>
                     </nav>
                     <Button variant="outline" onClick={logIn}>Log In</Button>
                 </div>
             </header>
 
-            {/* Hero */}
+            {/* 1. Hero — honest, project-focused */}
             <section className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-soft/30" />
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-                        <div className="space-y-8">
-                            <div className="space-y-4">
-                                <Badge className={EYEBROW}>
-                                    <Star className="w-4 h-4 mr-2" />
-                                    Portfolio Project
-                                </Badge>
-                                <h1 className="text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight">
-                                    Run the Floor
-                                    <span className="block italic text-brand-strong">Without the Chaos</span>
-                                </h1>
-                                <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
-                                    Explore a full restaurant workflow, from floor planning and ordering to kitchen fulfillment and payment, built on an observable .NET microservices architecture.
-                                </p>
-                            </div>
+                <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 text-center">
+                    <Badge className={`${EYEBROW} mb-6`}>
+                        <Star className="w-4 h-4 mr-2" />
+                        Portfolio Project
+                    </Badge>
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-4">
+                        Run the Floor
+                        <span className="block italic text-brand-strong">Without the Chaos</span>
+                    </h1>
+                    <p className="text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto mb-8">
+                        Explore a full restaurant workflow, from floor planning and ordering to kitchen fulfillment and payment, built on an observable .NET microservices architecture.
+                    </p>
 
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-                                <Button
-                                    size="lg"
-                                    onClick={goAdminDemo}
-                                    disabled={adminDemoLoading}
-                                    className="text-lg px-8 py-4 shadow-md hover:shadow-lg transition-all duration-200"
-                                >
-                                    {adminDemoLoading ? "Signing in…" : "Explore Admin Demo"}
-                                    <ArrowRight className="ml-2 h-5 w-5" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="lg"
-                                    onClick={goCustomerDemo}
-                                    disabled={customerDemoLoading}
-                                    className="text-lg px-8 py-4 border-2 hover:bg-accent"
-                                >
-                                    {customerDemoLoading ? "Signing in…" : "Try Customer Experience"}
-                                </Button>
-                                <Link
-                                    to="/engineering"
-                                    className="inline-flex items-center text-base font-medium text-muted-foreground hover:text-foreground"
-                                >
-                                    View Engineering Details
-                                    <ArrowRight className="ml-1.5 h-4 w-4" />
-                                </Link>
-                            </div>
+                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 mb-8">
+                        <Button
+                            size="lg"
+                            onClick={() => scrollToId("demos")}
+                            className="text-lg px-8 py-4 shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                            See the Live Demos
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                        </Button>
+                        <Link
+                            to="/engineering"
+                            className="inline-flex items-center text-base font-medium text-muted-foreground hover:text-foreground"
+                        >
+                            View Engineering Details
+                            <ArrowRight className="ml-1.5 h-4 w-4" />
+                        </Link>
+                    </div>
 
-                            <div className="flex items-center gap-6 pt-2">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                                    <span className="text-muted-foreground">Live, deployed system</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                                    <span className="text-muted-foreground">No sign-up needed to explore</span>
-                                </div>
-                            </div>
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-primary" />
+                            <span className="text-muted-foreground">Live, deployed system</span>
                         </div>
-
-                        <div className="relative">
-                            <Card className="relative overflow-hidden shadow-md border border-border bg-card">
-                                <CardContent className="p-0">
-                                    <ImageWithFallback
-                                        src={HERO_IMAGE}
-                                        alt="Modern restaurant interior"
-                                        className="w-full h-96 object-cover rounded-t-xl"
-                                    />
-                                    <div className="p-6 bg-card space-y-4">
-                                        <div>
-                                            <h3 className="font-medium text-foreground">What Each Demo Shows</h3>
-                                            <p className="text-sm text-muted-foreground">Two views into the same system</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-1.5">
-                                                <span className="text-sm font-medium text-foreground">Admin Demo</span>
-                                                <span className="text-xs text-muted-foreground">Staff POS — floor plan, ordering, kitchen, payments</span>
-                                            </div>
-                                            <div className="rounded-lg border border-border p-4 flex flex-col gap-1.5">
-                                                <span className="text-sm font-medium text-foreground">Customer Experience</span>
-                                                <span className="text-xs text-muted-foreground">Browse Momo &amp; Burger&apos;s menu and order as a guest</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5 text-primary" />
+                            <span className="text-muted-foreground">No sign-up needed to explore</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Features */}
-            <section id="features" className="py-20 lg:py-28 bg-muted/30">
+            {/* 2. Two clearly labeled live demos */}
+            <section id="demos" className="py-20 lg:py-28 bg-muted/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center space-y-4 mb-16">
+                    <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
                         <Badge className={EYEBROW}>
                             <Zap className="w-4 h-4 mr-2" />
-                            Core Features
+                            Live Demos
                         </Badge>
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground">Everything Your Restaurant Needs</h2>
-                        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                            Our comprehensive POS system handles every aspect of restaurant operations, from table management to payment processing.
+                        <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Two Views Into the Same System</h2>
+                        <p className="text-lg text-muted-foreground">
+                            Same four services underneath — pick the side you want to see.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {FEATURES.map((f) => (
-                            <Card
-                                key={f.title}
-                                className={`group overflow-hidden hover:shadow-md transition-all duration-200 border-border hover:border-primary/30 bg-card p-0 ${f.featured ? "lg:col-span-2 grid grid-cols-1 sm:grid-cols-2" : ""}`}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                        <Card className="p-6 border-border bg-card flex flex-col gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <Users className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-foreground mb-1">Staff / Admin Demo</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    The employee side: design a floor plan, seat and manage tables, fire orders to the kitchen, then take payment.
+                                </p>
+                            </div>
+                            <ul className="text-sm text-muted-foreground space-y-1.5 flex-1">
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Drag-and-drop floor plan</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Live table status</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Fire to Kitchen, then Pay</li>
+                            </ul>
+                            <Button
+                                size="lg"
+                                onClick={goAdminDemo}
+                                disabled={adminDemoLoading}
+                                className="w-full shadow-md hover:shadow-lg transition-all duration-200"
                             >
-                                {f.featured && (
-                                    <ImageWithFallback
-                                        src={f.image}
-                                        alt=""
-                                        className="w-full h-48 sm:h-full object-cover"
-                                    />
-                                )}
-                                <div className="flex flex-col">
-                                    <CardHeader className="space-y-4 pt-6">
-                                        <div className="flex items-center justify-between">
-                                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                                <f.icon className="w-6 h-6 text-primary" />
-                                            </div>
-                                            <Badge variant="outline" className="text-xs">{f.highlight}</Badge>
-                                        </div>
-                                        <CardTitle className="text-xl">{f.title}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="pb-6">
-                                        <CardDescription className="text-base leading-relaxed">{f.description}</CardDescription>
-                                    </CardContent>
-                                </div>
-                            </Card>
+                                {adminDemoLoading ? "Signing in…" : "Explore Admin Demo"}
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        </Card>
+
+                        <Card className="p-6 border-border bg-card flex flex-col gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <ShoppingCart className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-foreground mb-1">Customer Demo</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    The guest side: browse Momo &amp; Burger's menu, customize an item, and check out as a diner.
+                                </p>
+                            </div>
+                            <ul className="text-sm text-muted-foreground space-y-1.5 flex-1">
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Browse and customize the menu</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Guest checkout, no account needed</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Embedded Stripe test payment</li>
+                            </ul>
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={goCustomerDemo}
+                                disabled={customerDemoLoading}
+                                className="w-full border-2 hover:bg-accent"
+                            >
+                                {customerDemoLoading ? "Signing in…" : "Try Customer Experience"}
+                            </Button>
+                        </Card>
+                    </div>
+                </div>
+            </section>
+
+            {/* 3. Real product workflow screenshots — staged as <ProductScreenshots />
+                (src/features/landing/ProductScreenshots.tsx), not yet wired in here.
+                Drop images into public/screenshots/ matching the filenames in that
+                component, then import and render it right below this comment. */}
+
+            {/* 4. The problem this solves */}
+            <section id="problem" className="py-20 lg:py-28">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-2xl space-y-4 mb-12">
+                        <Badge className={EYEBROW}>
+                            <Zap className="w-4 h-4 mr-2" />
+                            The Problem
+                        </Badge>
+                        <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Restaurant Software Is Usually a Patchwork</h2>
+                        <p className="text-lg text-muted-foreground leading-relaxed">
+                            A floor-plan app that doesn't know about the menu. A POS that doesn't know about inventory. A payment
+                            processor bolted on after the fact. Spoontab is one event-driven system spanning floor management,
+                            ordering, kitchen fulfillment, and payment — built to show what that actually looks like end to end,
+                            including the parts most demos skip.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        {PROBLEM_POINTS.map((p) => (
+                            <div key={p.title} className="space-y-1.5">
+                                <h3 className="text-base font-semibold text-foreground">{p.title}</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
+                            </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* Engineering teaser */}
-            <section className="py-20 lg:py-28">
+            {/* 5. Architecture and engineering decisions */}
+            <section id="architecture" className="py-20 lg:py-28 bg-muted/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
                         <Badge className={EYEBROW}>
@@ -268,7 +276,8 @@ export default function LandingView() {
                         </Badge>
                         <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Built on a Real Microservices Architecture</h2>
                         <p className="text-lg text-muted-foreground">
-                            Four independently deployable .NET services, a MassTransit saga coordinating order fulfillment, and full OpenTelemetry observability — the way production restaurant systems actually get built.
+                            Four independently deployable .NET services, a MassTransit saga coordinating order fulfillment, and
+                            observability wired in — the way production restaurant systems actually get built.
                         </p>
                     </div>
 
@@ -282,24 +291,18 @@ export default function LandingView() {
                         ))}
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-3 mt-10">
+                    <div className="flex justify-center mt-10">
                         <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
                             <Link to="/engineering">
                                 View the Architecture
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
-                        <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
-                            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                                <GithubIcon className="mr-2 h-5 w-5" />
-                                View on GitHub
-                            </a>
-                        </Button>
                     </div>
                 </div>
             </section>
 
-            {/* CTA */}
+            {/* 6. GitHub / project CTA */}
             <section id="cta" className="py-20 lg:py-28 bg-brand-soft/30 relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
@@ -307,22 +310,31 @@ export default function LandingView() {
                             <PlayCircle className="w-4 h-4 mr-2" />
                             Explore Further
                         </Badge>
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See It For Yourself</h2>
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See the Full Picture</h2>
                         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                            Browse the live demo, read the architecture writeup, or reach out if you&apos;d like to talk through the engineering decisions.
+                            Full source is on GitHub — every service, migration, and workflow described above is really there.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                             <Button size="lg" asChild className="text-lg px-10 py-4 shadow-md hover:shadow-lg transition-all duration-200">
-                                <a href="mailto:snehabasnet224@gmail.com?subject=Let%27s%20Talk">
-                                    Get in Touch
+                                <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                                    <GithubIcon className="mr-2 h-5 w-5" />
+                                    View on GitHub
                                 </a>
                             </Button>
+                            <Button variant="outline" size="lg" onClick={() => scrollToId("demos")} className="text-lg px-10 py-4 border-2 hover:bg-accent">
+                                Back to the Demos
+                            </Button>
                         </div>
+
+                        <a href="mailto:snehabasnet224@gmail.com?subject=Let%27s%20Talk" className="inline-block text-base font-medium text-muted-foreground hover:text-foreground">
+                            Or get in touch to talk through the engineering decisions
+                        </a>
                     </div>
                 </div>
             </section>
 
+            {/* 7. Developer attribution */}
             <AppFooter onCta={go} />
         </div>
     );
