@@ -34,8 +34,8 @@ const SERVICES = [
 
 const HIGHLIGHTS = [
     {
-        icon: Workflow, title: "Saga-Orchestrated Order Flow",
-        description: "The order lifecycle is a MassTransit state machine, not a call chain: checkout reserves inventory, requests payment with a 2-minute timeout, and compensates with a rollback on failure or timeout — no distributed transaction, no partial state.",
+        icon: Workflow, title: "A Deliberately Small Saga",
+        description: "The order lifecycle is a MassTransit state machine, not a call chain — but scoped small on purpose: it reserves inventory and resolves straight to Confirmed or Rejected. Payment is a separate flow it hands off to, not a state it manages.",
     },
     {
         icon: ShieldCheck, title: "Real Multi-Tenancy",
@@ -46,24 +46,22 @@ const HIGHLIGHTS = [
         description: "The POS screen isn't a live join across four services — a dedicated projector consumes catalog and inventory events and upserts a single Postgres read model, computing availability at write time so ordering never blocks on a service call.",
     },
     {
-        icon: Activity, title: "Full Observability Stack",
-        description: "OpenTelemetry traces flow into Jaeger, metrics into Prometheus/Grafana, and structured logs into Seq — wired into every service from day one, not bolted on after the fact.",
+        icon: Activity, title: "Observability Stack",
+        description: "OpenTelemetry traces flow into Jaeger, metrics into Prometheus/Grafana, and structured logs into Seq — deployed alongside the services for demo purposes. No persistent volumes, so dashboards reset on every redeploy.",
     },
 ];
 
 const SAGA_STEPS = [
-    { title: "Checkout", detail: "Cart submits → OrderSubmitted" },
+    { title: "Fire to Kitchen", detail: "Cart checkout → OrderSubmitted" },
     { title: "Reserve Inventory", detail: "Saga calls catalog's inventory consumer" },
-    { title: "Payment Requested", detail: "2-minute timeout scheduled" },
-    { title: "Stripe Confirms", detail: "Embedded Payment Element, client-side" },
-    { title: "Server Verifies", detail: "Publishes PaymentSucceeded/Failed" },
+    { title: "Confirmed or Rejected", detail: "Inventory reserved or faulted resolves the saga — its involvement ends here" },
 ];
 
 const STACK_GROUPS = [
-    { label: "Backend", items: [".NET 8", "ASP.NET Core", "EF Core", "MassTransit", "Duende IdentityServer", "xUnit + Moq"] },
+    { label: "Backend", items: [".NET 8 & 10", "ASP.NET Core", "EF Core", "MassTransit", "Duende IdentityServer", "xUnit + Moq"] },
     { label: "Frontend", items: ["React 19", "TypeScript", "TanStack Query", "Tailwind v4", "Vite", "Playwright"] },
-    { label: "Data & Messaging", items: ["PostgreSQL", "Supabase / Supavisor", "RabbitMQ", "Azure Service Bus"] },
-    { label: "Infra & Observability", items: ["Docker Compose", "Kubernetes (AKS)", "Emissary Ingress", "cert-manager", "Helm", "OpenTelemetry", "Jaeger", "Prometheus", "Grafana", "Seq"] },
+    { label: "Data & Messaging", items: ["PostgreSQL", "Supabase / Supavisor", "RabbitMQ"] },
+    { label: "Infra & Observability", items: ["Docker Compose", "Caddy", "DigitalOcean", "OpenTelemetry", "Jaeger", "Prometheus", "Grafana", "Seq"] },
 ];
 
 export default function EngineeringView() {
@@ -177,7 +175,7 @@ export default function EngineeringView() {
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 <h2 className="text-xl font-semibold text-foreground mb-2">The Order Saga, Step by Step</h2>
                 <p className="text-sm text-muted-foreground mb-8 max-w-2xl">
-                    Order fulfillment is coordinated by a MassTransit state machine — every step below is a real event on the bus, with an explicit compensating path if payment fails or times out.
+                    Order fulfillment is coordinated by a MassTransit state machine — deliberately scoped to inventory reservation, not payment. Every step below is a real event on the bus.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -198,18 +196,30 @@ export default function EngineeringView() {
                     <Card className="p-4 border-status-available/30 bg-status-available-soft flex items-center gap-3">
                         <CheckCircle2 className="w-5 h-5 text-status-available shrink-0" />
                         <div>
-                            <h3 className="text-sm font-semibold text-foreground">Payment Succeeded</h3>
-                            <p className="text-xs text-muted-foreground">Order applied, saga completes.</p>
+                            <h3 className="text-sm font-semibold text-foreground">Inventory Reserved</h3>
+                            <p className="text-xs text-muted-foreground">Saga transitions to Confirmed.</p>
                         </div>
                     </Card>
                     <Card className="p-4 border-destructive/30 bg-destructive/10 flex items-center gap-3">
                         <XCircle className="w-5 h-5 text-destructive shrink-0" />
                         <div>
-                            <h3 className="text-sm font-semibold text-foreground">Failed or Timed Out</h3>
-                            <p className="text-xs text-muted-foreground">Saga compensates: ReleaseInventory, order Rejected.</p>
+                            <h3 className="text-sm font-semibold text-foreground">Reservation Failed</h3>
+                            <p className="text-xs text-muted-foreground">Saga transitions to Rejected — nothing to compensate, nothing was reserved.</p>
                         </div>
                     </Card>
                 </div>
+
+                <Card className="p-5 border-border bg-muted/30 mt-4 flex gap-4">
+                    <div className="w-11 h-11 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <CreditCard className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">Payment is a separate flow, on purpose</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                            Once an order is Confirmed, staff trigger payment on their own — the saga's involvement is already over. That request publishes <code>PaymentRequested</code> directly, no saga step watching for it. Payment service creates a Stripe PaymentIntent; the frontend confirms it client-side via an embedded Payment Element, then a server call verifies it with Stripe and applies <code>PaymentSucceeded</code>/<code>PaymentFailed</code> straight to the order — synchronously, no webhook in the loop.
+                        </p>
+                    </div>
+                </Card>
             </section>
 
             {/* Tech stack */}
