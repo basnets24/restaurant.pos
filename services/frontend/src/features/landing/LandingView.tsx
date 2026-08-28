@@ -105,7 +105,9 @@ export default function LandingView() {
                 <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
                     <img src="/favicon.svg" alt="Spoontab" className="w-8 h-8 shrink-0" />
                 </div>
-                <Button variant="outline" size="sm" onClick={logIn} className="pointer-events-auto">Log In</Button>
+                <button type="button" onClick={logIn} className="pointer-events-auto text-sm font-medium text-muted-foreground hover:text-foreground">
+                    Log In
+                </button>
             </div>
 
             {/* 1. Hero — honest, project-focused */}
