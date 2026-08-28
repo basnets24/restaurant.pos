@@ -95,12 +95,12 @@ export default function EngineeringView() {
                     <div className="flex items-center gap-5">
                         <a
                             href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
-                            className="hidden sm:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+                            className="tap-target hidden sm:flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
                         >
                             <GithubIcon className="w-4 h-4" />
                             GitHub
                         </a>
-                        <Link to="/" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                        <Link to="/" className="tap-target flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
                             <ArrowLeft className="w-4 h-4" />
                             Back to site
                         </Link>

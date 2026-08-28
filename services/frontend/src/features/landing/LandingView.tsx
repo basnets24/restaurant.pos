@@ -114,9 +114,9 @@ export default function LandingView() {
                         <span className="text-lg font-semibold text-foreground">Spoontab</span>
                     </div>
                     <nav className="hidden md:flex items-center gap-7">
-                        <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
-                        <Link to="/engineering" className="text-sm font-medium text-muted-foreground hover:text-foreground">Engineering</Link>
-                        <a href="#cta" className="text-sm font-medium text-muted-foreground hover:text-foreground">Get Started</a>
+                        <a href="#features" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Features</a>
+                        <Link to="/engineering" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Engineering</Link>
+                        <a href="#cta" className="tap-target text-sm font-medium text-muted-foreground hover:text-foreground">Get Started</a>
                     </nav>
                     <Button variant="outline" onClick={logIn}>Log In</Button>
                 </div>

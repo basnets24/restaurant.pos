@@ -27,6 +27,24 @@
     }
 }
 
+/* Expands a control's clickable/tappable hit area to at least 44x44px
+ * (WCAG 2.5.5/2.5.8) via an invisible pseudo-element centered over the
+ * element, rather than growing the element's own visible box/padding —
+ * a compact-looking nav link or small button keeps its current size but
+ * gets a bigger target underneath. No-ops (adds nothing) once the element
+ * is already >=44px in a given dimension, so it's safe to apply broadly. */
+@utility tap-target {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
 /* Design system utilities */
 @layer utilities {
   /* Auto grid with equal heights when children use h-full */
