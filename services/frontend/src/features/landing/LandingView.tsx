@@ -94,8 +94,11 @@ export default function LandingView() {
             {/* No full nav bar on this page - just the brand mark and a small, unobtrusive
                 Log In link so real staff (not the one-click demo flows below) can still reach
                 the sign-in page. pointer-events-none on the wrapper keeps it from blocking hero
-                content it overlaps; pointer-events-auto on the row opts back in. */}
-            <div className="sticky top-0 z-40 relative flex items-center justify-end px-4 sm:px-6 lg:px-8 py-3 pointer-events-none">
+                content it overlaps; pointer-events-auto on the row opts back in. bg-brand-soft/30
+                matches the hero section's own tint directly below - this bar is a sibling before
+                that section in the DOM, not stacked on top of it, so it doesn't inherit the
+                hero's tint automatically. */}
+            <div className="sticky top-0 z-40 relative flex items-center justify-end px-4 sm:px-6 lg:px-8 py-3 pointer-events-none bg-brand-soft/30">
                 <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
                     <img src="/favicon.svg" alt="Spoontab" className="w-8 h-8 shrink-0" />
                 </div>
