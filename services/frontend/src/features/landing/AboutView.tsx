@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, UserRound } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function AboutView() {
+    useDocumentTitle("About · Spoontab");
     return (
         <div className="min-h-screen bg-background">
             <header

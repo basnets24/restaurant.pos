@@ -10,6 +10,7 @@ import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
 
@@ -65,6 +66,7 @@ const STACK_GROUPS = [
 ];
 
 export default function EngineeringView() {
+    useDocumentTitle("Engineering · Spoontab");
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     const go = () => {

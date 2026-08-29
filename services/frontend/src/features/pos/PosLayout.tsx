@@ -3,8 +3,10 @@ import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { PosHeader } from "@/features/pos/components/PosHeader";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import { useFloorHub } from "@/domain/tables/realtime";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function PosLayout() {
+  useDocumentTitle("Point of Sale · Spoontab");
   const { restaurantName: nameFromTenant } = useTenantInfo();
   const restaurantName = nameFromTenant || "Restaurant POS";
   const { tableId } = useParams();
