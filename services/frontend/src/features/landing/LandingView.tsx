@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-    Star, ArrowRight, CheckCircle2, Zap, Users, Menu as MenuIcon,
-    ShoppingCart, CreditCard, Code2, PlayCircle,
+    ArrowRight, CheckCircle2, Users, Menu as MenuIcon,
+    ShoppingCart, CreditCard,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
+import { SectionHeader } from "@/components/primitives/SectionHeader";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 import { DinerAuth } from "@/features/diner/auth/dinerAuth";
 import { DEMO_DINER_EMAIL, DEMO_DINER_PASSWORD } from "@/features/landing/demoCredentials";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 // Matches the restaurant/location tenant IDs scripts/seed-demo.sh creates.
 const DEMO_RESTAURANT_ID = "momo-and-burger";
@@ -43,13 +45,16 @@ const PROBLEM_POINTS = [
 
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
 
-const EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
+// The one pill eyebrow badge on this page — reserved for the hero, the page's
+// opening frame. Every other section uses a plain overline via SectionHeader.
+const HERO_EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
 
 function scrollToId(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 export default function LandingView() {
+    useDocumentTitle("Spoontab");
     const navigate = useNavigate();
     const { isAuthenticated, signInDemoAdmin } = useAuth();
     const [adminDemoLoading, setAdminDemoLoading] = useState(false);
@@ -114,8 +119,7 @@ export default function LandingView() {
             <section className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-brand-soft/30" />
                 <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 text-center">
-                    <Badge className={`${EYEBROW} mb-6`}>
-                        <Star className="w-4 h-4 mr-2" />
+                    <Badge className={`${HERO_EYEBROW} mb-6`}>
                         Portfolio Project
                     </Badge>
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-4">
@@ -160,20 +164,13 @@ export default function LandingView() {
             {/* 2. Two clearly labeled live demos */}
             <section id="demos" className="py-20 lg:py-28 bg-muted/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
-                        <Badge className={EYEBROW}>
-                            <Zap className="w-4 h-4 mr-2" />
-                            Live Demos
-                        </Badge>
-                        <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Two Views Into the Same System</h2>
-                        <p className="text-lg text-muted-foreground">
-                            Same four services underneath — pick the side you want to see.
-                        </p>
-                    </div>
+                    <p className="text-lg text-muted-foreground max-w-4xl mx-auto mb-8">
+                        Same four services underneath — pick the side you want to see.
+                    </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                         <Card className="p-6 border-border bg-card flex flex-col gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
                                 <Users className="w-6 h-6 text-primary" />
                             </div>
                             <div>
@@ -199,7 +196,7 @@ export default function LandingView() {
                         </Card>
 
                         <Card className="p-6 border-border bg-card flex flex-col gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
                                 <ShoppingCart className="w-6 h-6 text-primary" />
                             </div>
                             <div>
@@ -236,10 +233,6 @@ export default function LandingView() {
             <section id="problem" className="py-20 lg:py-28">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="max-w-2xl space-y-4 mb-12">
-                        <Badge className={EYEBROW}>
-                            <Zap className="w-4 h-4 mr-2" />
-                            The Problem
-                        </Badge>
                         <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Restaurant Software Is Usually a Patchwork</h2>
                         <p className="text-lg text-muted-foreground leading-relaxed">
                             A floor-plan app that doesn't know about the menu. A POS that doesn't know about inventory. A payment
@@ -263,17 +256,13 @@ export default function LandingView() {
             {/* 5. Architecture and engineering decisions */}
             <section id="architecture" className="py-20 lg:py-28 bg-muted/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-2xl mx-auto space-y-4 mb-12">
-                        <Badge className={EYEBROW}>
-                            <Code2 className="w-4 h-4 mr-2" />
-                            Under the Hood
-                        </Badge>
-                        <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Built on a Real Microservices Architecture</h2>
-                        <p className="text-lg text-muted-foreground">
-                            Four independently deployable .NET services, a MassTransit saga coordinating order fulfillment, and
-                            observability wired in — the way production restaurant systems actually get built.
-                        </p>
-                    </div>
+                    <SectionHeader
+                        variant="technical"
+                        eyebrow="Under the Hood"
+                        title="Built on a Real Microservices Architecture"
+                        description="Four independently deployable .NET services, a MassTransit saga coordinating order fulfillment, and observability wired in — the way production restaurant systems actually get built."
+                        className="mb-12"
+                    />
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {SERVICES.map((s) => (
@@ -288,7 +277,7 @@ export default function LandingView() {
                     <div className="flex justify-center mt-10">
                         <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
                             <Link to="/engineering">
-                                View the Architecture
+                                View Engineering Details
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
@@ -300,10 +289,6 @@ export default function LandingView() {
             <section id="cta" className="py-20 lg:py-28 bg-brand-soft/30 relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
-                        <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-2">
-                            <PlayCircle className="w-4 h-4 mr-2" />
-                            Explore Further
-                        </Badge>
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See the Full Picture</h2>
                         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                             Full source is on GitHub — every service, migration, and workflow described above is really there.

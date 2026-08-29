@@ -13,7 +13,7 @@ export interface AppFooterProps {
   ctaLabel?: string;
 }
 
-export function AppFooter({ onCta, ctaLabel = "Try Demo" }: AppFooterProps) {
+export function AppFooter({ onCta, ctaLabel = "Get Started" }: AppFooterProps) {
   return (
     <footer className="bg-card border-t border-border py-5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3">
