@@ -94,20 +94,19 @@ export default function LandingView() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* No full nav bar on this page - just the brand mark and a small, unobtrusive
-                Log In link so real staff (not the one-click demo flows below) can still reach
-                the sign-in page. Plain, no tint - section separation on this page comes from
-                hairline borders, not color washes (see the border-t on each section below). */}
-            <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 bg-background border-b border-border">
-                <span className="text-sm font-medium text-foreground">Spoontab</span>
-                <button type="button" onClick={logIn} className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                    Log In
-                </button>
-            </div>
-
             {/* 1. Hero — honest, project-focused */}
             <section className="relative overflow-hidden">
                 <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 text-center">
+                    {/* Not a nav bar - just the brand mark and a small, unobtrusive Log In link
+                        so real staff (not the one-click demo flows below) can still reach the
+                        sign-in page. Lives in the hero, not sticky, no dividing line. */}
+                    <div className="flex items-center justify-between mb-12">
+                        <span className="text-sm font-medium text-foreground">Spoontab</span>
+                        <button type="button" onClick={logIn} className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                            Log In
+                        </button>
+                    </div>
+
                     <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-2 mb-6">
                         Portfolio Project
                     </Badge>
