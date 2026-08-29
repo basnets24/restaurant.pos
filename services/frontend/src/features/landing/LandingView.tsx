@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-    ArrowRight, CheckCircle2, Users, Menu as MenuIcon,
-    ShoppingCart, CreditCard,
+    ArrowRight, CheckCircle2, Users, ShoppingCart,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
 import { SectionHeader } from "@/components/primitives/SectionHeader";
+import { IconTextRow } from "@/components/primitives/IconTextRow";
+import { ServiceFlowDiagram } from "@/features/landing/components/ServiceFlowDiagram";
+import { ProductScreenshots } from "@/features/landing/ProductScreenshots";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { AuthorizationPaths, QueryParameterNames } from "@/api-authorization/ApiAuthorizationConstants";
 import { DinerAuth } from "@/features/diner/auth/dinerAuth";
@@ -22,10 +24,10 @@ const DEMO_RESTAURANT_ID = "momo-and-burger";
 const DEMO_LOCATION_ID = "main";
 
 const SERVICES = [
-    { icon: Users, name: "Identity", highlight: "OAuth2 · multi-tenant" },
-    { icon: MenuIcon, name: "Catalog", highlight: "Event-published inventory" },
-    { icon: ShoppingCart, name: "Order", highlight: "Saga-orchestrated" },
-    { icon: CreditCard, name: "Payment", highlight: "Stripe, no webhooks" },
+    { name: "Identity", highlight: "OAuth2 · multi-tenant" },
+    { name: "Catalog", highlight: "Event-published inventory" },
+    { name: "Order", highlight: "Saga-orchestrated" },
+    { name: "Payment", highlight: "Stripe, no webhooks" },
 ];
 
 const PROBLEM_POINTS = [
@@ -44,10 +46,6 @@ const PROBLEM_POINTS = [
 ];
 
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
-
-// The one pill eyebrow badge on this page — reserved for the hero, the page's
-// opening frame. Every other section uses a plain overline via SectionHeader.
-const HERO_EYEBROW = "bg-primary/10 text-primary border-primary/20 px-4 py-2";
 
 function scrollToId(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -98,28 +96,19 @@ export default function LandingView() {
         <div className="min-h-screen bg-background">
             {/* No full nav bar on this page - just the brand mark and a small, unobtrusive
                 Log In link so real staff (not the one-click demo flows below) can still reach
-                the sign-in page. pointer-events-none on the wrapper keeps it from blocking hero
-                content it overlaps; pointer-events-auto on the row opts back in. bg-brand-soft/30
-                matches the hero section's own tint directly below - this bar is a sibling before
-                that section in the DOM, not stacked on top of it, so it doesn't inherit the
-                hero's tint automatically. */}
-            <div className="sticky top-0 z-40 relative flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 pointer-events-none bg-brand-soft/30">
-                <Link to="/about" className="pointer-events-auto text-sm font-medium text-muted-foreground hover:text-foreground">
-                    About
-                </Link>
-                <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
-                    <img src="/favicon.svg" alt="Spoontab" className="w-8 h-8 shrink-0" />
-                </div>
-                <button type="button" onClick={logIn} className="pointer-events-auto text-sm font-medium text-muted-foreground hover:text-foreground">
+                the sign-in page. Plain, no tint - section separation on this page comes from
+                hairline borders, not color washes (see the border-t on each section below). */}
+            <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3 bg-background border-b border-border">
+                <span className="text-sm font-medium text-foreground">Spoontab</span>
+                <button type="button" onClick={logIn} className="text-sm font-medium text-muted-foreground hover:text-foreground">
                     Log In
                 </button>
             </div>
 
             {/* 1. Hero — honest, project-focused */}
             <section className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-brand-soft/30" />
                 <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 text-center">
-                    <Badge className={`${HERO_EYEBROW} mb-6`}>
+                    <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-2 mb-6">
                         Portfolio Project
                     </Badge>
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-4">
@@ -162,14 +151,14 @@ export default function LandingView() {
             </section>
 
             {/* 2. Two clearly labeled live demos */}
-            <section id="demos" className="py-20 lg:py-28 bg-muted/30">
+            <section id="demos" className="py-16 lg:py-24 border-t border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <p className="text-lg text-muted-foreground max-w-4xl mx-auto mb-8">
                         Same four services underneath — pick the side you want to see.
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                        <Card className="p-6 border-border bg-card flex flex-col gap-4">
+                        <Card size="lg" className="p-6 border-border bg-card flex flex-col gap-4">
                             <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
                                 <Users className="w-6 h-6 text-primary" />
                             </div>
@@ -195,7 +184,7 @@ export default function LandingView() {
                             </Button>
                         </Card>
 
-                        <Card className="p-6 border-border bg-card flex flex-col gap-4">
+                        <Card size="lg" className="p-6 border-border bg-card flex flex-col gap-4">
                             <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
                                 <ShoppingCart className="w-6 h-6 text-primary" />
                             </div>
@@ -224,37 +213,36 @@ export default function LandingView() {
                 </div>
             </section>
 
-            {/* 3. Real product workflow screenshots — staged as <ProductScreenshots />
-                (src/features/landing/ProductScreenshots.tsx), not yet wired in here.
-                Drop images into public/screenshots/ matching the filenames in that
-                component, then import and render it right below this comment. */}
+            {/* 3. Real product workflow screenshots — placeholders until real files land
+                in public/screenshots/ with the filenames ProductScreenshots.tsx expects;
+                each swaps in automatically once its file exists, no code change needed. */}
+            <ProductScreenshots />
 
             {/* 4. The problem this solves */}
-            <section id="problem" className="py-20 lg:py-28">
+            <section id="problem" className="py-16 lg:py-24 border-t border-border">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-2xl space-y-4 mb-12">
-                        <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Restaurant Software Is Usually a Patchwork</h2>
-                        <p className="text-lg text-muted-foreground leading-relaxed">
-                            A floor-plan app that doesn't know about the menu. A POS that doesn't know about inventory. A payment
-                            processor bolted on after the fact. Spoontab is one event-driven system spanning floor management,
-                            ordering, kitchen fulfillment, and payment — built to show what that actually looks like end to end,
-                            including the parts most demos skip.
-                        </p>
-                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+                        <div className="space-y-4">
+                            <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Restaurant Software Is Usually a Patchwork</h2>
+                            <p className="text-lg text-muted-foreground leading-relaxed">
+                                A floor-plan app that doesn't know about the menu. A POS that doesn't know about inventory. A payment
+                                processor bolted on after the fact. Spoontab is one event-driven system spanning floor management,
+                                ordering, kitchen fulfillment, and payment — built to show what that actually looks like end to end,
+                                including the parts most demos skip.
+                            </p>
+                        </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        {PROBLEM_POINTS.map((p) => (
-                            <div key={p.title} className="space-y-1.5">
-                                <h3 className="text-base font-semibold text-foreground">{p.title}</h3>
-                                <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
-                            </div>
-                        ))}
+                        <div>
+                            {PROBLEM_POINTS.map((p) => (
+                                <IconTextRow key={p.title} title={p.title} description={p.description} />
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
 
             {/* 5. Architecture and engineering decisions */}
-            <section id="architecture" className="py-20 lg:py-28 bg-muted/30">
+            <section id="architecture" className="py-16 lg:py-24 border-t border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <SectionHeader
                         variant="technical"
@@ -264,15 +252,7 @@ export default function LandingView() {
                         className="mb-12"
                     />
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {SERVICES.map((s) => (
-                            <Card key={s.name} className="p-5 text-center flex flex-col items-center gap-2 border-border bg-card">
-                                <s.icon className="w-5 h-5 text-primary" />
-                                <span className="text-sm font-medium text-foreground">{s.name}</span>
-                                <span className="text-xs text-muted-foreground">{s.highlight}</span>
-                            </Card>
-                        ))}
-                    </div>
+                    <ServiceFlowDiagram services={SERVICES} className="max-w-4xl" />
 
                     <div className="flex justify-center mt-10">
                         <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
@@ -286,7 +266,7 @@ export default function LandingView() {
             </section>
 
             {/* 6. GitHub / project CTA */}
-            <section id="cta" className="py-20 lg:py-28 bg-brand-soft/30 relative overflow-hidden">
+            <section id="cta" className="py-16 lg:py-20 border-t border-border relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See the Full Picture</h2>
