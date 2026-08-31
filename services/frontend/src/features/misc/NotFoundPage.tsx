@@ -37,7 +37,7 @@ export default function NotFoundPage() {
           Off the Floor Plan
         </h1>
         <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-          There's no table here — the page you're looking for doesn't exist or has moved.
+          There's no table here. The page you're looking for doesn't exist or has moved.
         </p>
         <Button asChild size="lg" className="shadow-md">
           <Link to="/">

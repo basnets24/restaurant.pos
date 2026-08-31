@@ -152,7 +152,7 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const quickStats = [
         { label: "Today's Sales", value: num(money(stats.salesToday)), trend: "neutral" as const, onClick: () => navigate("/management") },
         { label: "Active Orders", value: num(String(activeOrdersCount)), trend: "neutral" as const, onClick: () => navigate("/pos/current") },
-        { label: "Staff On Duty", value: num(String(employees.data?.total ?? "—")), trend: "neutral" as const, onClick: () => navigate("/management/staff") },
+        { label: "Staff On Duty", value: num(String(employees.data?.total ?? "N/A")), trend: "neutral" as const, onClick: () => navigate("/management/staff") },
         { label: "Tables Occupied", value: num(`${stats.occupied}/${stats.total}`), change: stats.capacityText, trend: "neutral" as const, onClick: () => navigate("/pos/tables") },
     ];
 

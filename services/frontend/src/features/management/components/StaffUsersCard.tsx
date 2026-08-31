@@ -107,9 +107,9 @@ export default function StaffUsersCard() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{e.email ?? "—"}</TableCell>
+                  <TableCell>{e.email ?? "N/A"}</TableCell>
                   <TableCell>
-                    {(!e.tenantRoles || e.tenantRoles.length === 0) ? "—" : (
+                    {(!e.tenantRoles || e.tenantRoles.length === 0) ? "N/A" : (
                       <div className="flex flex-wrap gap-1">
                         {e.tenantRoles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>)}
                       </div>

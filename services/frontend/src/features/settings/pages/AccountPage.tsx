@@ -119,8 +119,8 @@ export default function AccountPage() {
               <Separator />
 
               <div className="grid grid-cols-2 gap-4">
-                <InfoTile icon={Mail} label="Email" value={employeeDetail.data.email ?? "—"} />
-                <InfoTile icon={UserIcon} label="User Name" value={employeeDetail.data.userName ?? "—"} />
+                <InfoTile icon={Mail} label="Email" value={employeeDetail.data.email ?? "N/A"} />
+                <InfoTile icon={UserIcon} label="User Name" value={employeeDetail.data.userName ?? "N/A"} />
                 <InfoTile
                   icon={employeeDetail.data.emailConfirmed ? CheckCircle2 : XCircle}
                   iconClassName={employeeDetail.data.emailConfirmed ? "text-status-available" : "text-muted-foreground"}
@@ -144,9 +144,9 @@ export default function AccountPage() {
                 <div className="text-sm font-medium text-foreground">
                   {(() => {
                     const id = employeeDetail.data?.defaultLocationId ?? null;
-                    if (!id) return "—";
+                    if (!id) return "N/A";
                     const match = locs.find(l => l.id === id);
-                    return match?.name ?? "—";
+                    return match?.name ?? "N/A";
                   })()}
                 </div>
                 {locs.length > 0 && (
@@ -189,7 +189,7 @@ export default function AccountPage() {
                   <ShieldCheck className="h-3.5 w-3.5" /> Roles
                 </div>
                 {employeeDetail.data.tenantRoles.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">—</div>
+                  <div className="text-sm text-muted-foreground">N/A</div>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {employeeDetail.data.tenantRoles.map(r => (

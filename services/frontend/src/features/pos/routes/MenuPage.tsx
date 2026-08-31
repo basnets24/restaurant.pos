@@ -262,7 +262,7 @@ export default function MenuPage() {
   // Add to cart from a card
   async function handleAddToOrder(item: POSMenuItem, quantity = 1, notes?: string) {
     if (isFired) {
-      toast.error("Order already fired to kitchen — further changes won't be included");
+      toast.error("Order already fired to kitchen: further changes won't be included");
       return;
     }
     // ensure we have a cart first
@@ -299,7 +299,7 @@ export default function MenuPage() {
   async function handleUpdateItem(menuItemId: string, newQty: number) {
     if (!cartId) return;
     if (isFired) {
-      toast.error("Order already fired to kitchen — further changes won't be included");
+      toast.error("Order already fired to kitchen: further changes won't be included");
       return;
     }
     const curr = cart?.items.find((i) => i.menuItemId === menuItemId)?.quantity ?? 0;
@@ -323,7 +323,7 @@ export default function MenuPage() {
   async function handleRemoveItem(menuItemId: string) {
     if (!cartId) return;
     if (isFired) {
-      toast.error("Order already fired to kitchen — further changes won't be included");
+      toast.error("Order already fired to kitchen: further changes won't be included");
       return;
     }
     await cartApi.removeCartItem(cartId, menuItemId);

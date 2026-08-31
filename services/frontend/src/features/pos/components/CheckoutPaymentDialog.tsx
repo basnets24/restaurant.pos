@@ -118,7 +118,7 @@ export function CheckoutPaymentDialog({
             <div className="flex items-baseline justify-between border-t border-border pt-3">
               <span className="font-semibold">Total due</span>
               <span className="font-numeric text-lg font-semibold">
-                {total != null ? `$${total.toFixed(2)}` : "—"}
+                {total != null ? `$${total.toFixed(2)}` : "N/A"}
               </span>
             </div>
 
@@ -130,7 +130,7 @@ export function CheckoutPaymentDialog({
               ) : (
                 <>
                   <CreditCard className="h-4 w-4 mr-2" /> Pay Now
-                  {total != null ? ` — $${total.toFixed(2)}` : ""}
+                  {total != null ? ` ($${total.toFixed(2)})` : ""}
                 </>
               )}
             </Button>

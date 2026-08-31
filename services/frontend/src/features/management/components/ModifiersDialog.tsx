@@ -43,7 +43,7 @@ export default function ModifiersDialog({ open, onOpenChange, item, canWrite }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Modifiers — {item?.name}</DialogTitle>
+          <DialogTitle>Modifiers: {item?.name}</DialogTitle>
         </DialogHeader>
 
         {editing ? (

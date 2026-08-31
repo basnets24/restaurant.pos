@@ -114,7 +114,7 @@ export default function OrdersPage() {
                         const key = toStatusKey(o);
                         const s = ORDER_STATUS[key];
                         const tbl = o.tableId ? tableMap.get(o.tableId) : undefined;
-                        const tableNumber = tbl?.number ?? (o.tableId ? o.tableId.slice(0, 4) : "—");
+                        const tableNumber = tbl?.number ?? (o.tableId ? o.tableId.slice(0, 4) : "N/A");
                         const itemCount = o.items?.length ?? 0;
                         return (
                             <div key={o.id} className="flex items-center gap-3 px-1 py-2.5 border-b border-border">

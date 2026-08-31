@@ -126,7 +126,7 @@ export default function OrderStatusPage() {
                 {dead
                   ? "Order cancelled"
                   : paid
-                    ? "Paid — see you soon"
+                    ? "Paid, see you soon"
                     : clientSecret
                       ? "Ready to pay"
                       : "Sending to the kitchen…"}

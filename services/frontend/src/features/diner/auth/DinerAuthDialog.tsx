@@ -63,7 +63,7 @@ export function DinerAuthDialog({
           <DialogTitle>{mode === "signIn" ? "Sign in to order" : "Create an account"}</DialogTitle>
           <DialogDescription>
             {mode === "signIn"
-              ? "Your cart is saved — signing in won't lose it."
+              ? "Your cart is saved. Signing in won't lose it."
               : "You'll need an account so the restaurant can find your order."}
           </DialogDescription>
         </DialogHeader>

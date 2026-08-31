@@ -108,7 +108,7 @@ export default function DiscoveryPage() {
           <p className="text-sm text-muted-foreground">
             {isPending
               ? "Finding restaurants near you…"
-              : `Order ahead for pickup — ${listings?.length ?? 0} ${
+              : `Order ahead for pickup: ${listings?.length ?? 0} ${
                   listings?.length === 1 ? "restaurant" : "restaurants"
                 } near you`}
           </p>

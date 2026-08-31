@@ -215,7 +215,7 @@ function MenuRow({ item, canWrite, busy, onToggleAvailability, onEdit, onManageM
                 <div className="text-xs opacity-70">{item.description || ""}</div>
             </TableCell>
             <TableCell>
-                <Badge variant="secondary">{item.category || "—"}</Badge>
+                <Badge variant="secondary">{item.category || "N/A"}</Badge>
             </TableCell>
             <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
             <TableCell>

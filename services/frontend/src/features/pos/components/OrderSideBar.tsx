@@ -225,7 +225,7 @@ function OrderSidebarContent({
                             Table <span className="font-numeric">{table.number}</span>
                         </h3>
                         <p className="text-xs text-muted-foreground truncate">
-                            {table.section ?? "—"}
+                            {table.section ?? "N/A"}
                             {itemCount > 0 && ` · ${itemCount} item${itemCount === 1 ? "" : "s"}`}
                         </p>
                     </div>
