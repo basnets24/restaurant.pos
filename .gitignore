@@ -52,3 +52,6 @@ services/identity/src/IdentityService/tempkey.jwk
 # Launch profiles
 **/launchSettings.json
 .idea/
+
+# Claude Code local tool state (settings, worktrees, scheduled-task locks)
+.claude/
