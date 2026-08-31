@@ -2,15 +2,23 @@ import * as React from "react";
 
 import { cn } from "./utils";
 
+interface CardProps extends React.ComponentProps<"div"> {
+    /** "lg" (16px) for standard content cards, "xl" (22px) for large feature tiles.
+     * Defaults to "xl" so existing call sites keep their current appearance. */
+    size?: "lg" | "xl";
+}
+
 function Card({
                   className,
+                  size = "xl",
                   ...props
-              }: React.ComponentProps<"div">) {
+              }: CardProps) {
     return (
         <div
             data-slot="card"
             className={cn(
-                "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
+                "bg-card text-card-foreground flex flex-col gap-6 border",
+                size === "lg" ? "rounded-lg" : "rounded-xl",
                 className,
             )}
             {...props}

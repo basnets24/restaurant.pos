@@ -1,19 +1,15 @@
-import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared public-site footer — brand mark, optional CTA, and the portfolio
-// disclaimer. Used by every public page (Landing, Engineering) so the two
-// don't drift into different footer treatments.
+// Shared public-site footer — brand mark, portfolio attribution, and contact
+// links. Used by every public page (Landing, Engineering) so the two don't
+// drift into different footer treatments.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface AppFooterProps {
-  /** Shows the outlined CTA button on the right when provided */
-  onCta?: () => void;
-  ctaLabel?: string;
-}
+const PORTFOLIO_URL = "https://snehabasnet.com";
+const GITHUB_PROFILE_URL = "https://github.com/basnets24";
+const LINKEDIN_URL = "https://www.linkedin.com/in/snehabasnet/";
+const EMAIL = "snehabasnet224@gmail.com";
 
-export function AppFooter({ onCta, ctaLabel = "Get Started" }: AppFooterProps) {
+export function AppFooter() {
   return (
     <footer className="bg-card border-t border-border py-5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3">
@@ -21,16 +17,32 @@ export function AppFooter({ onCta, ctaLabel = "Get Started" }: AppFooterProps) {
           <div className="w-7 h-7 shrink-0 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-[10px]">S</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            This is a portfolio demo project built by Sneha Basnet, not an active commercial product.
+          <p className="text-sm text-muted-foreground">
+            This is a portfolio demo project built by{" "}
+            <a
+              href={PORTFOLIO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+            >
+              Sneha Basnet
+            </a>
+            , not an active commercial product.
           </p>
         </div>
-        {onCta && (
-          <Button variant="outline" size="sm" onClick={onCta} className="hidden sm:flex shrink-0">
-            {ctaLabel}
-            <ArrowRight className="ml-2 h-3.5 w-3.5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-3 text-sm text-muted-foreground shrink-0">
+          <a href={GITHUB_PROFILE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+            GitHub
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href={LINKEDIN_URL} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+            LinkedIn
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href={`mailto:${EMAIL}`} className="hover:text-foreground">
+            Email
+          </a>
+        </div>
       </div>
     </footer>
   );
