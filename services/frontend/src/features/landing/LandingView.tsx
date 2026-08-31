@@ -1,16 +1,14 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
     ArrowRight, CheckCircle2, Users, ShoppingCart,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
 import { SectionHeader } from "@/components/primitives/SectionHeader";
-import { IconTextRow } from "@/components/primitives/IconTextRow";
 import { ServiceFlowDiagram } from "@/features/landing/components/ServiceFlowDiagram";
 import { ProductScreenshots } from "@/features/landing/ProductScreenshots";
 import { useAuth } from "@/api-authorization/AuthProvider";
@@ -24,24 +22,24 @@ const DEMO_RESTAURANT_ID = "momo-and-burger";
 const DEMO_LOCATION_ID = "main";
 
 const SERVICES = [
-    { name: "Identity", highlight: "OAuth2 · multi-tenant" },
-    { name: "Catalog", highlight: "Event-published inventory" },
-    { name: "Order", highlight: "Saga-orchestrated" },
-    { name: "Payment", highlight: "Stripe, no webhooks" },
+    { name: "Identity", highlight: "Accounts · roles · tenant context" },
+    { name: "Catalog", highlight: "Menu · modifiers · inventory" },
+    { name: "Order", highlight: "Tickets · fulfillment · saga" },
+    { name: "Payment", highlight: "Checkout · Stripe" },
 ];
 
-const PROBLEM_POINTS = [
+const ARCHITECTURE_DECISIONS = [
     {
-        title: "One data model, not five",
-        description: "Menu, inventory, and orders share one event-driven backbone instead of syncing across disconnected tools that each have their own idea of what's in stock.",
+        title: "Tenant scoping",
+        description: "Restaurant and location scope is enforced at the database layer via EF Core query filters.",
     },
     {
-        title: "Multi-tenant from day one",
-        description: "Every request is scoped to a restaurant and location, enforced at the database layer via EF query filters — not bolted on later as a client-side check.",
+        title: "Event-driven fulfillment",
+        description: "MassTransit events connect inventory and ordering while the order saga owns long-running fulfillment state.",
     },
     {
-        title: "Payment kept deliberately separate",
-        description: "A small, understandable order saga hands off to payment as its own flow, rather than one sprawling state machine trying to own every outcome.",
+        title: "Payment boundary",
+        description: "Checkout runs as a separate workflow, keeping payment state and failures out of order fulfillment.",
     },
 ];
 
@@ -54,15 +52,17 @@ function scrollToId(id: string) {
 export default function LandingView() {
     useDocumentTitle("Spoontab");
     const navigate = useNavigate();
+    const location = useLocation();
     const { isAuthenticated, signInDemoAdmin } = useAuth();
     const [adminDemoLoading, setAdminDemoLoading] = useState(false);
     const [customerDemoLoading, setCustomerDemoLoading] = useState(false);
 
-    const register = () => {
-        const returnUrl = `${window.location.origin}/join`;
-        navigate(`${AuthorizationPaths.Register}?${QueryParameterNames.ReturnUrl}=${encodeURIComponent(returnUrl)}`);
-    };
-    const go = () => (isAuthenticated ? navigate("/join") : register());
+    // Lets other pages (e.g. Engineering's "See the Live Demos") link straight to
+    // /#demos instead of duplicating the two one-click demo triggers below.
+    useEffect(() => {
+        if (location.hash === "#demos") scrollToId("demos");
+    }, [location.hash]);
+
     const logIn = () => {
         if (isAuthenticated) return navigate("/home");
         const returnUrl = `${window.location.origin}/home`;
@@ -95,65 +95,81 @@ export default function LandingView() {
     return (
         <div className="min-h-screen bg-background">
             {/* 1. Hero — honest, project-focused */}
-            <section className="relative overflow-hidden">
-                <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 text-center">
+            <section className="relative overflow-hidden lg:min-h-[92vh] lg:flex lg:flex-col bg-background texture-paper">
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 sm:pt-8 lg:pb-16 lg:flex lg:flex-col lg:flex-1 w-full">
                     {/* Not a nav bar - just the brand mark and a small, unobtrusive Log In link
                         so real staff (not the one-click demo flows below) can still reach the
                         sign-in page. Lives in the hero, not sticky, no dividing line. */}
-                    <div className="flex items-center justify-between mb-12">
-                        <span className="text-sm font-medium text-foreground">Spoontab</span>
-                        <button type="button" onClick={logIn} className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                    <div className="flex items-center justify-between mb-16 lg:mb-0">
+                        <span className="font-display text-3xl text-foreground">Spoontab</span>
+                        <Button type="button" variant="outline" size="lg" onClick={logIn} className="text-lg px-6 py-5 rounded-none">
                             Log In
-                        </button>
-                    </div>
-
-                    <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-2 mb-6">
-                        Portfolio Project
-                    </Badge>
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-4">
-                        Run the Floor
-                        <span className="block italic text-brand-strong">Without the Chaos</span>
-                    </h1>
-                    <p className="text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto mb-8">
-                        Explore a full restaurant workflow, from floor planning and ordering to kitchen fulfillment and payment, built on an observable .NET microservices architecture.
-                    </p>
-
-                    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 mb-8">
-                        <Button
-                            size="lg"
-                            onClick={() => scrollToId("demos")}
-                            className="text-lg px-8 py-4 shadow-md hover:shadow-lg transition-all duration-200"
-                        >
-                            See the Live Demos
-                            <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
-                        <Link
-                            to="/engineering"
-                            className="inline-flex items-center text-base font-medium text-muted-foreground hover:text-foreground"
-                        >
-                            View Engineering Details
-                            <ArrowRight className="ml-1.5 h-4 w-4" />
-                        </Link>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-primary" />
-                            <span className="text-muted-foreground">Live, deployed system</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-primary" />
-                            <span className="text-muted-foreground">No sign-up needed to explore</span>
+                    <div className="relative flex flex-col items-center lg:flex-1 lg:items-stretch lg:justify-center">
+                        <img
+                            src="/cutlery.png"
+                            alt=""
+                            className="w-72 sm:w-96 lg:hidden order-first mx-auto"
+                        />
+                        <img
+                            src="/cutlery.png"
+                            alt=""
+                            className="hidden lg:block absolute left-0 top-1/2 -translate-x-1/4 translate-y-[calc(-50%+8rem)] w-[70%] max-w-4xl pointer-events-none select-none"
+                        />
+
+                        <div className="text-center lg:text-left lg:ml-[44%]">
+                            <h1 className="text-4xl sm:text-5xl lg:text-7xl text-foreground leading-[1.05] mb-6">
+                                Open the floor.
+                                <br />
+                                Fire the ticket.
+                                <br />
+                                Close the tab.
+                            </h1>
+                            <p className="text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8">
+                                Explore this restaurant system, from floor management to checkout. Run it as staff, or order as a guest.
+                            </p>
+
+                            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
+                                <Button
+                                    size="lg"
+                                    onClick={goAdminDemo}
+                                    disabled={adminDemoLoading}
+                                    className="text-xl px-10 py-6 rounded-none shadow-md hover:shadow-lg transition-all duration-200"
+                                >
+                                    {adminDemoLoading ? "Signing in…" : "Explore staff demo"}
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    onClick={goCustomerDemo}
+                                    disabled={customerDemoLoading}
+                                    className="text-xl px-10 py-6 rounded-none transition-all duration-200"
+                                >
+                                    {customerDemoLoading ? "Signing in…" : "Order as a customer"}
+                                </Button>
+                            </div>
+
+                            <p className="mt-10">
+                                <Link
+                                    to="/engineering"
+                                    className="font-display italic text-xl text-[var(--rust-600)] hover:text-foreground transition-colors"
+                                >
+                                    Curious how it's built? Read the engineering details{" "}
+                                    <ArrowRight className="inline h-5 w-5 -mt-1" />
+                                </Link>
+                            </p>
                         </div>
                     </div>
                 </div>
             </section>
 
             {/* 2. Two clearly labeled live demos */}
-            <section id="demos" className="py-16 lg:py-24 border-t border-border">
+            <section id="demos" className="py-12 lg:py-16 border-t border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <p className="text-lg text-muted-foreground max-w-4xl mx-auto mb-8">
-                        Same four services underneath — pick the side you want to see.
+                        Two experiences. One restaurant system underneath. Pick the side you want to see.
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -162,7 +178,7 @@ export default function LandingView() {
                                 <Users className="w-6 h-6 text-primary" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold text-foreground mb-1">Staff / Admin Demo</h3>
+                                <h3 className="text-lg font-semibold text-foreground mb-1">Staff Demo</h3>
                                 <p className="text-sm text-muted-foreground leading-relaxed">
                                     The employee side: design a floor plan, seat and manage tables, fire orders to the kitchen, then take payment.
                                 </p>
@@ -178,7 +194,7 @@ export default function LandingView() {
                                 disabled={adminDemoLoading}
                                 className="w-full shadow-md hover:shadow-lg transition-all duration-200"
                             >
-                                {adminDemoLoading ? "Signing in…" : "Explore Admin Demo"}
+                                {adminDemoLoading ? "Signing in…" : "Explore Staff Demo"}
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </Card>
@@ -199,13 +215,13 @@ export default function LandingView() {
                                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Embedded Stripe test payment</li>
                             </ul>
                             <Button
-                                variant="outline"
                                 size="lg"
                                 onClick={goCustomerDemo}
                                 disabled={customerDemoLoading}
-                                className="w-full border-2 hover:bg-accent"
+                                className="w-full shadow-md hover:shadow-lg transition-all duration-200"
                             >
-                                {customerDemoLoading ? "Signing in…" : "Try Customer Experience"}
+                                {customerDemoLoading ? "Signing in…" : "Explore Customer Demo"}
+                                <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </Card>
                     </div>
@@ -217,46 +233,34 @@ export default function LandingView() {
                 each swaps in automatically once its file exists, no code change needed. */}
             <ProductScreenshots />
 
-            {/* 4. The problem this solves */}
-            <section id="problem" className="py-16 lg:py-24 border-t border-border">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-                        <div className="space-y-4">
-                            <h2 className="text-3xl sm:text-4xl text-foreground leading-tight">Restaurant Software Is Usually a Patchwork</h2>
-                            <p className="text-lg text-muted-foreground leading-relaxed">
-                                A floor-plan app that doesn't know about the menu. A POS that doesn't know about inventory. A payment
-                                processor bolted on after the fact. Spoontab is one event-driven system spanning floor management,
-                                ordering, kitchen fulfillment, and payment — built to show what that actually looks like end to end,
-                                including the parts most demos skip.
-                            </p>
-                        </div>
-
-                        <div>
-                            {PROBLEM_POINTS.map((p) => (
-                                <IconTextRow key={p.title} title={p.title} description={p.description} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* 5. Architecture and engineering decisions */}
-            <section id="architecture" className="py-16 lg:py-24 border-t border-border">
+            {/* 4. Architecture and engineering decisions */}
+            <section id="architecture" className="py-12 lg:py-16 border-t border-border">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <SectionHeader
                         variant="technical"
                         eyebrow="Under the Hood"
-                        title="Built on a Real Microservices Architecture"
-                        description="Four independently deployable .NET services, a MassTransit saga coordinating order fulfillment, and observability wired in — the way production restaurant systems actually get built."
-                        className="mb-12"
+                        title="Four services. One restaurant workflow."
+                        description="Spoontab is split across four independently deployable .NET services for identity, catalog, ordering, and payment. MassTransit coordinates fulfillment across service boundaries, with tenant isolation and observability built in."
+                        className="mb-10"
                     />
 
-                    <ServiceFlowDiagram services={SERVICES} className="max-w-4xl" />
+                    <ServiceFlowDiagram services={SERVICES} className="max-w-4xl mb-12" />
 
-                    <div className="flex justify-center mt-10">
+                    <div className="max-w-4xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                            {ARCHITECTURE_DECISIONS.map((d) => (
+                                <div key={d.title} className="rounded-lg border border-border bg-card p-5">
+                                    <h3 className="text-sm font-semibold text-foreground mb-1.5">{d.title}</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">{d.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-10">
                         <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
                             <Link to="/engineering">
-                                View Engineering Details
+                                Read the engineering details
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
@@ -264,36 +268,35 @@ export default function LandingView() {
                 </div>
             </section>
 
-            {/* 6. GitHub / project CTA */}
-            <section id="cta" className="py-16 lg:py-20 border-t border-border relative overflow-hidden">
+            {/* 5. GitHub / project CTA */}
+            <section id="cta" className="py-12 lg:py-16 border-t border-border relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See the Full Picture</h2>
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">Want to See How It Works?</h2>
                         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                            Full source is on GitHub — every service, migration, and workflow described above is really there.
+                            The complete source is public, including all four services, database migrations, message contracts, saga state, tests, and deployment configuration.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                             <Button size="lg" asChild className="text-lg px-10 py-4 shadow-md hover:shadow-lg transition-all duration-200">
                                 <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                                     <GithubIcon className="mr-2 h-5 w-5" />
-                                    View on GitHub
+                                    View source on GitHub
                                 </a>
                             </Button>
-                            <Button variant="outline" size="lg" onClick={() => scrollToId("demos")} className="text-lg px-10 py-4 border-2 hover:bg-accent">
-                                Back to the Demos
+                            <Button variant="outline" size="lg" asChild className="text-lg px-10 py-4 border-2 hover:bg-accent">
+                                <Link to="/engineering">
+                                    Read the engineering details
+                                    <ArrowRight className="ml-2 h-5 w-5" />
+                                </Link>
                             </Button>
                         </div>
-
-                        <a href="mailto:snehabasnet224@gmail.com?subject=Let%27s%20Talk" className="inline-block text-base font-medium text-muted-foreground hover:text-foreground">
-                            Or get in touch to talk through the engineering decisions
-                        </a>
                     </div>
                 </div>
             </section>
 
-            {/* 7. Developer attribution */}
-            <AppFooter onCta={go} />
+            {/* 6. Developer attribution */}
+            <AppFooter />
         </div>
     );
 }

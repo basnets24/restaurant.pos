@@ -57,6 +57,47 @@
   .cols-1-2 { grid-template-columns: 1fr 2fr; }
   /* font-numeric (money amounts, table/order numbers, receipt figures) is
    * defined in fonts.css alongside the rest of the typography system. */
+
+  /* Faint paper-grain overlay for a section that already sets its own
+   * background (e.g. bg-background). The grain lives on a ::before behind
+   * the section's real content: ::before is the first thing painted in the
+   * section's stacking order, so ordinary content painted after it (no
+   * z-index juggling needed) sits on top and stays perfectly sharp — only
+   * the backdrop gets the multiply-blended grain. Asset + tuning knobs
+   * (opacity, tile size) live in brand.css as --texture-paper-image /
+   * --paper-texture-opacity / --paper-texture-size so this stays a pure
+   * layout utility.
+   */
+  .texture-paper {
+    position: relative;
+  }
+
+  .texture-paper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--texture-paper-image);
+    background-repeat: repeat;
+    background-size: var(--paper-texture-size) var(--paper-texture-size);
+    opacity: var(--paper-texture-opacity);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  /* Decorative only — drop it for print and for forced-colors/high-contrast
+   * modes rather than let a faint multiply layer fight a user's contrast
+   * override. */
+  @media print {
+    .texture-paper::before {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .texture-paper::before {
+      display: none;
+    }
+  }
 }
 
 /**
