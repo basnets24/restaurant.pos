@@ -22,12 +22,14 @@ import { DinerCartSheet } from "../components/DinerCartSheet";
 import { useDinerCart } from "../cart/DinerCartProvider";
 import { cartCount, defaultSelections, lineKey, type DinerCartSelection } from "../cart/dinerCartTypes";
 import { money } from "../money";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function RestaurantMenuPage() {
   const { restaurantId = "", locationId = "" } = useParams();
   const navigate = useNavigate();
 
   const { data: listing } = useDiscoveryListing(restaurantId, locationId);
+  useDocumentTitle(`${listing?.restaurantName ?? "Menu"} · Spoontab`);
   const { data: menu, isPending, isError } = usePublicMenu(restaurantId, locationId);
   const { cart, add, replaceWith, setQuantity } = useDinerCart();
 

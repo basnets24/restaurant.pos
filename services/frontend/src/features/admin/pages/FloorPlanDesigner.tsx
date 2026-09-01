@@ -554,7 +554,7 @@ function EditMode({ initial, onExit }: { initial: TableViewDto[]; onExit: () => 
 
       {/* Footer bar */}
       <div className="flex items-center justify-between border rounded-md p-2">
-        <div className="text-xs text-muted-foreground">Draft mode. Changes exist only in this session — Publish before leaving, or they're lost.</div>
+        <div className="text-xs text-muted-foreground">Draft mode. Changes exist only in this session. Publish before leaving, or they're lost.</div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={onDiscard}>Discard</Button>
           <Button variant="outline" onClick={onSaveDraft}><Save className="h-4 w-4 mr-1" />Save Draft</Button>

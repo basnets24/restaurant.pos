@@ -217,7 +217,7 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
             </div>
             <div className="min-w-0">
               <DialogTitle className="truncate">Table {table.number}</DialogTitle>
-              <div className="text-sm text-muted-foreground truncate">{table.section || "—"} · seats {table.seats}</div>
+              <div className="text-sm text-muted-foreground truncate">{table.section || "N/A"} · seats {table.seats}</div>
             </div>
           </div>
         </DialogHeader>

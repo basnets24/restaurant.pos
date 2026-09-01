@@ -94,7 +94,7 @@ function RoleMembersModal({ roleName, onClose }: { roleName: string | null; onCl
     <Dialog open={!!roleName} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Manage members — {roleName}</DialogTitle>
+          <DialogTitle>Manage members: {roleName}</DialogTitle>
         </DialogHeader>
         {!roleName ? null : (
           <div className="space-y-3">
@@ -123,7 +123,7 @@ function RoleMembersModal({ roleName, onClose }: { roleName: string | null; onCl
                   roleName={roleName}
                   userId={e.userId}
                   displayName={e.displayName || e.userName || "(no name)"}
-                  email={e.email ?? "—"}
+                  email={e.email ?? "N/A"}
                   hasRole={(e.tenantRoles ?? []).includes(roleName)}
                   onChanged={() => list.refetch()}
                 />

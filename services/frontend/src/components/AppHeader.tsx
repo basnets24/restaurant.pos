@@ -45,7 +45,7 @@ export interface AppHeaderProps {
   title: string;
   /** Secondary line — location, "Point of Sale System", etc. */
   subtitle?: string;
-  /** Short text in the brand mark box (e.g. "RMS", "POS", "A") */
+  /** Short text in the brand mark box (e.g. "S", "POS") */
   logo?: string;
   /** Where clicking the brand mark navigates (default: /home) */
   brandTo?: string;
@@ -60,7 +60,7 @@ export interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
-  logo = "RMS",
+  logo = "S",
   brandTo = "/home",
   nav,
   menuItems,
@@ -77,7 +77,7 @@ export function AppHeader({
     <header
       className="sticky top-0 z-40 border-b border-border"
       style={{
-        background: "color-mix(in srgb, var(--olive-300) 90%, transparent)",
+        background: "var(--header-bg)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
       }}

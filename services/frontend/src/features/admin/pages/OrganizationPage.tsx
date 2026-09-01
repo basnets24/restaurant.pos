@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { isValidElement, cloneElement, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { Building2, Copy, MapPin, KeyRound, type LucideIcon } from "lucide-react";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
@@ -284,11 +284,12 @@ function SectionHeading({ icon: Icon, label }: { icon: LucideIcon; label: string
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactElement }) {
+  const id = useId();
   return (
     <div className="space-y-1">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      {children}
+      <Label htmlFor={id} className="text-xs text-muted-foreground font-normal">{label}</Label>
+      {isValidElement(children) ? cloneElement(children, { id } as { id: string }) : children}
     </div>
   );
 }

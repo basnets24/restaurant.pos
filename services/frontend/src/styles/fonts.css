@@ -1,0 +1,89 @@
+/* =============================================================================
+ * Spoontab typography system — single source of truth for font families,
+ * the weights/styles actually loaded for each, and the semantic roles
+ * components are allowed to reference.
+ *
+ * TO SWAP A FONT FAMILY: change the matching --typeface-* stack below AND
+ * the matching segment of the Google Fonts URL in index.html (each family
+ * below documents exactly which weights/styles that URL must request for
+ * it). Nothing else needs to change — components never spell out a family
+ * name; they use font-body / font-display / font-numeric / font-mono
+ * (wired to Tailwind below) plus ordinary weight/italic utilities
+ * (font-medium, italic, ...).
+ *
+ * Imported by src/index.css, right after brand.css.
+ * ========================================================================== */
+
+:root {
+    /* ---------------------------------------------------------------------
+     * Physical typeface stacks — the only place a literal family name is
+     * allowed to appear. Each comment is the authoritative weight/style
+     * matrix: index.html's Google Fonts URL must load exactly this set,
+     * and no component may request a weight/style outside it (that's what
+     * font-synthesis: none, below, makes fail loudly instead of silently
+     * faking a face).
+     * ------------------------------------------------------------------- */
+
+    /* Loaded: 400, 500, 600, 700 normal + 400 italic. */
+    --typeface-body: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Loaded: 500, 600, 700 normal + 500 italic. Deliberately no 400 face —
+     * see the h1/h2 default in src/index.css, which sets unweighted
+     * display text to 500 instead of the browser's normal-weight default
+     * so it can never land on this unloaded weight. */
+    --typeface-display: 'Lora', Georgia, 'Times New Roman', serif;
+
+    /* Loaded: 400, 500, 600, 700 normal. No italic face — nothing in the
+     * numeric/mono roles is ever set in italic. */
+    --typeface-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* ---------------------------------------------------------------------
+     * Supported weights, as tokens rather than raw numbers so the base
+     * typography rules in src/index.css stay traceable to this file.
+     * ------------------------------------------------------------------- */
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+
+    /* ---------------------------------------------------------------------
+     * font-numeric (tabular figures: money, counts, table/order numbers)
+     * and font-mono (literal codes: order/session IDs, restaurant ID,
+     * slugs) are two distinct semantic roles — font-numeric always pairs
+     * with tabular-nums for column alignment, font-mono never does, since
+     * forcing alphanumeric IDs into tabular width serves no purpose. They
+     * share one physical typeface today; give one a different typeface
+     * later by pointing it at its own --typeface-* stack instead of
+     * --typeface-mono, without touching the other role or any component.
+     * ------------------------------------------------------------------- */
+    --font-numeric: var(--typeface-mono);
+}
+
+/* ---------------------------------------------------------------------
+ * Tailwind wiring — every family-swappable role becomes a Tailwind
+ * font-family utility (font-body, font-display, font-mono; font-sans is
+ * kept as a Tailwind-convention alias of font-body). font-numeric is
+ * deliberately NOT declared here — see the @utility below — because it
+ * needs to always carry tabular-nums alongside the family, not just the
+ * family alone.
+ * ------------------------------------------------------------------- */
+@theme inline {
+    --font-sans: var(--typeface-body);
+    --font-body: var(--typeface-body);
+    --font-display: var(--typeface-display);
+    --font-mono: var(--typeface-mono);
+}
+
+/* .font-numeric: family + tabular-nums in one utility, sourced from the
+ * one --font-numeric variable above. Deliberately not a @theme font-*
+ * key (which would only ever generate a family-only utility) — this is
+ * the one role that must always carry tabular-nums alongside it. */
+@utility font-numeric {
+    font-family: var(--font-numeric);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Missing weights/styles must render as the nearest loaded real face, not
+ * a browser-faked bold/oblique — keeps gaps in the matrices above visibly
+ * wrong (thin fake-bold, sheared fake-italic) instead of silently passable. */
+html {
+    font-synthesis: none;
+}

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./styles/brand.css";
+@import "./styles/fonts.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -10,14 +11,38 @@
 
     body {
         @apply bg-background text-foreground;
-        font-family: var(--font-sans);
+        font-family: var(--font-body);
     }
 
-    /* Lora display serif for headlines & dialog titles (Spoontab brand) */
+    /* Lora display serif for headlines & dialog titles (Spoontab brand).
+     * font-weight defaults to 500 (the lightest loaded Lora weight — see
+     * fonts.css) rather than the browser's normal-weight default, so a
+     * heading with no explicit font-weight utility never requests the
+     * unloaded 400 face. Any font-medium/semibold/bold utility on the
+     * element itself still wins — utilities are a later cascade layer. */
     h1,
     h2 {
         font-family: var(--font-display);
+        font-weight: var(--font-weight-medium);
     }
+}
+
+/* Expands a control's clickable/tappable hit area to at least 44x44px
+ * (WCAG 2.5.5/2.5.8) via an invisible pseudo-element centered over the
+ * element, rather than growing the element's own visible box/padding —
+ * a compact-looking nav link or small button keeps its current size but
+ * gets a bigger target underneath. No-ops (adds nothing) once the element
+ * is already >=44px in a given dimension, so it's safe to apply broadly. */
+@utility tap-target {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* Design system utilities */
@@ -30,8 +55,49 @@
   .cols-2-3 { grid-template-columns: 2fr 3fr; }
   .cols-1-1 { grid-template-columns: 1fr 1fr; }
   .cols-1-2 { grid-template-columns: 1fr 2fr; }
-  /* Mono for money amounts, table/order numbers, receipt figures */
-  .font-numeric { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  /* font-numeric (money amounts, table/order numbers, receipt figures) is
+   * defined in fonts.css alongside the rest of the typography system. */
+
+  /* Faint paper-grain overlay for a section that already sets its own
+   * background (e.g. bg-background). The grain lives on a ::before behind
+   * the section's real content: ::before is the first thing painted in the
+   * section's stacking order, so ordinary content painted after it (no
+   * z-index juggling needed) sits on top and stays perfectly sharp — only
+   * the backdrop gets the multiply-blended grain. Asset + tuning knobs
+   * (opacity, tile size) live in brand.css as --texture-paper-image /
+   * --paper-texture-opacity / --paper-texture-size so this stays a pure
+   * layout utility.
+   */
+  .texture-paper {
+    position: relative;
+  }
+
+  .texture-paper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--texture-paper-image);
+    background-repeat: repeat;
+    background-size: var(--paper-texture-size) var(--paper-texture-size);
+    opacity: var(--paper-texture-opacity);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  /* Decorative only — drop it for print and for forced-colors/high-contrast
+   * modes rather than let a faint multiply layer fight a user's contrast
+   * override. */
+  @media print {
+    .texture-paper::before {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .texture-paper::before {
+      display: none;
+    }
+  }
 }
 
 /**

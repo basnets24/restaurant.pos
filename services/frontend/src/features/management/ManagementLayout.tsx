@@ -11,6 +11,7 @@ import { GrowthChartIcon } from "@/components/brand-icons/report-icons";
 import { ChefIcon } from "@/components/brand-icons/staff-icons";
 import { TwoTopPlaceSettingIcon } from "@/components/brand-icons/table-icons";
 import type { RestaurantUserData } from "./types";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 type ManagementTab = "analytics" | "staff" | "menu" | "reservations" | "admin";
 type TabIcon = ComponentType<{ className?: string }>;
@@ -36,6 +37,7 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
     const active = (pathname.split("/")[2] as ManagementTab) ?? "analytics";
     const isValid = ALL_TABS.some(t => t.value === active);
     const activeTab = isValid ? active : "analytics";
+    useDocumentTitle(`${ALL_TABS.find(t => t.value === activeTab)?.label ?? "Management"} · Spoontab`);
 
     const go = (to: string) => navigate(to);
     const canManageStaff = useCan("manageStaff");
@@ -47,7 +49,6 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
             <AppHeader
                 title="Management Dashboard"
                 subtitle={nameFromTenant ?? userData?.restaurantName}
-                logo="RMS"
                 menuItems={[
                     { label: "Account", icon: User, onClick: () => navigate("/settings/account") },
                     { label: "Security", icon: Shield, onClick: () => navigate("/settings/security") },

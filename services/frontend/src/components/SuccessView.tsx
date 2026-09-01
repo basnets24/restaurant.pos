@@ -78,7 +78,7 @@ export default function SuccessView() {
               <Separator />
               <div className="flex items-center justify-between">
                 <span className="text-sm">Amount</span>
-                <span className="font-medium font-numeric">{amount != null ? `$${amount.toFixed(2)}` : "—"}</span>
+                <span className="font-medium font-numeric">{amount != null ? `$${amount.toFixed(2)}` : "N/A"}</span>
               </div>
               <div className="flex gap-2 pt-2">
                 {receiptUrl ? (

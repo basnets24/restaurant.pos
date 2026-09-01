@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { DinerCartProvider } from "./cart/DinerCartProvider";
 import { DinerAuthProvider } from "./auth/DinerAuthProvider";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 /**
  * Shell for the customer-facing ordering surface (`/order`). Public — no
@@ -11,6 +12,7 @@ import { DinerAuthProvider } from "./auth/DinerAuthProvider";
  * genuinely differs between discovery and a restaurant menu.
  */
 export default function DinerLayout() {
+  useDocumentTitle("Order Online · Spoontab");
   return (
     <DinerAuthProvider>
       <DinerCartProvider>

@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from "@/components/AppHeader";
 import { User, ShieldCheck, Bell, type LucideIcon } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 type SettingsTab = "account" | "security" | "notifications";
 
@@ -18,12 +19,13 @@ export default function SettingsLayout() {
   const active = (pathname.split("/")[2] as SettingsTab) ?? "account";
   const isValid = TAB_LIST.some(t => t.value === active);
   const activeTab = isValid ? active : "account";
+  useDocumentTitle(`${TAB_LIST.find(t => t.value === activeTab)?.label ?? "Settings"} · Spoontab`);
 
   const go = (to: string) => navigate(to);
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader title="Settings" subtitle="Account & preferences" logo="RMS" />
+      <AppHeader title="Settings" subtitle="Account & preferences" />
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8 items-stretch md:items-start">
         <Tabs

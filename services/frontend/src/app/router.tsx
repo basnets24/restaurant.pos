@@ -1,6 +1,7 @@
 // src/app/router.tsx
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import RouteErrorBoundary from "./RouteErrorBoundary";
 
 // ---- Auth plumbing (your files) ----
 import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstants";
@@ -16,12 +17,20 @@ import RegisterPage from "../api-authorization/RegisterPage";
 import SuccessView from "@/components/SuccessView";
 import CancelView from "@/components/CancelView";
 
+// Static imports, not lazy(): these are the two public marketing pages most
+// visitors land on first (and the only ones with no auth/tenant dependency).
+// Code-splitting them the same way as authenticated app routes forces a
+// chunk-fetch round trip before any static content can paint - the "Loading…"
+// fallback below was measurably taking several seconds on cold loads. Every
+// other route stays lazy; those are genuinely gated behind navigation/auth,
+// so deferring their JS is a real win rather than pure overhead.
+import LandingView from "@/features/landing/LandingView";
+import EngineeringView from "@/features/landing/EngineeringView";
+
 // ---- Shared fallback ----
 const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</div>;
 
 // ---- Public top-level ----
-const LandingView = lazy(() => import("@/features/landing/LandingView"));
-const EngineeringView = lazy(() => import("@/features/landing/EngineeringView"));
 const HomePage    = lazy(() => import("@/features/home/HomePage"));
 
 // ---- Management ----
@@ -67,22 +76,25 @@ const JoinPage      = lazy(() => import("@/features/join/JoinPage"));
 // eslint-disable-next-line react-refresh/only-export-components
 export const router = createBrowserRouter([
   // ========= PUBLIC =========
-  { path: "/", element: <Suspense fallback={<Fallback />}><LandingView /></Suspense> },
-  { path: "/engineering", element: <Suspense fallback={<Fallback />}><EngineeringView /></Suspense> },
+  // No Suspense here on purpose - these two import statically above, so
+  // there's nothing to suspend on and no fallback flash to show.
+  { path: "/", element: <LandingView />, errorElement: <RouteErrorBoundary /> },
+  { path: "/engineering", element: <EngineeringView />, errorElement: <RouteErrorBoundary /> },
 
   // Auth endpoints (public)
-  { path: AuthorizationPaths.Login,           element: <LoginPage /> },
-  { path: AuthorizationPaths.Register,        element: <RegisterPage /> },
-  { path: AuthorizationPaths.LoginCallback,   element: <LoginCallbackPage /> },
-  { path: AuthorizationPaths.LogOut,          element: <LogoutPage /> },
-  { path: AuthorizationPaths.LogOutCallback,  element: <LogoutCallbackPage /> },
-  { path: AuthorizationPaths.LoggedOut,       element: <LoggedOutPage /> },
+  { path: AuthorizationPaths.Login,           element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
+  { path: AuthorizationPaths.Register,        element: <RegisterPage />, errorElement: <RouteErrorBoundary /> },
+  { path: AuthorizationPaths.LoginCallback,   element: <LoginCallbackPage />, errorElement: <RouteErrorBoundary /> },
+  { path: AuthorizationPaths.LogOut,          element: <LogoutPage />, errorElement: <RouteErrorBoundary /> },
+  { path: AuthorizationPaths.LogOutCallback,  element: <LogoutCallbackPage />, errorElement: <RouteErrorBoundary /> },
+  { path: AuthorizationPaths.LoggedOut,       element: <LoggedOutPage />, errorElement: <RouteErrorBoundary /> },
 
   // Diner ordering — public by design. Browsing restaurants and menus must work
   // signed out; only placing an order requires an account, gated further in.
   {
     path: "/order",
     element: <Suspense fallback={<Fallback />}><DinerLayout /></Suspense>,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <Suspense fallback={<Fallback />}><DiscoveryPage /></Suspense> },
       // Static segments before the :restaurantId/:locationId pattern, or "checkout" would
@@ -101,6 +113,7 @@ export const router = createBrowserRouter([
         <Suspense fallback={<Fallback />}><JoinPage /></Suspense>
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
   },
   { path: "/home",
     element: (
@@ -108,6 +121,7 @@ export const router = createBrowserRouter([
         <Suspense fallback={<Fallback />}><HomePage /></Suspense>
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
   },
 
   // Management
@@ -118,6 +132,7 @@ export const router = createBrowserRouter([
         <Suspense fallback={<Fallback />}><ManagementLayout /></Suspense>
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <Navigate to="analytics" replace /> },
       { path: "analytics",    element: <Suspense fallback={<Fallback />}><AnalyticsTab /></Suspense> },
@@ -149,6 +164,7 @@ export const router = createBrowserRouter([
         <Suspense fallback={<Fallback />}><SettingsLayout /></Suspense>
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <Navigate to="account" replace /> },
       { path: "account",       element: <Suspense fallback={<Fallback />}><AccountPage /></Suspense> },
@@ -165,6 +181,7 @@ export const router = createBrowserRouter([
         <Suspense fallback={<Fallback />}><PosLayout /></Suspense>
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <Navigate to="tables" replace /> },
       { path: "tables", element: <Suspense fallback={<Fallback />}><TablesPage /></Suspense> },
@@ -185,7 +202,7 @@ export const router = createBrowserRouter([
   },
 
   // 404
-  { path: "*", element: <Suspense fallback={<Fallback />}><NotFoundPage /></Suspense> },
+  { path: "*", element: <Suspense fallback={<Fallback />}><NotFoundPage /></Suspense>, errorElement: <RouteErrorBoundary /> },
 ]);
 
 export function AppRouter() {

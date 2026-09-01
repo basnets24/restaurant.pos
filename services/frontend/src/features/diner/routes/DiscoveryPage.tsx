@@ -52,7 +52,11 @@ export default function DiscoveryPage() {
     <>
       <DinerHeader
         center={
-          <div className="hidden md:flex items-center gap-2 w-full max-w-xl">
+          // md (768px, iPad portrait) is too narrow for this row to share space with the
+          // brand mark on the left and the bell/orders/avatar cluster on the right - none of
+          // those yield width, so the search input was the only thing left to collapse. Below
+          // lg it moves to its own full-width row under the header instead (see below).
+          <div className="hidden lg:flex items-center gap-2 w-full max-w-xl">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -83,8 +87,10 @@ export default function DiscoveryPage() {
       />
 
       <main className="mx-auto max-w-[1160px] px-4 sm:px-8 py-6">
-        {/* Mobile search — the header collapses it to keep the brand row readable */}
-        <div className="md:hidden flex items-center gap-2 mb-4">
+        {/* Search on its own full-width row below lg (covers iPad portrait, 768px) — the
+            header has no room to share with it once the brand mark and account controls are
+            in place. See the matching lg breakpoint on the header's center slot above. */}
+        <div className="lg:hidden flex items-center gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -102,7 +108,7 @@ export default function DiscoveryPage() {
           <p className="text-sm text-muted-foreground">
             {isPending
               ? "Finding restaurants near you…"
-              : `Order ahead for pickup — ${listings?.length ?? 0} ${
+              : `Order ahead for pickup: ${listings?.length ?? 0} ${
                   listings?.length === 1 ? "restaurant" : "restaurants"
                 } near you`}
           </p>

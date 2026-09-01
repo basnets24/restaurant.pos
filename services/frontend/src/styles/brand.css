@@ -1,9 +1,12 @@
 /* =============================================================================
- * Spoontab brand tokens — single source of truth for the design system.
+ * Spoontab brand tokens — single source of truth for the design system's
+ * color/radius/shadow palette. Typography (families, weights, styles,
+ * semantic font roles) lives in src/styles/fonts.css instead — see that
+ * file to swap a font or check what's loaded.
  *
  * Imported by src/index.css right after the Tailwind import. Two layers:
  *   1. :root         - raw palette scales + Spoontab/shadcn semantic tokens.
- *   2. theme block   - exposes tokens as Tailwind color/radius/font utilities.
+ *   2. theme block   - exposes tokens as Tailwind color/radius utilities.
  *
  * Components reference the semantic utilities (e.g. text-destructive,
  * bg-status-available-soft, bg-table-occupied) - never raw hex - so a palette
@@ -55,14 +58,23 @@
     --border: var(--sand-200);
     --border-strong: var(--sand-300);
 
-    --brand: var(--olive-500);
+    /* olive-500 measures ~4.01:1 for white text — below the 4.5:1 AA
+     * minimum for normal text, which matters here since --brand feeds
+     * --primary (buttons, badges) as a solid fill with white text/icons.
+     * olive-600 measures ~5.56:1, comfortably clearing AA. */
+    --brand: var(--olive-600);
     --brand-strong: var(--olive-700);
     --brand-soft: var(--olive-100);
     --brand-ink: #ffffff;
 
-    --accent: var(--clay-500);
-    --accent-soft: #f3e4c8;
-    --accent-ink: #ffffff;
+    /* App/diner header translucent backdrop — was copy-pasted as a raw
+     * var(--olive-300) color-mix() in AppHeader/DinerHeader/EngineeringView/
+     * LandingView; centralized here so all four track together. */
+    --header-bg: color-mix(in srgb, var(--olive-300) 90%, transparent);
+
+    --brand-accent: var(--clay-500);
+    --brand-accent-soft: #f3e4c8;
+    --brand-accent-ink: #ffffff;
 
     --destructive: var(--rust-600);
     --destructive-soft: #f6ddd6;
@@ -91,6 +103,7 @@
      * existing component tree adopts the new look without edits.
      * ------------------------------------------------------------------- */
     --font-size: 16px;
+    /* --font-weight-normal / --font-weight-medium now live in fonts.css */
     --background: var(--bg);
     --foreground: var(--ink);
     --card: var(--surface);
@@ -103,18 +116,21 @@
     --secondary-foreground: var(--ink);
     --muted: var(--surface-sunken);
     --muted-foreground: var(--ink-muted);
-    /* accent = soft hover surface + on-brand ink (shadcn hover semantics) */
+    /* shadcn accent = soft hover surface + on-brand ink (hover semantics) —
+     * distinct from Spoontab's own --brand-accent above; the two used to
+     * share the --accent name, and this declaration silently won every time. */
     --accent: var(--brand-soft);
     --accent-foreground: var(--brand-strong);
     --destructive-foreground: var(--destructive-ink);
     --input: var(--border);
     --input-background: var(--surface);
     --switch-background: var(--border-strong);
-    --font-weight-medium: 500;
-    --font-weight-normal: 400;
 
-    /* Earthy categorical charts */
-    --chart-1: var(--olive-500);
+    /* Earthy categorical charts. chart-1 tracks --brand (not a raw
+     * olive-N step) since it IS the brand color in chart form — it should
+     * move whenever --brand does, same as every other brand-colored
+     * surface. */
+    --chart-1: var(--brand);
     --chart-2: var(--ochre-500);
     --chart-3: var(--clay-500);
     --chart-4: var(--forest-500);
@@ -141,14 +157,41 @@
     --table-reserved-border: var(--ochre-600);
     --table-dirty: var(--status-dirty);
     --table-dirty-border: var(--sand-600);
+
+    /* ---------------------------------------------------------------------
+     * Paper-grain texture (.texture-paper utility, src/index.css). A single
+     * tileable feTurbulence noise SVG lives here so it's never copy-pasted
+     * per-component; --bg (cream) stays the section's real background,
+     * this is just a faint pseudo-element overlay on top of it. Tune the
+     * effect by adjusting opacity/tile size below, not by touching the
+     * component or the SVG itself.
+     * ------------------------------------------------------------------- */
+    --texture-paper-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --paper-texture-opacity: 0.06;
+    --paper-texture-size: 200px;
+
+    /* PROTOTYPE — candidate secondary accent, not wired into --brand/--primary.
+     * Scoped to four spots only (Customer Demo card, Customer/Pickup walkthrough
+     * track, Engineering §03 Payment, one Tradeoffs row) so it can be compared
+     * side by side against the existing olive brand color before any adoption
+     * decision. Remove this block and its four call sites if fig is rejected.
+     * v2: darker/browner per feedback that the v1 mauve (#704453/#875665/
+     * #eee1e5) read as too dusty-pink against olive and lacked anchor weight.
+     * v3: added --fig-medium — icons/checks were sitting on --fig-strong
+     * (the hover/emphasis shade) and read as near brown-black; the olive side
+     * never puts its darkest step on small icons either (compare --ring, a
+     * lighter olive-400, against --brand-strong's olive-700). --fig-medium is
+     * one step up from --fig-base, same hue/saturation, for exactly that role. */
+    --fig-strong: #472833;
+    --fig-base: #5a3442;
+    --fig-medium: #814b5f;
+    --fig-soft: #ede2e6;
 }
 
 @theme inline {
-    /* Font families */
-    --font-sans: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-serif: 'Lora', Georgia, 'Times New Roman', serif;
-    --font-display: 'Lora', Georgia, 'Times New Roman', serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* Font families are wired in fonts.css (font-sans/font-body/font-display/
+     * font-mono) — --font-serif was dropped, it was an unused duplicate of
+     * font-display with no distinct usage anywhere in the app. */
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -181,6 +224,8 @@
     --color-brand: var(--brand);
     --color-brand-strong: var(--brand-strong);
     --color-brand-soft: var(--brand-soft);
+    --color-brand-accent: var(--brand-accent);
+    --color-brand-accent-soft: var(--brand-accent-soft);
 
     /* Semantic status colors (earthy) — solid + soft surface pairs.
      * available=forest, occupied=rust, reserved=ochre, dirty=warm sand */
@@ -197,6 +242,12 @@
     --radius-md: 10px;
     --radius-lg: 16px;
     --radius-xl: 22px;
+
+    /* PROTOTYPE accent — see :root comment above. */
+    --color-fig-strong: var(--fig-strong);
+    --color-fig-base: var(--fig-base);
+    --color-fig-medium: var(--fig-medium);
+    --color-fig-soft: var(--fig-soft);
 
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);

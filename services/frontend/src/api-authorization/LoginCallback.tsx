@@ -10,7 +10,8 @@ export default function LoginCallbackPage() {
         (async () => {
             try {
                 await completeSignIn();
-            } catch {
+            } catch (e) {
+                console.warn("LoginCallbackPage: completeSignIn failed", e);
                 // Fallback: if state/returnUrl missing, go to home
                 window.location.replace(AuthorizationPaths.DefaultLoginRedirectPath);
             }

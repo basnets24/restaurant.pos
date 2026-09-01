@@ -15,8 +15,10 @@ import { getApiToken } from "@/auth/getApiToken";
 import { ENV } from "@/config/env";
 import { useTenant } from "@/auth/tenant";
 import { errorMessage } from "@/lib/apiErrors";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function JoinPage() {
+  useDocumentTitle("Get Started · Spoontab");
   const { profile, signOut } = useAuth();
   const hooks = useRestaurantUserProfile();
   const { rid, lid, setRid, setLid } = useTenant();
@@ -146,11 +148,15 @@ export default function JoinPage() {
     if (status?.hasMembership) navigate("/home", { replace: true });
   }, [status]);
 
-  if (alreadyOnboarded) {
-    // If a token refresh happened elsewhere, bounce to app
-    navigate("/home", { replace: true });
-    return null;
-  }
+  // If a token refresh happened elsewhere and the profile now carries a
+  // restaurant, bounce to app. Done in an effect, not render - navigate()
+  // triggers a RouterProvider state update, which React disallows during
+  // another component's render.
+  useEffect(() => {
+    if (alreadyOnboarded) navigate("/home", { replace: true });
+  }, [alreadyOnboarded]);
+
+  if (alreadyOnboarded) return null;
 
   return (
     <div>

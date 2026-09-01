@@ -150,7 +150,7 @@ export default function OrderPage() {
               <Separator />
               <div className="flex justify-between text-sm font-semibold">
                 <span>Total</span>
-                <span>{amount != null ? `$${amount.toFixed(2)}` : "—"}</span>
+                <span>{amount != null ? `$${amount.toFixed(2)}` : "N/A"}</span>
               </div>
 
               {isPaid && (

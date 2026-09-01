@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Signing in…</title>
+</head>
+
+<body>
+  <!-- Target of oidc.ts's silent_redirect_uri. oidc-client-ts loads this in a hidden iframe
+       on every token-expiry check (automaticSilentRenew) and for scoped-token minting
+       (getApiToken.ts). It only needs to run signinSilentCallback() - no React, no providers,
+       no router - so it's a separate Vite entry rather than a route inside the SPA. -->
+  <script type="module" src="/src/api-authorization/silentRenew.ts"></script>
+</body>
+
+</html>

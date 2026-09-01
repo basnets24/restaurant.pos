@@ -43,11 +43,15 @@ Thumbs.db
 
 # Docker
 secrets/
-infra/secrets/
+local/secrets/
 
 # IdentityServer auto-generated signing keys (per-machine, Data Protection-wrapped)
 services/identity/src/IdentityService/keys/
+services/identity/src/IdentityService/tempkey.jwk
 
 # Launch profiles
 **/launchSettings.json
 .idea/
+
+# Claude Code local tool state (settings, worktrees, scheduled-task locks)
+.claude/

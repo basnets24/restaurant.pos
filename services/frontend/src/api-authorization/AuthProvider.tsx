@@ -232,6 +232,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     const completeSignIn = async () => {
         const u = await userManager.signinCallback(window.location.href);
         setFromUser(u);
+
         const suggested =
             (u?.state as SignInState | undefined)?.returnUrl ??
             `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`;
