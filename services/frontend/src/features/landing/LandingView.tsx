@@ -128,7 +128,7 @@ export default function LandingView() {
                                 Close the tab.
                             </h1>
                             <p className="text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8">
-                                Explore this restaurant system, from floor management to checkout. Run it as staff, or order as a guest.
+                                A working restaurant operations system for managing the floor, orders, kitchen fulfillment, and checkout. Explore it as staff or place an order as a guest.
                             </p>
 
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
@@ -140,14 +140,16 @@ export default function LandingView() {
                                 >
                                     {adminDemoLoading ? "Signing in…" : "Explore staff demo"}
                                 </Button>
+                                {/* PROTOTYPE: fig accent, matching the Guest Demo card below —
+                                    this is the same action ("order as a guest") appearing twice
+                                    on the page, so it should carry the same accent — see brand.css */}
                                 <Button
                                     size="lg"
-                                    variant="outline"
                                     onClick={goCustomerDemo}
                                     disabled={customerDemoLoading}
-                                    className="text-xl px-10 py-6 rounded-none transition-all duration-200"
+                                    className="text-xl px-10 py-6 rounded-none shadow-md hover:shadow-lg transition-all duration-200 bg-fig-base text-white hover:bg-fig-strong"
                                 >
-                                    {customerDemoLoading ? "Signing in…" : "Order as a customer"}
+                                    {customerDemoLoading ? "Signing in…" : "Order as a guest"}
                                 </Button>
                             </div>
 
@@ -156,7 +158,7 @@ export default function LandingView() {
                                     to="/engineering"
                                     className="font-display italic text-xl text-[var(--rust-600)] hover:text-foreground transition-colors"
                                 >
-                                    Curious how it's built? Read the engineering details{" "}
+                                    Read the engineering case study{" "}
                                     <ArrowRight className="inline h-5 w-5 -mt-1" />
                                 </Link>
                             </p>
@@ -199,28 +201,31 @@ export default function LandingView() {
                             </Button>
                         </Card>
 
+                        {/* PROTOTYPE: fig accent (--fig-strong/base/soft, brand.css) swapped in for
+                            this card only, in place of the shared olive --primary, to test the
+                            candidate secondary accent against the Staff Demo card side by side. */}
                         <Card size="lg" className="p-6 border-border bg-card flex flex-col gap-4">
-                            <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center">
-                                <ShoppingCart className="w-6 h-6 text-primary" />
+                            <div className="w-12 h-12 rounded-md bg-fig-soft flex items-center justify-center">
+                                <ShoppingCart className="w-6 h-6 text-fig-medium" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-semibold text-foreground mb-1">Customer Demo</h3>
+                                <h3 className="text-lg font-semibold text-foreground mb-1">Guest Demo</h3>
                                 <p className="text-sm text-muted-foreground leading-relaxed">
                                     The guest side: browse Momo &amp; Burger's menu, customize an item, and check out as a diner.
                                 </p>
                             </div>
                             <ul className="text-sm text-muted-foreground space-y-1.5 flex-1">
-                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Browse and customize the menu</li>
-                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Guest checkout, no account needed</li>
-                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary shrink-0" />Embedded Stripe test payment</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-fig-medium shrink-0" />Browse and customize the menu</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-fig-medium shrink-0" />Guest checkout, no account needed</li>
+                                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-fig-medium shrink-0" />Embedded Stripe test payment</li>
                             </ul>
                             <Button
                                 size="lg"
                                 onClick={goCustomerDemo}
                                 disabled={customerDemoLoading}
-                                className="w-full shadow-md hover:shadow-lg transition-all duration-200"
+                                className="w-full shadow-md hover:shadow-lg transition-all duration-200 bg-fig-base text-white hover:bg-fig-strong"
                             >
-                                {customerDemoLoading ? "Signing in…" : "Explore Customer Demo"}
+                                {customerDemoLoading ? "Signing in…" : "Explore Guest Demo"}
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </Card>
@@ -242,6 +247,7 @@ export default function LandingView() {
                         title="Four services. One restaurant workflow."
                         description="Spoontab is split across four independently deployable .NET services for identity, catalog, ordering, and payment. MassTransit coordinates fulfillment across service boundaries, with tenant isolation and observability built in."
                         className="mb-10"
+                        wide
                     />
 
                     <ServiceFlowDiagram services={SERVICES} className="max-w-4xl mb-12" />
@@ -256,15 +262,6 @@ export default function LandingView() {
                             ))}
                         </div>
                     </div>
-
-                    <div className="mt-10">
-                        <Button variant="outline" size="lg" asChild className="text-lg px-8 py-4 border-2 hover:bg-accent">
-                            <Link to="/engineering">
-                                Read the engineering details
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </Link>
-                        </Button>
-                    </div>
                 </div>
             </section>
 
@@ -272,7 +269,7 @@ export default function LandingView() {
             <section id="cta" className="py-12 lg:py-16 border-t border-border relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <div className="space-y-8">
-                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">Want to See How It Works?</h2>
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-foreground leading-tight">See the Code Behind It</h2>
                         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                             The complete source is public, including all four services, database migrations, message contracts, saga state, tests, and deployment configuration.
                         </p>
@@ -286,7 +283,7 @@ export default function LandingView() {
                             </Button>
                             <Button variant="outline" size="lg" asChild className="text-lg px-10 py-4 border-2 hover:bg-accent">
                                 <Link to="/engineering">
-                                    Read the engineering details
+                                    Read the engineering case study
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Link>
                             </Button>

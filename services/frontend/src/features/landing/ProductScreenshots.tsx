@@ -35,22 +35,7 @@ type Moment = {
     frameMaxWidth?: string;
 };
 
-type StaffStackMoment = {
-    step: string;
-    title: string;
-    subhead: string;
-    service: string;
-    annotation?: string;
-    aspect: string;
-    frameMaxWidth?: string;
-    connectorLabel: string;
-    shots: [
-        { src: string; alt: string; label: string },
-        { src: string; alt: string; label: string },
-    ];
-};
-
-const STAFF_MOMENTS: (Moment | StaffStackMoment)[] = [
+const STAFF_MOMENTS: Moment[] = [
     {
         step: "01",
         title: "Open the floor",
@@ -66,21 +51,9 @@ const STAFF_MOMENTS: (Moment | StaffStackMoment)[] = [
         subhead: "A ticket is built, then fired to the kitchen. That's the moment it commits.",
         service: "order + catalog services",
         annotation: "Saga begins when ticket is fired",
-        aspect: "aspect-[384/500]",
-        frameMaxWidth: "max-w-[220px]",
-        connectorLabel: "Fire to Kitchen",
-        shots: [
-            {
-                src: "/screenshots/order-ticket-tight.png",
-                alt: "Order ticket with items added, not yet fired",
-                label: "Ticket opened",
-            },
-            {
-                src: "/screenshots/order-fired.png",
-                alt: "Order ticket after firing, showing Fired confirmation",
-                label: "Fired",
-            },
-        ],
+        src: "/screenshots/order-fired.png",
+        alt: "Order ticket after firing, showing Fired confirmation",
+        aspect: "aspect-[16/9]",
     },
     {
         step: "03",
@@ -93,10 +66,6 @@ const STAFF_MOMENTS: (Moment | StaffStackMoment)[] = [
         aspect: "aspect-[16/9]",
     },
 ];
-
-function isStackMoment(m: Moment | StaffStackMoment): m is StaffStackMoment {
-    return "shots" in m;
-}
 
 const CUSTOMER_MOMENTS = [
     {
@@ -146,16 +115,21 @@ function ScreenshotFrame({
     alt,
     aspect,
     annotation,
+    accent = "primary",
 }: {
     src: string;
     alt: string;
     aspect: string;
     annotation?: string;
+    accent?: "primary" | "fig";
 }) {
     const [failed, setFailed] = useState(false);
 
     return (
-        <div className="w-full rounded-xl border border-[var(--sand-400)]/50 bg-white p-1.5 shadow-lg shadow-black/10">
+        <div className={cn(
+            "w-full rounded-xl border p-1.5 shadow-lg shadow-black/10",
+            accent === "fig" ? "border-fig-medium/50 bg-fig-base" : "border-[var(--sand-400)]/50 bg-primary",
+        )}>
             <div
                 className={cn(
                     "relative w-full overflow-hidden rounded-lg bg-muted/40",
@@ -190,14 +164,23 @@ function ScreenshotFrame({
     );
 }
 
-function MomentHeading({ m }: { m: Pick<Moment, "step" | "title" | "subhead" | "service"> }) {
+/** `accent="fig"` is a PROTOTYPE path (see brand.css) used only by the Customer/Pickup
+ * track below, so the service label there can be compared directly against the
+ * Staff/Dine-in track's olive --primary without touching the shared token. */
+function MomentHeading({ m, accent = "primary" }: { m: Pick<Moment, "step" | "title" | "subhead" | "service">; accent?: "primary" | "fig" }) {
     return (
         <div>
-            <span className="text-[11px] font-mono text-muted-foreground/70">
+            <span className={cn(
+                "text-[11px] font-mono",
+                accent === "fig" ? "text-fig-medium" : "text-muted-foreground/70",
+            )}>
                 {m.step} / {m.title.toUpperCase()}
             </span>
             <h3 className="text-base text-foreground mt-1 mb-1.5 leading-snug">{m.subhead}</h3>
-            <span className="inline-block text-[11px] font-medium uppercase tracking-wide text-primary">
+            <span className={cn(
+                "inline-block text-[11px] font-medium uppercase tracking-wide",
+                accent === "fig" ? "text-fig-strong" : "text-primary",
+            )}>
                 {m.service}
             </span>
         </div>
@@ -215,49 +198,24 @@ function StaffMoment({ m }: { m: Moment }) {
     );
 }
 
-function StaffFireMoment({ m }: { m: StaffStackMoment }) {
-    const [before, after] = m.shots;
-    return (
-        <div>
-            <MomentHeading m={m} />
-            <div className="mt-3 flex items-center justify-center gap-3">
-                <div className={cn("w-full flex-1", m.frameMaxWidth)}>
-                    <ScreenshotFrame src={before.src} alt={before.alt} aspect={m.aspect} />
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mt-1.5 text-center">
-                        {before.label}
-                    </p>
-                </div>
-                <div className="flex flex-col items-center gap-1 text-muted-foreground/60 shrink-0">
-                    <ArrowRight className="w-4 h-4" />
-                    <span className="text-[10px] font-medium uppercase tracking-wide text-center leading-tight max-w-[52px]">
-                        {m.connectorLabel}
-                    </span>
-                </div>
-                <div className={cn("w-full flex-1", m.frameMaxWidth)}>
-                    <ScreenshotFrame src={after.src} alt={after.alt} aspect={m.aspect} annotation={m.annotation} />
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mt-1.5 text-center">
-                        {after.label}
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 function CustomerMoment({ m }: { m: (typeof CUSTOMER_MOMENTS)[number] }) {
     return (
         <div>
-            <MomentHeading m={m} />
+            <MomentHeading m={m} accent="fig" />
             <div className="mt-3 flex items-center justify-center gap-3">
                 {m.shots.map((shot, i) => (
                     <div key={shot.src} className="contents">
                         <div className={cn("w-full flex-1", m.frameMaxWidth)}>
-                            <ScreenshotFrame src={shot.src} alt={shot.alt} aspect={m.aspect} />
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground mt-1.5 text-center">
-                                {shot.label}
+                            <ScreenshotFrame src={shot.src} alt={shot.alt} aspect={m.aspect} accent="fig" />
+                            {/* PROTOTYPE: small fig badge in place of the staff track's plain
+                                caption text, per the "small badges" accent request — brand.css */}
+                            <p className="mt-1.5 flex justify-center">
+                                <span className="rounded-full bg-fig-soft px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-fig-strong">
+                                    {shot.label}
+                                </span>
                             </p>
                         </div>
-                        {i === 0 && <ArrowRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />}
+                        {i === 0 && <ArrowRight className="w-4 h-4 text-fig-medium shrink-0" />}
                     </div>
                 ))}
             </div>
@@ -265,8 +223,13 @@ function CustomerMoment({ m }: { m: (typeof CUSTOMER_MOMENTS)[number] }) {
     );
 }
 
-function StepConnector() {
-    return <ArrowDown className="w-3.5 h-3.5 text-muted-foreground/40 ml-0.5" />;
+function StepConnector({ accent = "primary" }: { accent?: "primary" | "fig" }) {
+    return (
+        <ArrowDown className={cn(
+            "w-3.5 h-3.5 ml-0.5",
+            accent === "fig" ? "text-fig-medium/70" : "text-muted-foreground/40",
+        )} />
+    );
 }
 
 export function ProductScreenshots() {
@@ -279,6 +242,7 @@ export function ProductScreenshots() {
                     title="Dine in or pick up. One restaurant underneath."
                     description="Staff manage tables, tickets, kitchen fulfillment, and payment for dine-in service. Customers browse the same catalog and place pickup orders through a separate guest experience."
                     className="mb-8"
+                    wide
                 />
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-0 lg:divide-x lg:divide-border">
@@ -290,20 +254,24 @@ export function ProductScreenshots() {
                             {STAFF_MOMENTS.map((m, i) => (
                                 <div key={m.step}>
                                     {i > 0 && <StepConnector />}
-                                    {isStackMoment(m) ? <StaffFireMoment m={m} /> : <StaffMoment m={m} />}
+                                    <StaffMoment m={m} />
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="lg:pl-8">
-                        <span className="block text-xs font-medium tracking-wide uppercase text-primary mb-4">
+                    {/* PROTOTYPE: subtle pale-fig panel behind the whole Customer/Pickup
+                        subsection, plus fig accents on its labels/arrows/badges below —
+                        see brand.css. Kept to a soft tint, not a solid fill, per the "not
+                        a full-width section color" guidance from the earlier accent review. */}
+                    <div className="rounded-xl bg-fig-soft/40 p-4 sm:p-6 lg:pt-6 lg:pb-6 lg:pr-6 lg:pl-10">
+                        <span className="block text-xs font-medium tracking-wide uppercase text-fig-strong mb-4">
                             Customer / Pickup
                         </span>
                         <div className="space-y-3">
                             {CUSTOMER_MOMENTS.map((m, i) => (
                                 <div key={m.step}>
-                                    {i > 0 && <StepConnector />}
+                                    {i > 0 && <StepConnector accent="fig" />}
                                     <CustomerMoment m={m} />
                                 </div>
                             ))}
