@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import RouteErrorBoundary from "./RouteErrorBoundary";
+import { FullScreenLoader } from "@/components/primitives/FullScreenLoader";
 
 // ---- Auth plumbing (your files) ----
 import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstants";
@@ -28,7 +29,7 @@ import LandingView from "@/features/landing/LandingView";
 import EngineeringView from "@/features/landing/EngineeringView";
 
 // ---- Shared fallback ----
-const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</div>;
+const Fallback = () => <FullScreenLoader />;
 
 // ---- Public top-level ----
 const HomePage    = lazy(() => import("@/features/home/HomePage"));
