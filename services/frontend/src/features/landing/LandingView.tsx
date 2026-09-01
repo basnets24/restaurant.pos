@@ -72,7 +72,8 @@ export default function LandingView() {
     const goAdminDemo = async () => {
         setAdminDemoLoading(true);
         try {
-            await signInDemoAdmin(`${window.location.origin}/home`);
+            await signInDemoAdmin();
+            navigate("/home");
         } catch {
             toast.error("Could not start the admin demo. Please try again.");
             setAdminDemoLoading(false);

@@ -1,14 +1,15 @@
-// src/auth/AuthProvider.tsx
+// src/api-authorization/AuthProvider.tsx
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { User } from 'oidc-client-ts';
 import { userManager } from './oidc';
-import { clearApiTokenCache } from "@/auth/getApiToken";
+import { clearApiTokenCache, waitForPendingRenewals } from "@/auth/getApiToken";
 import { clearTenant } from "@/auth/tenant";
 import { clearKitchenState } from "@/features/pos/kitchen/kitchenStore";
 import { clearAllTableSessions } from "@/stores";
 import { ENV } from "@/config/env";
 import { AuthorizationPaths } from './ApiAuthorizationConstants';
 import { bindAuthAccessors } from "@/auth/runtime";
+import { isDemoProfile } from "@/auth/demoSession";
 import type { AppProfile, SignInState } from "@/auth/types";
 
 // Recruiter-facing "Admin Demo" button. `spoontab-demo-admin` is a custom `demo_admin`-grant
@@ -50,7 +51,7 @@ type AuthState = {
     accessToken?: string;
     profile?: AppProfile;
     signIn: (returnUrl?: string) => Promise<void>;
-    signInDemoAdmin: (returnUrl?: string) => Promise<void>;
+    signInDemoAdmin: () => Promise<void>;
     completeSignIn: () => Promise<void>;
     signOut: (returnUrl?: string) => Promise<void>;
     completeSignOut: () => Promise<void>;
@@ -89,6 +90,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             try { clearApiTokenCache(); } catch (e) { console.warn("AuthProvider: clearApiTokenCache failed on user switch", e); }
         }
         lastSubRef.current = sub;
+
+        // A demo session (see signInDemoAdmin below) has no real Authorization Code session
+        // at the IdP - oidc-client-ts's automaticSilentRenew would otherwise keep scheduling
+        // a doomed prompt=none iframe renewal against it on a timer, indefinitely, for as
+        // long as the demo session is loaded. Toggle the timer off for demo sessions and back
+        // on for real ones (stopSilentRenew/startSilentRenew are idempotent).
+        if (authed && isDemoProfile(u?.profile as AppProfile | undefined)) {
+            userManager.stopSilentRenew();
+        } else {
+            userManager.startSilentRenew();
+        }
     };
 
     // Initial load + wire up useful events
@@ -119,6 +131,29 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             clearSessionLocalState();
         };
         const onExpired = async () => {
+            // A demo session has no real Authorization Code session at the IdP for
+            // signinSilent to renew against - skip the doomed attempt and clean up directly
+            // rather than logging the same "always fails" warning every expiry.
+            const stale = await userManager.getUser();
+            if (isDemoProfile(stale?.profile as AppProfile | undefined)) {
+                setFromUser(undefined);
+                clearSessionLocalState();
+                try { await userManager.removeUser(); } catch (e) { console.warn("AuthProvider: failed to remove expired demo user", e); }
+                return;
+            }
+
+            // If a getApiToken() call already kicked off its own renewal for this same
+            // expiry, wait for it instead of racing a second, independent attempt - starting
+            // our own here regardless could fail and clear session state (below) while that
+            // other renewal was still about to succeed, leaving local state stale. Once it
+            // settles, re-check: if it left us with a live user, we're done.
+            await waitForPendingRenewals();
+            const renewed = await userManager.getUser();
+            if (renewed && !renewed.expired) {
+                setFromUser(renewed);
+                return;
+            }
+
             // token expired — try silent renew path to refresh UI state if possible
             try {
                 const u = await userManager.signinSilent();
@@ -167,10 +202,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
             // If we recently signed out, skip silent once to avoid auto SSO login via back button
             const skipSilent = sessionStorage.getItem("auth.skipSilentOnce") === "1";
             if (!skipSilent) {
-                // Try silent first (if already logged in at the IdP)
+                // Try silent first (if already logged in at the IdP). No redirect round trip
+                // happens on this path, so there's no page unload to piggyback a navigation on -
+                // setFromUser() updates state in place and the caller (LoginPage) does an in-app
+                // navigate() rather than a window.location.replace forcing a full SPA reload.
                 const u = await userManager.signinSilent();
                 setFromUser(u);
-                if (returnUrl) window.location.replace(returnUrl);
                 return;
             }
             sessionStorage.removeItem("auth.skipSilentOnce");
@@ -196,7 +233,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         }
     };
 
-    const signInDemoAdmin = async (returnUrl?: string) => {
+    // No redirect round trip happens here (unlike signIn()), so there's no page unload to
+    // piggyback a navigation on - storeUser()/setFromUser() update state in place and the
+    // caller does an in-app navigate() rather than a window.location.replace, which used to
+    // force a full SPA reload for no navigational reason.
+    const signInDemoAdmin = async () => {
         const res = await fetch(`${ENV.IDENTITY_URL}/connect/token`, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -226,7 +267,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
         await userManager.storeUser(user);
         setFromUser(user);
-        window.location.replace(returnUrl ?? `${window.location.origin}${AuthorizationPaths.DefaultLoginRedirectPath}`);
     };
 
     const completeSignIn = async () => {
@@ -268,6 +308,22 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         isSigningOutRef.current = true;
         // Signal to the next login attempt to skip silent once
         try { sessionStorage.setItem("auth.skipSilentOnce", "1"); } catch (e) { console.warn("AuthProvider: failed to set skipSilentOnce flag", e); }
+
+        // A demo session (see signInDemoAdmin) never created a real cookie session at the
+        // IdP - it was minted entirely via a token-only extension grant. Routing it through
+        // signoutRedirect() sends the browser to Duende's /connect/endsession, which redirects
+        // to /Identity/Account/Logout - but that page requires an authenticated cookie
+        // (Microsoft.AspNetCore.Identity.UI's AddDefaultUI() wires up
+        // AuthorizeAreaPage("Identity", "/Account/Logout") automatically), so an anonymous
+        // browser gets bounced to the sign-in page instead of ever reaching it. Skip the round
+        // trip entirely and clear local state directly, same as getApiToken.ts's demo handling.
+        const current = await userManager.getUser();
+        if (isDemoProfile(current?.profile as AppProfile | undefined)) {
+            await userManager.removeUser();
+            window.location.replace(returnUrl ?? `${window.location.origin}${AuthorizationPaths.LoggedOut}`);
+            return;
+        }
+
         await userManager.signoutRedirect({
             state: { returnUrl },
             post_logout_redirect_uri: `${window.location.origin}${AuthorizationPaths.LogOutCallback}`,
