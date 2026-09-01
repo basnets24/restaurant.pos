@@ -93,7 +93,7 @@ export default function TablesPage() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading…</div>;
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-1 min-h-0 flex-col gap-4 p-4">
       <div
         ref={wrapRef}
         onMouseDown={onCanvasMouseDown}
@@ -101,7 +101,7 @@ export default function TablesPage() {
         onMouseUp={onCanvasMouseUp}
         onMouseLeave={onCanvasMouseUp}
         onWheel={onWheel}
-        className={`relative h-[70vh] rounded-2xl border border-border overflow-hidden bg-muted ${panning ? "cursor-grabbing" : "cursor-default"}`}
+        className={`relative min-h-0 flex-1 rounded-2xl border border-border overflow-hidden bg-muted ${panning ? "cursor-grabbing" : "cursor-default"}`}
         style={{ backgroundImage: "linear-gradient(90deg,rgba(53,25,3,.05) 1px,transparent 1px),linear-gradient(180deg,rgba(53,25,3,.05) 1px,transparent 1px)", backgroundSize: `${GRID}px ${GRID}px` }}
       >
         {tables.length === 0 ? (
