@@ -3,7 +3,9 @@ using IdentityService.Features.Shared.Auth;
 using IdentityService.Features.Tenancy.Services;
 using IdentityService.Common.Settings;
 using Microsoft.AspNetCore.Identity;
+using Common.Library.PostgreSQL;
 using Common.Library.Settings;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Hosting;
@@ -49,6 +51,26 @@ public static class IdentityServerExtensions
            .AddInMemoryClients(idp.Clients)
            .AddProfileService<TenantProfileService>()
            .AddExtensionGrantValidator<DemoAdminGrantValidator>();
+
+        // Without this, Duende falls back to its default in-memory grant store: every
+        // authorization code and refresh token (the diner client's 30-day offline_access
+        // grant) lives only in process memory and is silently wiped on every restart/deploy,
+        // and there's nowhere durable to revoke into on logout (see Logout.cshtml.cs). Same
+        // Postgres database as everything else, same schema-per-service convention.
+        var postgresSettings = configuration.GetSection("PostgresSettings").Get<PostgresSettings>()
+            ?? throw new InvalidOperationException("PostgresSettings configuration is missing.");
+        var migrationsAssembly = typeof(IdentityServerExtensions).Assembly.GetName().Name;
+
+        identityServerBuilder.AddOperationalStore(options =>
+        {
+            options.ConfigureDbContext = b => b.UseNpgsql(
+                postgresSettings.GetConnectionString(),
+                sql => sql.MigrationsAssembly(migrationsAssembly));
+            // Sweeps expired/consumed grants (auth codes, refresh tokens, device codes) on a
+            // timer instead of letting the table grow forever - the in-memory store used to
+            // get this for free just by virtue of being memory.
+            options.EnableTokenCleanup = true;
+        });
 
         if (environment.IsDevelopment())
         {
