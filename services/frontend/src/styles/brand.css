@@ -169,6 +169,23 @@
     --texture-paper-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     --paper-texture-opacity: 0.06;
     --paper-texture-size: 200px;
+
+    /* PROTOTYPE — candidate secondary accent, not wired into --brand/--primary.
+     * Scoped to four spots only (Customer Demo card, Customer/Pickup walkthrough
+     * track, Engineering §03 Payment, one Tradeoffs row) so it can be compared
+     * side by side against the existing olive brand color before any adoption
+     * decision. Remove this block and its four call sites if fig is rejected.
+     * v2: darker/browner per feedback that the v1 mauve (#704453/#875665/
+     * #eee1e5) read as too dusty-pink against olive and lacked anchor weight.
+     * v3: added --fig-medium — icons/checks were sitting on --fig-strong
+     * (the hover/emphasis shade) and read as near brown-black; the olive side
+     * never puts its darkest step on small icons either (compare --ring, a
+     * lighter olive-400, against --brand-strong's olive-700). --fig-medium is
+     * one step up from --fig-base, same hue/saturation, for exactly that role. */
+    --fig-strong: #472833;
+    --fig-base: #5a3442;
+    --fig-medium: #814b5f;
+    --fig-soft: #ede2e6;
 }
 
 @theme inline {
@@ -225,6 +242,12 @@
     --radius-md: 10px;
     --radius-lg: 16px;
     --radius-xl: 22px;
+
+    /* PROTOTYPE accent — see :root comment above. */
+    --color-fig-strong: var(--fig-strong);
+    --color-fig-base: var(--fig-base);
+    --color-fig-medium: var(--fig-medium);
+    --color-fig-soft: var(--fig-soft);
 
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);

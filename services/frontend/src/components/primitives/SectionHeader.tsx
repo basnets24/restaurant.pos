@@ -7,11 +7,16 @@ export interface SectionHeaderProps {
     title: string;
     description?: string;
     className?: string;
+    /** Let the title/description run the section's full width instead of the
+     * default max-w-2xl reading column — for a section whose content below
+     * (a diagram, a grid) already spans full width, so the intro isn't
+     * narrower than what it's introducing. */
+    wide?: boolean;
 }
 
-export function SectionHeader({ variant, eyebrow, title, description, className }: SectionHeaderProps) {
+export function SectionHeader({ variant, eyebrow, title, description, className, wide }: SectionHeaderProps) {
     return (
-        <div className={cn("max-w-2xl space-y-3", className)}>
+        <div className={cn(wide ? "" : "max-w-2xl", "space-y-3", className)}>
             {eyebrow && (
                 <span className="block text-xs font-medium tracking-wide uppercase text-muted-foreground">
                     {eyebrow}
