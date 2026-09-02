@@ -81,7 +81,6 @@ export function PosHeader({
     <AppHeader
       title={restaurantName}
       subtitle={subtitle}
-      logo="POS"
       brandTo={routes.dashboard}
       nav={nav}
       rightExtra={rightExtra}

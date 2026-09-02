@@ -25,13 +25,13 @@
      * ------------------------------------------------------------------- */
 
     /* Loaded: 400, 500, 600, 700 normal + 400 italic. */
-    --typeface-body: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --typeface-body: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
     /* Loaded: 500, 600, 700 normal + 500 italic. Deliberately no 400 face —
      * see the h1/h2 default in src/index.css, which sets unweighted
      * display text to 500 instead of the browser's normal-weight default
      * so it can never land on this unloaded weight. */
-    --typeface-display: 'Lora', Georgia, 'Times New Roman', serif;
+    --typeface-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
 
     /* Loaded: 400, 500, 600, 700 normal. No italic face — nothing in the
      * numeric/mono roles is ever set in italic. */

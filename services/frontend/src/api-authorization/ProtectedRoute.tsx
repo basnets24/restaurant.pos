@@ -7,6 +7,7 @@ import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provide
 import { useTenant } from "@/auth/tenant";
 import { UnauthorizedError } from "@/domain/restaurantUserProfile/api";
 import { errorStatus } from "@/lib/apiErrors";
+import { FullScreenLoader } from "@/components/primitives/FullScreenLoader";
 
 type Props = React.PropsWithChildren<{ roles?: string[] }>;
 
@@ -37,7 +38,7 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
     }, [loc.pathname, status, rid, lid, setRid, setLid]);
 
     // Now branch based on state
-    if (!isReady) return null;
+    if (!isReady) return <FullScreenLoader />;
     // signOut() clears the local user (isAuthenticated -> false) before the browser actually
     // navigates away to the IdP's sign-out endpoint. Redirecting to login here would race that
     // real redirect and can pre-empt it, leaving the IdP session alive while the app thinks
@@ -46,7 +47,7 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
     if (!isAuthenticated) return <Navigate to={loginUrl} replace />;
 
     if (loc.pathname !== "/join") {
-        if (isLoading) return null;
+        if (isLoading) return <FullScreenLoader />;
         if (error) {
             const statusCode = errorStatus(error);
             // If onboarding status call returns 401 while authenticated, treat it as not onboarded

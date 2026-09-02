@@ -442,7 +442,7 @@ export default function MenuPage() {
   }, [blocker.state, blocker.location?.pathname, tableId]);
 
   return (
-    <div className="xl:pr-[25rem]"> {/* reserve space for fixed sidebar on xl+ */}
+    <div className="pr-[19rem] sm:pr-[19.5rem] lg:pr-[21.5rem] xl:pr-[25rem]"> {/* reserve space for fixed sidebar at every breakpoint it renders at (widths match OrderSidebar's own w-72/lg:w-80/xl:w-96 + right offset) */}
       <div className="flex min-h-[calc(100dvh-3.5rem)]">
         {/* Category icon rail (sm+) */}
         <aside

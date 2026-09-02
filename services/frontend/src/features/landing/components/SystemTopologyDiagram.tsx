@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DiagramScrollArea } from "@/features/landing/components/NarrativeDiagrams";
 
 interface Label {
     x: number;
@@ -85,7 +86,9 @@ export function SystemTopologyDiagram({ services = [], hovered, onHoverChange }:
     const hoveredService = hovered ? services.find((s) => s.name === hovered) : undefined;
 
     return (
-        <figure className="m-0 relative">
+        <figure className="m-0">
+          <DiagramScrollArea>
+            <div className="relative min-w-[720px]">
             <svg
                 viewBox="0 0 980 490"
                 role="img"
@@ -100,7 +103,7 @@ export function SystemTopologyDiagram({ services = [], hovered, onHoverChange }:
                 </defs>
 
                 {/* Frontend */}
-                <rect x="340" y="16" width="300" height="56" rx="8" fill="var(--card)" stroke="var(--border)" />
+                <rect x="340" y="16" width="300" height="56" rx="8" fill="var(--card)" stroke="var(--fig-base)" />
                 <text x="490" y="40" textAnchor="middle" fontSize="13" fontWeight="600" fill="var(--foreground)">Frontend, React SPA</text>
                 <text x="490" y="58" textAnchor="middle" fontSize="11" fill="var(--muted-foreground)">staff POS + pickup ordering</text>
 
@@ -158,7 +161,7 @@ export function SystemTopologyDiagram({ services = [], hovered, onHoverChange }:
                             <rect
                                 x={s.x} y="140" width="180" height="64" rx="8"
                                 fill={active ? "var(--brand-soft)" : "var(--card)"}
-                                stroke={active ? "var(--brand)" : "var(--border)"}
+                                stroke={active ? "var(--brand)" : "var(--fig-base)"}
                                 strokeWidth={active ? 2 : 1}
                                 style={{ transition: "fill 150ms, stroke 150ms" }}
                             />
@@ -207,7 +210,7 @@ export function SystemTopologyDiagram({ services = [], hovered, onHoverChange }:
                 ))}
 
                 {/* Postgres */}
-                <rect x="40" y="420" width="900" height="50" rx="8" fill="var(--card)" stroke="var(--border)" />
+                <rect x="40" y="420" width="900" height="50" rx="8" fill="var(--card)" stroke="var(--fig-base)" />
                 <text x="490" y="441" textAnchor="middle" fontSize="13" fontWeight="600" fill="var(--foreground)">PostgreSQL</text>
                 <text x="490" y="457" textAnchor="middle" fontSize="11" fill="var(--muted-foreground)">one instance, a separate schema per service</text>
 
@@ -246,6 +249,8 @@ export function SystemTopologyDiagram({ services = [], hovered, onHoverChange }:
                     </div>
                 </div>
             )}
+            </div>
+          </DiagramScrollArea>
 
             <figcaption className="mt-3 text-sm text-muted-foreground leading-relaxed">
                 Service boundaries follow domain ownership rather than request flow. Catalog owns what can be ordered, Order owns fulfillment, Payment owns Stripe state, and Identity establishes who is acting and for which restaurant.

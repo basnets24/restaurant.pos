@@ -1,4 +1,4 @@
-// src/auth/oidc.ts
+// src/api-authorization/oidc.ts
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 import { ApplicationName, AuthorizationPaths } from './ApiAuthorizationConstants';
 import { ENV } from '@/config/env';

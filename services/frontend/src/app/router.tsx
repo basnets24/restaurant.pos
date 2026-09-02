@@ -2,6 +2,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import RouteErrorBoundary from "./RouteErrorBoundary";
+import { FullScreenLoader } from "@/components/primitives/FullScreenLoader";
 
 // ---- Auth plumbing (your files) ----
 import { AuthorizationPaths } from "../api-authorization/ApiAuthorizationConstants";
@@ -28,7 +29,7 @@ import LandingView from "@/features/landing/LandingView";
 import EngineeringView from "@/features/landing/EngineeringView";
 
 // ---- Shared fallback ----
-const Fallback = () => <div className="p-6 text-muted-foreground">Loading…</div>;
+const Fallback = () => <FullScreenLoader />;
 
 // ---- Public top-level ----
 const HomePage    = lazy(() => import("@/features/home/HomePage"));
@@ -38,7 +39,6 @@ const ManagementLayout  = lazy(() => import("@/features/management/ManagementLay
 const AnalyticsTab      = lazy(() => import("@/features/management/tabs/AnalyticsTab"));
 const StaffTab          = lazy(() => import("@/features/management/tabs/StaffTab"));
 const MenuTab           = lazy(() => import("@/features/management/tabs/MenuTab"));
-const ReservationsTab   = lazy(() => import("@/features/management/tabs/ReservationsTab"));
 
 // ---- Admin (nested under Management, role-gated) ----
 const AdminTab           = lazy(() => import("@/features/management/tabs/AdminTab"));
@@ -138,7 +138,6 @@ export const router = createBrowserRouter([
       { path: "analytics",    element: <Suspense fallback={<Fallback />}><AnalyticsTab /></Suspense> },
       { path: "staff",        element: <Suspense fallback={<Fallback />}><StaffTab /></Suspense> },
       { path: "menu",         element: <Suspense fallback={<Fallback />}><MenuTab /></Suspense> },
-      { path: "reservations", element: <Suspense fallback={<Fallback />}><ReservationsTab /></Suspense> },
       {
         path: "admin",
         element: (

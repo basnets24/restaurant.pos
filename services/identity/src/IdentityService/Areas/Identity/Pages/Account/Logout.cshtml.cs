@@ -33,6 +33,12 @@ public class LogoutModel : PageModel
     {
         if (User.Identity?.IsAuthenticated == true)
         {
+            // Must run before SignOutAsync() - it revokes grants/consents for the current
+            // session's sid, which is read off the still-authenticated principal. Without this,
+            // "logout" only cleared the browser's cookie/local state; a refresh token issued
+            // earlier in the session (e.g. to the diner client) stayed valid until its own
+            // natural expiry regardless of the user having signed out.
+            await _interaction.RevokeTokensForCurrentSessionAsync(HttpContext.RequestAborted);
             await _signInManager.SignOutAsync();
             _logger.LogInformation("User logged out.");
         }
@@ -51,8 +57,17 @@ public class LogoutModel : PageModel
 
     public async Task<IActionResult> OnPost(string? returnUrl = null)
     {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            // See OnGet's comment - must run before SignOutAsync() while the session is
+            // still resolvable.
+            await _interaction.RevokeTokensForCurrentSessionAsync(HttpContext.RequestAborted);
+        }
+
         await _signInManager.SignOutAsync();
         _logger.LogInformation("User logged out.");
+
+        var settings = _config.GetSection("IdentityServerSettings").Get<IdentityServerSettings>();
 
         if (!string.IsNullOrWhiteSpace(returnUrl))
         {
@@ -61,7 +76,6 @@ public class LogoutModel : PageModel
                 return LocalRedirect(returnUrl);
 
             // Allow absolute URLs that match configured PostLogoutRedirectUris
-            var settings = _config.GetSection("IdentityServerSettings").Get<IdentityServerSettings>();
             var allowed = settings?.Clients
                 .SelectMany(c => c.PostLogoutRedirectUris ?? Array.Empty<string>())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -70,9 +84,13 @@ public class LogoutModel : PageModel
                 return Redirect(returnUrl);
         }
 
-        // Fallback to first configured PostLogoutRedirectUri if any
-        var fallback = _config.GetSection("IdentityServerSettings:Clients:1:PostLogoutRedirectUris:0").Value
-                       ?? _config.GetSection("IdentityServerSettings:Clients:0:PostLogoutRedirectUris:0").Value;
+        // Fallback to the "frontend" client's configured PostLogoutRedirectUri, looked up by
+        // ClientId rather than array position - a positional "Clients:1:..." lookup broke
+        // silently the moment a client got added/removed/reordered in config.
+        var fallback = settings?.Clients
+            .FirstOrDefault(c => c.ClientId == "frontend")?
+            .PostLogoutRedirectUris?
+            .FirstOrDefault();
         if (!string.IsNullOrEmpty(fallback))
             return Redirect(fallback);
 

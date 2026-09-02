@@ -16,6 +16,7 @@ import {
 
 import { useCuisines, useDiscoveryListings } from "@/domain/discovery";
 import type { DiscoveryListingDto, DiscoverySort } from "@/domain/discovery";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { DinerHeader } from "../components/DinerHeader";
 import { DinerNotificationBell } from "../components/DinerNotificationBell";
 import { DinerAccountMenu } from "../components/DinerAccountMenu";
@@ -36,13 +37,17 @@ export default function DiscoveryPage() {
   const [cuisine, setCuisine] = useState<string>(ALL_CUISINES);
   const [sort, setSort] = useState<DiscoverySort>("Recommended");
 
+  // Debounced so the request fires once typing pauses, not on every keystroke - the input
+  // itself still updates immediately via `search`/`setSearch`.
+  const debouncedSearch = useDebouncedValue(search, 300);
+
   const query = useMemo(
     () => ({
-      q: search.trim() || undefined,
+      q: debouncedSearch.trim() || undefined,
       cuisine: cuisine === ALL_CUISINES ? undefined : cuisine,
       sort,
     }),
-    [search, cuisine, sort]
+    [debouncedSearch, cuisine, sort]
   );
 
   const { data: listings, isPending, isError, refetch } = useDiscoveryListings(query);
@@ -217,7 +222,7 @@ function ListingCard({
           onSelect();
         }
       }}
-      className="cursor-pointer overflow-hidden p-0 gap-0 transition-[transform,box-shadow] duration-[120ms] ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="cursor-pointer overflow-hidden p-0 gap-0 transition-[transform,box-shadow] duration-[120ms] ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="px-4 py-[18px]">
         <div className="flex items-start justify-between gap-2">

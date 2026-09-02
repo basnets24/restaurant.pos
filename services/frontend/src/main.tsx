@@ -35,8 +35,9 @@ function start() {
         {/* Several surfaces already call toast() but no Toaster was ever mounted, so none
             of them rendered anything. Mounting it here makes those existing calls visible. */}
         {/* top-center, not the sonner default of bottom-right: that corner is where the
-            cart sheet's checkout button sits, and the toast covered it. */}
-        <Toaster richColors closeButton position="top-center" />
+            cart sheet's checkout button sits, and the toast covered it. No richColors - the
+            Toaster component themes success/error itself off brand.css's tokens instead. */}
+        <Toaster closeButton position="top-center" />
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </React.StrictMode>

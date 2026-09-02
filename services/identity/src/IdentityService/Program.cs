@@ -3,6 +3,7 @@ using Common.Library.Logging;
 using Common.Library.OpenTelemetry;
 using Common.Library.PostgreSQL;
 using Duende.IdentityServer.Configuration;
+using Duende.IdentityServer.EntityFramework.DbContexts;
 using IdentityService.Common.Extensions;
 using IdentityService.Common.Settings;
 using IdentityService.Data;
@@ -120,6 +121,8 @@ using (var scope = app.Services.CreateScope())
     applicationDbContext.Database.Migrate();
     var tenantDbContext = scope.ServiceProvider.GetRequiredService<TenantDbContext>();
     tenantDbContext.Database.Migrate();
+    var persistedGrantDbContext = scope.ServiceProvider.GetRequiredService<PersistedGrantDbContext>();
+    persistedGrantDbContext.Database.Migrate();
 }
 
 var identitySettings = builder.Configuration.GetSection(nameof(IdentitySettings)).Get<IdentitySettings>();

@@ -1,6 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DinerAuth, type DinerSession } from "./dinerAuth";
+
+// Root query key prefixes for every diner-scoped query. Cleared on sign-out so a different
+// diner signing in on the same device never sees a flash of the previous one's cached order
+// history, notifications, or in-flight quote/payment-session data before it refetches.
+const DINER_QUERY_KEY_PREFIXES = ["dinerOrders", "dinerNotifications", "dinerPaymentSession", "dinerQuote"];
 
 interface DinerAuthContextValue {
   session: DinerSession | null;
@@ -22,6 +28,7 @@ const DinerAuthContext = createContext<DinerAuthContextValue | null>(null);
  */
 export function DinerAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DinerSession | null>(() => DinerAuth.load());
+  const queryClient = useQueryClient();
 
   // Refreshes are deduped through a promise ref rather than state: several requests can fire
   // at once on a page load, and each seeing "not refreshing yet" would start its own refresh
@@ -61,7 +68,16 @@ export function DinerAuthProvider({ children }: { children: ReactNode }) {
     setSession(await DinerAuth.signIn(email, password));
   }, []);
 
-  const signOut = useCallback(() => setSession(null), []);
+  const signOut = useCallback(() => {
+    const current = session;
+    setSession(null);
+    for (const prefix of DINER_QUERY_KEY_PREFIXES) {
+      queryClient.removeQueries({ queryKey: [prefix] });
+    }
+    // Fire-and-forget: local state is already cleared above, so sign-out itself doesn't wait
+    // on (or fail because of) the network round trip.
+    if (current) void DinerAuth.revoke(current);
+  }, [session, queryClient]);
 
   const value = useMemo(
     () => ({ session, isSignedIn: session !== null, signIn, register, signOut, getToken }),

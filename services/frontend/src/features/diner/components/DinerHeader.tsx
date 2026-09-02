@@ -34,12 +34,10 @@ export function DinerHeader({ left, center, right }: DinerHeaderProps) {
             {left ?? (
               <button
                 type="button"
-                onClick={() => navigate("/order")}
+                onClick={() => navigate("/")}
                 className="flex items-center gap-3 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
               >
-                <div className="w-10 h-10 shrink-0 bg-primary rounded-[10px] flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-sm">S</span>
-                </div>
+                <img src="/favicon.svg" alt="" className="w-10 h-10 shrink-0" />
                 <span className="text-xl font-semibold text-foreground truncate">Spoontab</span>
               </button>
             )}

@@ -11,12 +11,13 @@ const EMAIL = "snehabasnet224@gmail.com";
 
 export function AppFooter() {
   return (
-    <footer className="bg-card border-t border-border py-5">
+    <footer
+      className="border-t border-border py-5"
+      style={{ background: "linear-gradient(90deg, var(--background) 0%, color-mix(in srgb, var(--sand-100) 85%, var(--background)) 100%)" }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 shrink-0 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-[10px]">S</span>
-          </div>
+          <img src="/favicon.svg" alt="" className="w-7 h-7 shrink-0" />
           <p className="text-sm text-muted-foreground">
             This is a portfolio demo project built by{" "}
             <a
