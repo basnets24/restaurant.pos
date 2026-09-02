@@ -86,9 +86,10 @@ function NarrativeSection({ index, label, title, lede, wide, weight = "major", c
             <span className="block text-xs font-medium tracking-wide uppercase text-brand-strong mb-3">
                 {index} / {label}
             </span>
-            <h2 className={`font-display text-2xl sm:text-3xl text-foreground leading-tight mb-4 ${measure}`}>
+            <h2 className={`font-display text-2xl sm:text-3xl text-foreground leading-tight mb-3 ${measure}`}>
                 {title}
             </h2>
+            <div className="h-0.5 w-10 bg-border mb-4" />
             {lede && <p className={`text-lg text-muted-foreground leading-relaxed mb-6 ${measure}`}>{lede}</p>}
             {!lede && <div className="mb-6" />}
             {children}
@@ -139,9 +140,10 @@ export default function EngineeringView() {
                         <span className="block text-xs font-medium tracking-wide uppercase text-muted-foreground mb-3">
                             Engineering Spoontab
                         </span>
-                        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-4">
+                        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-3">
                             Behind the ticket.
                         </h1>
+                        <div className="h-0.5 w-10 bg-border mb-5" />
                         <p className="text-xl text-muted-foreground leading-relaxed mb-4">
                             How Spoontab handles service boundaries, asynchronous fulfillment, tenant-scoped data, payment, and observability in a deployed restaurant system.
                         </p>
@@ -155,7 +157,12 @@ export default function EngineeringView() {
                                     <ArrowDown className="ml-2 h-5 w-5" />
                                 </a>
                             </Button>
-                            <Button variant="outline" size="lg" asChild className="text-lg px-8 py-5 rounded-none">
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                asChild
+                                className="text-lg px-8 py-5 rounded-none hover:bg-brand-strong hover:border-brand-strong hover:text-white transition-colors"
+                            >
                                 <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                                     View source
                                     <ExternalLink className="ml-2 h-5 w-5" />
@@ -212,9 +219,7 @@ export default function EngineeringView() {
                 wide
                 weight="compact"
             >
-                <div className="max-w-2xl">
-                    <PaymentTriggerDiagram />
-                </div>
+                <PaymentTriggerDiagram />
             </NarrativeSection>
 
             <SectionRule />
@@ -228,9 +233,7 @@ export default function EngineeringView() {
                 wide
                 weight="compact"
             >
-                <div className="max-w-2xl">
-                    <ReadModelDiagram />
-                </div>
+                <ReadModelDiagram />
             </NarrativeSection>
 
             <SectionRule />
@@ -333,44 +336,44 @@ export default function EngineeringView() {
                 weight="medium"
             >
                 <div className="divide-y divide-border">
-                    {TRADEOFFS.map((t, i) => {
-                        // PROTOTYPE: fig accent on this one row only (index 1, the payment
-                        // tradeoff) to test it against the plain neutral rows around it — see brand.css
-                        const isFigPrototype = i === 1;
-                        return (
-                            <div key={t.title} className="py-5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-6">
-                                <span className={`font-numeric text-sm sm:w-6 shrink-0 ${isFigPrototype ? "text-fig-strong" : "text-muted-foreground"}`}>{i + 1}</span>
-                                <div className={isFigPrototype ? "border-l-2 border-fig-base pl-3 -ml-3 sm:ml-0 sm:border-l-0 sm:pl-0" : undefined}>
-                                    <h3 className={`text-sm font-semibold mb-1 ${isFigPrototype ? "text-fig-strong" : "text-foreground"}`}>{t.title}</h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">{t.detail}</p>
-                                </div>
+                    {TRADEOFFS.map((t, i) => (
+                        <div key={t.title} className="py-5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-baseline gap-1.5 sm:gap-6">
+                            <span className="font-numeric text-sm sm:w-6 shrink-0 text-muted-foreground">{i + 1}</span>
+                            <div>
+                                <h3 className="text-sm font-semibold mb-1 text-foreground">{t.title}</h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">{t.detail}</p>
                             </div>
-                        );
-                    })}
+                        </div>
+                    ))}
                 </div>
             </NarrativeSection>
 
             {/* CTA */}
             <section className="border-t border-border py-10 lg:py-14 relative overflow-hidden">
                 <div className="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 space-y-6">
-                    <h2 className="font-display text-3xl sm:text-4xl text-foreground leading-tight">See the Code, or See It Running</h2>
+                    <h2 className="font-display text-3xl sm:text-4xl text-foreground leading-tight">See how it was built.</h2>
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                         Explore the full source on GitHub, or see more of my work.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                        <Button size="lg" asChild className="text-lg px-10 py-4 shadow-md hover:shadow-lg transition-all duration-200">
+                        <Button size="lg" asChild className="text-lg px-10 py-4 rounded-none shadow-md hover:shadow-lg transition-all duration-200">
                             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                                 <GithubIcon className="mr-2 h-5 w-5" />
                                 View on GitHub
                             </a>
                         </Button>
-                        <Button variant="outline" size="lg" asChild className="text-lg px-10 py-4 border-2 hover:bg-accent">
+                        <Button variant="outline" size="lg" asChild className="text-lg px-10 py-4 rounded-none border-2 hover:bg-accent">
                             <Link to="/">
                                 <Home className="mr-2 h-5 w-5" />
                                 Home
                             </Link>
                         </Button>
-                        <Button variant="outline" size="lg" asChild className="text-lg px-10 py-4 border-2 hover:bg-accent">
+                        <Button
+                            variant="outline"
+                            size="lg"
+                            asChild
+                            className="text-lg px-10 py-4 rounded-none border-2 border-fig-base text-fig-base hover:bg-fig-strong hover:border-fig-strong hover:text-white transition-colors"
+                        >
                             <a href={PORTFOLIO_URL} target="_blank" rel="noopener noreferrer">
                                 See more projects
                                 <ArrowRight className="ml-2 h-5 w-5" />

@@ -4,6 +4,49 @@
  * labels only where text sits on top of a line). Kept intentionally simple —
  * one mechanism per figure, not a restatement of the whole system. */
 
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowRight } from "lucide-react";
+
+/** Horizontal-scroll wrapper for diagrams too wide to shrink to a legible size on
+ * a narrow viewport (see the min-width floors below). Shows a right-edge fade +
+ * arrow hint only while there's more to scroll to — native scrollbars are
+ * invisible by default on iOS/touch until mid-drag, so without this a clipped
+ * diagram gives no sign it's scrollable at all. Shared with SystemTopologyDiagram. */
+export function DiagramScrollArea({ children }: { children: ReactNode }) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [canScroll, setCanScroll] = useState(false);
+
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const update = () => setCanScroll(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+        update();
+        el.addEventListener("scroll", update);
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => {
+            el.removeEventListener("scroll", update);
+            ro.disconnect();
+        };
+    }, []);
+
+    return (
+        <div className="relative mx-auto w-full max-w-3xl rounded-lg border border-border bg-card">
+            <div ref={scrollRef} className="overflow-x-auto p-4 sm:p-6">
+                {children}
+            </div>
+            {canScroll && (
+                <div
+                    className="pointer-events-none absolute inset-y-0 right-0 w-10 flex items-center justify-end rounded-r-lg bg-gradient-to-l from-card to-transparent"
+                    aria-hidden="true"
+                >
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground mr-1" />
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface Box {
     x: number;
     y: number;
@@ -14,9 +57,9 @@ interface Box {
     tone?: "default" | "brand" | "success" | "danger" | "fig";
 }
 
-/** "fig" is a PROTOTYPE tone (--fig-strong/base/soft, brand.css) used only by
- * PaymentTriggerDiagram below, to test the candidate accent against the brand
- * tone used everywhere else in these diagrams (OrderSagaDiagram, etc). */
+/** "fig" (--fig-strong/base/soft, brand.css) marks diner/customer-facing steps,
+ * used only by PaymentTriggerDiagram below — everywhere else in these diagrams
+ * (OrderSagaDiagram, etc) is staff/system-side and stays on the brand tone. */
 const TONE_FILL: Record<NonNullable<Box["tone"]>, string> = {
     default: "var(--card)",
     brand: "var(--brand-soft)",
@@ -25,7 +68,7 @@ const TONE_FILL: Record<NonNullable<Box["tone"]>, string> = {
     fig: "var(--fig-soft)",
 };
 const TONE_STROKE: Record<NonNullable<Box["tone"]>, string> = {
-    default: "var(--border)",
+    default: "var(--fig-base)",
     brand: "var(--brand)",
     success: "var(--status-available)",
     danger: "var(--status-occupied)",
@@ -89,7 +132,8 @@ export function OrderSagaDiagram() {
     const busX1 = 380, busX2 = 520;
     return (
         <figure className="m-0">
-            <svg viewBox="0 0 900 330" role="img" aria-label="The order saga sends ReserveInventory across the RabbitMQ bus to catalog, which decrements stock and returns either InventoryReserved or InventoryReserveFaulted; the saga resolves to Confirmed or Rejected accordingly." className="w-full h-auto">
+          <DiagramScrollArea>
+            <svg viewBox="0 0 900 330" role="img" aria-label="The order saga sends ReserveInventory across the RabbitMQ bus to catalog, which decrements stock and returns either InventoryReserved or InventoryReserveFaulted; the saga resolves to Confirmed or Rejected accordingly." className="w-full h-auto min-w-[640px]">
                 {defs}
 
                 <text x="20" y="20" fontSize="10.5" fontWeight="700" letterSpacing="1" fill="var(--muted-foreground)">ORDER</text>
@@ -124,6 +168,7 @@ export function OrderSagaDiagram() {
                 <FlowBox x={670} y={150} w={230} h={40} title="success" tone="success" />
                 <FlowBox x={670} y={214} w={230} h={40} title="failure → restore stock" tone="danger" />
             </svg>
+          </DiagramScrollArea>
         </figure>
     );
 }
@@ -133,13 +178,14 @@ export function OrderSagaDiagram() {
 export function PaymentTriggerDiagram() {
     return (
         <figure className="m-0">
-            <svg viewBox="0 0 900 160" role="img" aria-label="Pickup and dine-in both feed the same PaymentRequested event, which goes to the Payment service and then Stripe." className="w-full h-auto">
+          <DiagramScrollArea>
+            <svg viewBox="0 0 900 160" role="img" aria-label="Pickup and dine-in both feed the same PaymentRequested event, which goes to the Payment service and then Stripe." className="w-full h-auto min-w-[640px]">
                 {defs}
-                {/* PROTOTYPE: fig marks the customer/diner-only step (Pickup), matching the
-                 * fig=customer / olive=staff split used on the landing page's Customer
-                 * Demo card and walkthrough. Dine-in is staff-triggered, so it keeps the
-                 * brand tone; PaymentRequested is the shared merge point both flows feed
-                 * into, so it stays neutral rather than reading as customer-only. */}
+                {/* fig marks the customer/diner-only step (Pickup), matching the fig=customer
+                 * / olive=staff split used on the landing page's Customer Demo card and
+                 * walkthrough. Dine-in is staff-triggered, so it keeps the brand tone;
+                 * PaymentRequested is the shared merge point both flows feed into, so it
+                 * stays neutral rather than reading as customer-only. */}
                 <FlowBox x={20} y={20} w={150} h={44} title="Pickup" tone="fig" />
                 <FlowBox x={20} y={96} w={150} h={44} title="Dine-in" tone="brand" />
                 <line x1={170} y1={42} x2={230} y2={80} stroke="var(--muted-foreground)" strokeWidth="1.5" />
@@ -152,6 +198,7 @@ export function PaymentTriggerDiagram() {
                 <line x1={690} y1={80} x2={726} y2={80} stroke="var(--muted-foreground)" strokeWidth="1.5" markerEnd="url(#narr-arrow)" />
                 <FlowBox x={728} y={58} w={150} h={44} title="Stripe" />
             </svg>
+          </DiagramScrollArea>
         </figure>
     );
 }
@@ -160,7 +207,8 @@ export function PaymentTriggerDiagram() {
 export function ReadModelDiagram() {
     return (
         <figure className="m-0">
-            <svg viewBox="0 0 900 200" role="img" aria-label="MenuItemUpdated and InventoryItemUpdated events feed a projector that upserts a Postgres read model at write time; the POS screen reads that local table directly, with no live call to catalog." className="w-full h-auto">
+          <DiagramScrollArea>
+            <svg viewBox="0 0 900 200" role="img" aria-label="MenuItemUpdated and InventoryItemUpdated events feed a projector that upserts a Postgres read model at write time; the POS screen reads that local table directly, with no live call to catalog." className="w-full h-auto min-w-[640px]">
                 {defs}
                 <FlowBox x={30} y={10} w={210} h={50} title="MenuItemUpdated" subtitle="catalog event" />
                 <FlowBox x={30} y={78} w={210} h={50} title="InventoryItemUpdated" subtitle="catalog event" />
@@ -173,6 +221,7 @@ export function ReadModelDiagram() {
                 <text x="760" y="168" textAnchor="middle" fontSize="11" fill="var(--brand-strong)" fontWeight="600">POS reads this table</text>
                 <text x="760" y="184" textAnchor="middle" fontSize="10" fill="var(--muted-foreground)">no live call to catalog</text>
             </svg>
+          </DiagramScrollArea>
         </figure>
     );
 }
