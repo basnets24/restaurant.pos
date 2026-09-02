@@ -149,4 +149,27 @@ export const DinerAuth = {
       return null;
     }
   },
+
+  /**
+   * Invalidates the refresh token server-side on sign-out, so a copy sitting in memory (or
+   * caught by an XSS before sign-out) can't mint fresh access tokens for the rest of its 30-day
+   * lifetime. Best-effort: local state is already cleared by the caller regardless of whether
+   * this network call lands, so sign-out itself never fails or blocks on this.
+   */
+  async revoke(session: DinerSession): Promise<void> {
+    if (!session.refreshToken) return;
+    try {
+      await fetch(`${ENV.IDENTITY_URL}/connect/revocation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: CLIENT_ID,
+          token: session.refreshToken,
+          token_type_hint: "refresh_token",
+        }),
+      });
+    } catch (e) {
+      console.warn("DinerAuth: token revocation failed", e);
+    }
+  },
 };
