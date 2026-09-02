@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Clock, MapPin, ShoppingBag } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,9 +42,7 @@ export default function RestaurantMenuPage() {
     if (add(args) === "conflict") {
       // Never silently discard a cart the diner built at another restaurant.
       setConflict(args);
-      return;
     }
-    toast.success(`${args.item.name} added to your order`);
   };
 
   const addSimple = (item: PublicMenuItemDto) =>
