@@ -39,7 +39,6 @@ const ManagementLayout  = lazy(() => import("@/features/management/ManagementLay
 const AnalyticsTab      = lazy(() => import("@/features/management/tabs/AnalyticsTab"));
 const StaffTab          = lazy(() => import("@/features/management/tabs/StaffTab"));
 const MenuTab           = lazy(() => import("@/features/management/tabs/MenuTab"));
-const ReservationsTab   = lazy(() => import("@/features/management/tabs/ReservationsTab"));
 
 // ---- Admin (nested under Management, role-gated) ----
 const AdminTab           = lazy(() => import("@/features/management/tabs/AdminTab"));
@@ -139,7 +138,6 @@ export const router = createBrowserRouter([
       { path: "analytics",    element: <Suspense fallback={<Fallback />}><AnalyticsTab /></Suspense> },
       { path: "staff",        element: <Suspense fallback={<Fallback />}><StaffTab /></Suspense> },
       { path: "menu",         element: <Suspense fallback={<Fallback />}><MenuTab /></Suspense> },
-      { path: "reservations", element: <Suspense fallback={<Fallback />}><ReservationsTab /></Suspense> },
       {
         path: "admin",
         element: (
