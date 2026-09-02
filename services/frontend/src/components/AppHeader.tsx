@@ -45,8 +45,6 @@ export interface AppHeaderProps {
   title: string;
   /** Secondary line — location, "Point of Sale System", etc. */
   subtitle?: string;
-  /** Short text in the brand mark box (e.g. "S", "POS") */
-  logo?: string;
   /** Where clicking the brand mark navigates (default: /home) */
   brandTo?: string;
   /** Optional center nav (desktop) + chip row (mobile) */
@@ -60,7 +58,6 @@ export interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
-  logo = "S",
   brandTo = "/home",
   nav,
   menuItems,
@@ -90,9 +87,7 @@ export function AppHeader({
             onClick={() => brandTo && navigate(brandTo)}
             className="flex items-center gap-3 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
           >
-            <div className="w-10 h-10 shrink-0 bg-primary rounded-[10px] flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">{logo}</span>
-            </div>
+            <img src="/favicon.svg" alt="" className="w-10 h-10 shrink-0" />
             <div className="min-w-0">
               <h1 className="text-base sm:text-lg font-semibold text-foreground leading-tight truncate">
                 {title}
