@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,15 +15,29 @@ import {
 
 import { DinerHeader } from "../components/DinerHeader";
 import { DinerAuthDialog } from "../auth/DinerAuthDialog";
+import { QuantityStepper } from "../components/ItemModifierDialog";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { useDinerCart } from "../cart/DinerCartProvider";
 import { rememberDinerTenant } from "../cart/lastTenant";
 import { toCheckoutRequest } from "../cart/dinerCartTypes";
 import { money } from "../money";
 
+/** The server rejects a stale cart line by naming it, e.g. "Buff Cheeseburger: one of the
+ *  selected options is no longer offered." Matching that prefix against the cart's own line
+ *  names lets the checkout page offer to remove exactly that line instead of sending the diner
+ *  back to the cart to hunt for it themselves. Falls back to the cart's only line when the
+ *  message has no name to match (the "no longer available" case) and there is nothing else it
+ *  could be. */
+function findOfflineLine(message: string, cart: ReturnType<typeof useDinerCart>["cart"]) {
+  if (!cart) return null;
+  const named = cart.lines.find((l) => message.startsWith(`${l.name}:`));
+  if (named) return named;
+  return cart.lines.length === 1 ? cart.lines[0] : null;
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { cart, clear } = useDinerCart();
+  const { cart, clear, remove, setQuantity } = useDinerCart();
   const { isSignedIn, session, getToken } = useDinerAuth();
   const [authOpen, setAuthOpen] = useState(false);
 
@@ -56,6 +70,10 @@ export default function CheckoutPage() {
     enabled: Boolean(isSignedIn && request && tenant),
     retry: false,
   });
+
+  const offendingLine = quote.isError
+    ? findOfflineLine(dinerErrorMessage(quote.error, ""), cart)
+    : null;
 
   const place = useMutation({
     mutationFn: async () => {
@@ -112,16 +130,27 @@ export default function CheckoutPage() {
             {cart.lines.map((line) => (
               <div key={line.key} className="flex items-start justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    <span className="font-numeric">{line.quantity}×</span> {line.name}
-                  </p>
+                  <p className="text-sm font-medium">{line.name}</p>
                   {line.optionsLabel && (
                     <p className="text-[13px] text-muted-foreground">{line.optionsLabel}</p>
                   )}
+                  <p className="mt-1.5">
+                    <QuantityStepper value={line.quantity} onChange={(q) => setQuantity(line.key, q)} />
+                  </p>
                 </div>
-                <span className="font-numeric text-sm shrink-0">
-                  {money(line.unitPrice * line.quantity)}
-                </span>
+                <div className="shrink-0 flex flex-col items-end gap-2">
+                  <span className="font-numeric text-sm">
+                    {money(line.unitPrice * line.quantity)}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${line.name}`}
+                    onClick={() => remove(line.key)}
+                    className="text-muted-foreground hover:text-destructive p-1"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -138,9 +167,21 @@ export default function CheckoutPage() {
           ) : quote.isPending ? (
             <div className="h-20 rounded bg-muted/40 animate-pulse" />
           ) : quote.isError ? (
-            <p className="text-[13px] text-destructive">
-              {dinerErrorMessage(quote.error, "Couldn't price your order.")}
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[13px] text-destructive">
+                {dinerErrorMessage(quote.error, "Couldn't price your order.")}
+              </p>
+              {offendingLine && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => remove(offendingLine.key)}
+                >
+                  Remove item
+                </Button>
+              )}
+            </div>
           ) : (
             // Every figure below comes from the server's estimate - the client never
             // computes tax, discounts or fees.
