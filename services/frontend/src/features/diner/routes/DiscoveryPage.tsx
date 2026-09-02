@@ -222,7 +222,7 @@ function ListingCard({
           onSelect();
         }
       }}
-      className="cursor-pointer overflow-hidden p-0 gap-0 transition-[transform,box-shadow] duration-[120ms] ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="cursor-pointer overflow-hidden p-0 gap-0 transition-[transform,box-shadow] duration-[120ms] ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="px-4 py-[18px]">
         <div className="flex items-start justify-between gap-2">
