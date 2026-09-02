@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,11 @@ export default function OrderStatusPage() {
   const queryClient = useQueryClient();
 
   const [payOpen, setPayOpen] = useState(false);
+  // Set the instant Stripe confirms, before the order's own status has caught up (that write
+  // happens in a different service, off the PaymentSucceeded event, a broker round trip later -
+  // see onPaid below). Showing a transitional state here instead of the pre-payment UI avoids a
+  // few seconds where the screen looks like it forgot you just paid.
+  const [confirming, setConfirming] = useState(false);
 
   const order = useQuery<DinerOrder>({
     queryKey: DinerOrderKeys.detail(orderId),
@@ -46,7 +51,7 @@ export default function OrderStatusPage() {
     // until the order settles covers that wait and the one after Stripe (PaymentSucceeded
     // reaches the order through a consumer, a broker round trip later) with one mechanism.
     refetchInterval: (query) =>
-      query.state.data && !SETTLED.includes(query.state.data.status) ? 2000 : false,
+      query.state.data && !SETTLED.includes(query.state.data.status) ? 5000 : false,
   });
 
   const paid = Boolean(order.data?.paidAt) || order.data?.status === "Paid";
@@ -62,7 +67,7 @@ export default function OrderStatusPage() {
     enabled: Boolean(isSignedIn && orderId && tenant && order.data && !paid && !dead),
     // The PaymentIntent is created off InventoryReserved, so it simply is not there for the
     // first few seconds. Poll until the secret shows up, then stop - it does not change.
-    refetchInterval: (query) => (query.state.data?.clientSecret ? false : 2000),
+    refetchInterval: (query) => (query.state.data?.clientSecret ? false : 5000),
   });
 
   const clientSecret = session.data?.clientSecret ?? null;
@@ -86,11 +91,14 @@ export default function OrderStatusPage() {
 
   const onPaid = async () => {
     setPayOpen(false);
-    toast.success("Payment complete");
+    setConfirming(true);
     // PaymentSucceeded reaches the order entity through a consumer, not synchronously, so the
-    // refetch below may still read Confirmed. The poll above keeps running until it says Paid.
+    // refetch below may still read Confirmed. The poll above keeps running until it says Paid,
+    // at which point `paid` flips and the confirming state below stops rendering on its own.
     await queryClient.invalidateQueries({ queryKey: DinerOrderKeys.detail(orderId) });
   };
+
+  const showConfirming = confirming && !paid && !dead;
 
   return (
     <>
@@ -117,19 +125,25 @@ export default function OrderStatusPage() {
                 <XCircle className="h-5 w-5 text-destructive" />
               ) : paid ? (
                 <CheckCircle2 className="h-5 w-5 text-primary" />
+              ) : showConfirming ? (
+                <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
               ) : (
                 <Clock className="h-5 w-5 text-muted-foreground" />
               )}
               <h1 className="text-2xl font-semibold">
                 {/* Keyed on the payment session rather than the status, which stays Pending the
-                    whole way from checkout to paid and so can't tell these two apart. */}
+                    whole way from checkout to paid and so can't tell these two apart. showConfirming
+                    takes priority over both so the screen doesn't flash back to "Ready to pay"
+                    while the order's own status is still catching up to the payment. */}
                 {dead
                   ? "Order cancelled"
                   : paid
                     ? "Paid, see you soon"
-                    : clientSecret
-                      ? "Ready to pay"
-                      : "Sending to the kitchen…"}
+                    : showConfirming
+                      ? "Confirming your payment…"
+                      : clientSecret
+                        ? "Ready to pay"
+                        : "Sending to the kitchen…"}
               </h1>
             </div>
 
@@ -176,6 +190,11 @@ export default function OrderStatusPage() {
                 <p className="text-center text-[13px] text-muted-foreground">
                   This order wasn't fulfilled, and you haven't been charged.
                 </p>
+              ) : showConfirming ? (
+                <Button className="w-full" size="lg" disabled>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Confirming your payment…
+                </Button>
               ) : clientSecret ? (
                 <Button className="w-full" size="lg" onClick={() => setPayOpen(true)}>
                   Pay {money(order.data.grandTotal)}
@@ -188,10 +207,10 @@ export default function OrderStatusPage() {
                 </Button>
               )}
 
-              {/* Offered right up until the order is paid. Cancelling here is what puts the
-                  items back on the menu immediately; leaving the page instead just means
-                  waiting for the server-side sweep to do the same thing later. */}
-              {!paid && !dead && (
+              {/* Offered right up until the order is paid - and hidden once payment is confirmed
+                  even though the order's own status hasn't caught up yet, so a diner can't cancel
+                  an order they already paid for during that gap. */}
+              {!paid && !dead && !showConfirming && (
                 <Button
                   variant="ghost"
                   className="mt-2 w-full text-muted-foreground"
