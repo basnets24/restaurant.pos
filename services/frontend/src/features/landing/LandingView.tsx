@@ -220,6 +220,7 @@ export default function LandingView() {
                             src="/landing/restaurant-bg.jpeg"
                             alt="Warmly lit restaurant dining room with set tables"
                             className="w-full h-full object-cover scale-125"
+                            loading="lazy"
                         />
                     </div>
                     <div
@@ -255,6 +256,7 @@ export default function LandingView() {
                                 alt="Hands holding a tablet showing the Spoontab staff menu screen"
                                 className="w-full max-w-[280px] sm:max-w-[420px] lg:max-w-[340px] shrink-0 ml-auto"
                                 style={{ filter: "drop-shadow(0 18px 24px rgba(43,29,11,0.18))" }}
+                                loading="lazy"
                             />
                         </div>
                     </div>
@@ -273,6 +275,7 @@ export default function LandingView() {
                         src="/landing/tickets.jpeg"
                         alt="Chef handling order tickets in a restaurant kitchen"
                         className="w-full h-full object-cover"
+                        loading="lazy"
                     />
                 </div>
                 <div
@@ -301,10 +304,11 @@ export default function LandingView() {
             <section className="grid grid-cols-1 lg:grid-cols-2 lg:h-[400px]">
                 <div className="h-[340px] lg:h-full overflow-hidden">
                     <img
-                        src="/landing/menu-mobile.png"
+                        src="/landing/menu-mobile.jpg"
                         alt="Printed menu next to a phone showing the Spoontab guest ordering app"
                         className="w-full h-full object-cover"
                         style={{ objectPosition: "center 100%" }}
+                        loading="lazy"
                     />
                 </div>
                 <div
@@ -335,6 +339,7 @@ export default function LandingView() {
                         alt="Restaurant kitchen with hanging ladles"
                         className="w-full h-full object-cover"
                         style={{ filter: "saturate(0.85) brightness(1)" }}
+                        loading="lazy"
                     />
                     {/* Lighter over the heading so the kitchen photo stays legible there,
                         ramping to the original dark, near-opaque scrim by the point the
