@@ -48,6 +48,7 @@ export interface DinerEstimate {
  *  answer, not an error. */
 export interface DinerPaymentSession {
   clientSecret?: string | null;
+  attemptId?: string;
   status?: string;
 }
 

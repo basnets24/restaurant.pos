@@ -32,6 +32,9 @@ namespace PaymentService.Migrations
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ClientSecret")
                         .HasColumnType("text");
 

@@ -22,6 +22,7 @@ import { useDinerCart } from "../cart/DinerCartProvider";
 import { cartCount, defaultSelections, lineKey, type DinerCartSelection } from "../cart/dinerCartTypes";
 import { money } from "../money";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { getRestaurantBanner } from "../restaurantBanners";
 
 export default function RestaurantMenuPage() {
   const { restaurantId = "", locationId = "" } = useParams();
@@ -37,6 +38,7 @@ export default function RestaurantMenuPage() {
   const [conflict, setConflict] = useState<Parameters<typeof replaceWith>[0] | null>(null);
 
   const count = cartCount(cart);
+  const banner = getRestaurantBanner(restaurantId);
 
   const addOrPrompt = (args: Parameters<typeof add>[0]) => {
     if (add(args) === "conflict") {
@@ -97,7 +99,13 @@ export default function RestaurantMenuPage() {
         }
       />
 
-      <main className="mx-auto max-w-[900px] px-4 sm:px-8 py-6">
+      {banner && (
+        <div className="h-40 sm:h-56 w-full overflow-hidden">
+          <img src={banner} alt="" className="h-full w-full object-cover" />
+        </div>
+      )}
+
+      <main className="mx-auto max-w-[900px] md:max-w-[1100px] px-4 sm:px-8 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold">{listing?.restaurantName ?? "Menu"}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -138,7 +146,7 @@ export default function RestaurantMenuPage() {
             {menu.categories.map((category) => (
               <section key={category.name}>
                 <h2 className="text-[19px] font-semibold mb-2">{category.name}</h2>
-                <div className="flex flex-col">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {category.items.map((item) => {
                     const hasModifiers = item.modifierGroups.length > 0;
                     const line = hasModifiers ? undefined : plainLineFor(item);
@@ -146,7 +154,7 @@ export default function RestaurantMenuPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-start justify-between gap-4 border-t border-border py-3.5 first:border-t-0"
+                        className="flex items-start justify-between gap-4 rounded-lg border border-border p-3.5"
                       >
                         <div className="min-w-0">
                           <h3 className="text-[15px] font-semibold">{item.name}</h3>

@@ -8,10 +8,19 @@ import { useTenant } from "@/auth/tenant";
 import { UnauthorizedError } from "@/domain/restaurantUserProfile/api";
 import { errorStatus } from "@/lib/apiErrors";
 import { FullScreenLoader } from "@/components/primitives/FullScreenLoader";
+import { isDemoProfile } from "@/auth/demoSession";
 
-type Props = React.PropsWithChildren<{ roles?: string[] }>;
+type Props = React.PropsWithChildren<{
+    roles?: string[];
+    /** Redirect away instead of rendering, for a route the public demo_admin
+     * session shouldn't reach even though it carries the same roles/scopes as
+     * a real Admin/Manager login (see auth/demoSession.ts). Redirects to
+     * demoRedirectTo (default "/management"). */
+    blockDemo?: boolean;
+    demoRedirectTo?: string;
+}>;
 
-export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
+export const ProtectedRoute: React.FC<Props> = ({ roles, blockDemo, demoRedirectTo = "/management", children }) => {
     const { isReady, isAuthenticated, isSigningOut, profile } = useAuth();
     const loc = useLocation();
     const returnUrl = `${window.location.origin}${loc.pathname}${loc.search}${loc.hash}`;
@@ -72,6 +81,10 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, children }) => {
         // Fallback: if Admin is required but claim hasn't propagated yet, trust onboarding status
         if (!ok && roles.includes("Admin") && status?.isAdmin) ok = true;
         if (!ok) return <Navigate to={AuthorizationPaths.DefaultLoginRedirectPath} replace />;
+    }
+
+    if (blockDemo && isDemoProfile(profile)) {
+        return <Navigate to={demoRedirectTo} replace />;
     }
 
     return <>{children}</>;

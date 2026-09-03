@@ -9,6 +9,7 @@ export type PaymentSessionStatus = "pending" | "succeeded" | "failed" | string;
 
 export type PaymentSessionResponse = {
   clientSecret?: string | null;
+  attemptId?: string;
   status?: PaymentSessionStatus;
   error?: string;
 };
@@ -47,18 +48,20 @@ export async function getPaymentClientSecret(
   }
 }
 
+export type PaymentSession = { clientSecret: string; attemptId: string };
+
 export async function pollForClientSecret(
   orderId: string,
   ms = 6000,
   step = 600,
   opts?: { signal?: AbortSignal }
-): Promise<string | null> {
+): Promise<PaymentSession | null> {
   const start = Date.now();
   while (Date.now() - start < ms) {
     if (opts?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
     try {
-      const { clientSecret, status } = await getPaymentClientSecret(orderId, { signal: opts?.signal });
-      if (clientSecret) return clientSecret;
+      const { clientSecret, attemptId, status } = await getPaymentClientSecret(orderId, { signal: opts?.signal });
+      if (clientSecret && attemptId) return { clientSecret, attemptId };
       const s = status?.toLowerCase();
       if (s === "succeeded" || s === "failed") return null;
     } catch (err: unknown) {
@@ -71,11 +74,15 @@ export async function pollForClientSecret(
 
 // Called right after stripe.confirmCardPayment() resolves - asks the backend to
 // verify the result with Stripe server-side and publish PaymentSucceeded/Failed.
+// attemptId must be the one the ClientSecret being confirmed was issued with - the
+// backend rejects (status: "stale") a confirm whose attemptId doesn't match the
+// order's current payment attempt, since a retry may have since started a new one.
 export async function confirmPayment(
   orderId: string,
+  attemptId: string,
   opts?: { signal?: AbortSignal }
 ): Promise<PaymentConfirmResponse> {
-  const url = `${ENV.PAYMENT_URL}/orders/${orderId}/payment-confirm`;
+  const url = `${ENV.PAYMENT_URL}/orders/${orderId}/payment-confirm?attemptId=${encodeURIComponent(attemptId)}`;
   const { data } = await http.post<PaymentConfirmResponse>(url, null, {
     signal: opts?.signal,
     headers: await authHeaders(),

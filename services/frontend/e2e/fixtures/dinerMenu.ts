@@ -21,12 +21,11 @@ export interface SeededDinerMenu {
  * a required single-select modifier group, so the diner flow has something to browse,
  * customize, and check out.
  *
- * There is no staff API for modifier groups (see catalog/README.md's "Diner ordering" section
- * — deliberately out of scope in this project, seeded by script only), so those two rows go in
- * via a direct psql call against the same local Postgres container `scripts/seed-discovery.sh`
- * uses, scoped to just this one item's id rather than touching every tenant the way that
- * script does. Deleting the menu item at teardown cascades both rows away (see
- * CatalogDbContext's `OnDelete(DeleteBehavior.Cascade)` on `ModifierGroup`).
+ * A staff API for modifier groups exists (catalog's ModifierGroupsController), but this fixture
+ * still writes those two rows via a direct psql call against the local Postgres container,
+ * scoped to just this one item's id — simpler than driving the management UI or minting a
+ * second staff-scoped token for a test fixture. Deleting the menu item at teardown cascades
+ * both rows away (see CatalogDbContext's `OnDelete(DeleteBehavior.Cascade)` on `ModifierGroup`).
  */
 export async function seedDinerMenu(request: APIRequestContext): Promise<SeededDinerMenu> {
   const tenantHeaders = readTenantHeaders();

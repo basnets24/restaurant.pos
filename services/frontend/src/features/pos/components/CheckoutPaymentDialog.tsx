@@ -35,7 +35,7 @@ export function CheckoutPaymentDialog({
 }: CheckoutPaymentDialogProps) {
   const { data: order } = useOrder(orderId || undefined);
   const requestPayment = useRequestPayment();
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [session, setSession] = useState<{ clientSecret: string; attemptId: string } | null>(null);
   const [paying, setPaying] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -48,9 +48,9 @@ export function CheckoutPaymentDialog({
       // Kick off the saga's payment request, then poll for the PaymentIntent
       // client secret the payment service publishes back (same as OrderPage).
       await requestPayment.mutateAsync(orderId);
-      const cs = await pollForClientSecret(orderId, 12_000, 600);
-      if (cs) {
-        setClientSecret(cs);
+      const s = await pollForClientSecret(orderId, 12_000, 600);
+      if (s) {
+        setSession(s);
       } else {
         toast.error("Payment session not ready yet. Please try again.");
       }
@@ -66,7 +66,7 @@ export function CheckoutPaymentDialog({
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {done ? "Payment complete" : clientSecret ? "Card details" : "Payment"}
+            {done ? "Payment complete" : session ? "Card details" : "Payment"}
           </DialogTitle>
         </DialogHeader>
 
@@ -88,10 +88,11 @@ export function CheckoutPaymentDialog({
               Back to Tables
             </Button>
           </div>
-        ) : clientSecret ? (
+        ) : session ? (
           <StripeElementsForm
             orderId={orderId}
-            clientSecret={clientSecret}
+            clientSecret={session.clientSecret}
+            attemptId={session.attemptId}
             onSuccess={() => {
               setDone(true);
               onPaid();

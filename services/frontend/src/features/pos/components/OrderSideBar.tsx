@@ -351,7 +351,7 @@ function OrderSidebarContent({
                         title={!isFired ? "Fire the order to the kitchen before paying" : undefined}
                     >
                         <CreditCard className="h-4 w-4 mr-2" />
-                        Pay – ${total.toFixed(2)}
+                        Pay ${total.toFixed(2)}
                     </Button>
                 </div>
             )}

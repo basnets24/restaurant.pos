@@ -111,9 +111,15 @@ export default function OrganizationPage() {
   const onCancel = () => setDraft(model);
   const onSave = () => { setModel(draft); write(draft); toast.success("Organization settings saved"); };
 
+  // Built client-side rather than asked of the server: this page already knows its own public
+  // URL (window.location.origin) in every environment, with no config to keep in sync.
+  const joinUrl = joinCode
+    ? `${window.location.origin}/join?code=${encodeURIComponent(joinCode.slug || joinCode.restaurantId)}`
+    : null;
+
   const copyJoinLink = () => {
     try {
-      navigator.clipboard.writeText(joinCode?.joinUrl ?? "");
+      navigator.clipboard.writeText(joinUrl ?? "");
       toast.success("Join link copied");
     } catch (e) {
       console.warn("OrganizationPage: failed to copy join link to clipboard", e);
@@ -173,8 +179,8 @@ export default function OrganizationPage() {
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">Join link</div>
                 <div className="flex items-center gap-2">
-                  <Input readOnly value={joinCode.joinUrl ?? "(configure CORS origins)"} />
-                  <Button variant="outline" size="icon" onClick={copyJoinLink} disabled={!joinCode.joinUrl} title="Copy link">
+                  <Input readOnly value={joinUrl ?? ""} />
+                  <Button variant="outline" size="icon" onClick={copyJoinLink} disabled={!joinUrl} title="Copy link">
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>

@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Utensils, Settings } from "lucide-react";
 import { useCan } from "@/auth/permissions";
-import { User, Shield, Bell } from "lucide-react";
+import { User } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { GrowthChartIcon } from "@/components/brand-icons/report-icons";
@@ -39,6 +39,12 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
 
     const go = (to: string) => navigate(to);
     const canManageStaff = useCan("manageStaff");
+    // The Admin tab itself stays visible for the demo_admin session - the
+    // floor plan editor under it is a legitimate demo destination. The
+    // organization-settings and roles sub-pages it also contains are hidden/
+    // blocked separately, in AdminTab (its own sub-nav) and app/router.tsx
+    // (ProtectedRoute's blockDemo), since demo shouldn't reach those.
+    const showAdmin = canManageStaff;
 
     const coreTabs = TAB_LIST.filter(t => t.value !== "staff" || canManageStaff);
 
@@ -49,8 +55,6 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                 subtitle={nameFromTenant ?? userData?.restaurantName}
                 menuItems={[
                     { label: "Account", icon: User, onClick: () => navigate("/settings/account") },
-                    { label: "Security", icon: Shield, onClick: () => navigate("/settings/security") },
-                    { label: "Notifications", icon: Bell, onClick: () => navigate("/settings/notifications") },
                 ]}
             />
 
@@ -73,7 +77,7 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                             </TabsTrigger>
                         ))}
 
-                        {canManageStaff && (
+                        {showAdmin && (
                             <>
                                 <div className="h-px bg-border my-2 mx-1" />
                                 <TabsTrigger
@@ -95,7 +99,7 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                     className="md:hidden w-full"
                 >
                     <TabsList className="w-full h-auto rounded-2xl p-1.5 flex items-center gap-1.5 bg-muted/50 overflow-x-auto">
-                        {(canManageStaff ? [...coreTabs, ADMIN_ITEM] : coreTabs).map(({ value, label, Icon }) => (
+                        {(showAdmin ? [...coreTabs, ADMIN_ITEM] : coreTabs).map(({ value, label, Icon }) => (
                             <TabsTrigger
                                 key={value}
                                 value={value}

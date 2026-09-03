@@ -3,10 +3,10 @@ name: Backend CI
 on:
   push:
     branches: [ dev, main ]
-    paths: [ 'services/**', 'shared/**', '.github/workflows/backend-ci.yml' ]
+    paths: [ 'services/**', '.github/workflows/backend-ci.yml' ]
   pull_request:
     branches: [ dev, main ]
-    paths: [ 'services/**', 'shared/**', '.github/workflows/backend-ci.yml' ]
+    paths: [ 'services/**', '.github/workflows/backend-ci.yml' ]
   workflow_dispatch:
 
 permissions:
@@ -14,25 +14,58 @@ permissions:
   packages: read
 
 jobs:
+  detect-changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+      has-changes: ${{ steps.build-matrix.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            identity: 'services/identity/**'
+            catalog: 'services/catalog/**'
+            order: 'services/order/**'
+            payment: 'services/payment/**'
+
+      - name: Build matrix from changed services
+        id: build-matrix
+        run: |
+          all='[
+            {"name":"IdentityService","key":"identity","project":"services/identity/src/IdentityService/IdentityService.csproj","dotnet-version":"10.0.x"},
+            {"name":"CatalogService","key":"catalog","project":"services/catalog/src/CatalogService/CatalogService.csproj","dotnet-version":"10.0.x"},
+            {"name":"OrderService","key":"order","project":"services/order/src/OrderService/OrderService.csproj","dotnet-version":"8.0.x"},
+            {"name":"PaymentService","key":"payment","project":"services/payment/PaymentService/PaymentService.csproj","dotnet-version":"10.0.x"}
+          ]'
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            matrix=$(echo "$all" | jq -c '.')
+          else
+            changed='${{ steps.filter.outputs.changes }}'
+            matrix=$(echo "$all" | jq -c --argjson changed "$changed" '[.[] | select(.key as $k | $changed | index($k))]')
+          fi
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$(echo "$matrix" | jq 'length')" -gt 0 ]; then
+            echo "has-changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build ${{ matrix.name }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: IdentityService
-            project: services/identity/src/IdentityService/IdentityService.csproj
-            dotnet-version: 10.0.x
-          - name: CatalogService
-            project: services/catalog/src/CatalogService/CatalogService.csproj
-            dotnet-version: 10.0.x
-          - name: OrderService
-            project: services/order/src/OrderService/OrderService.csproj
-            dotnet-version: 8.0.x
-          - name: PaymentService
-            project: services/payment/PaymentService/PaymentService.csproj
-            dotnet-version: 10.0.x
+        include: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     env:
       # NuGet.config's github source reads credentials from %GH_PAT%
       GH_PAT: ${{ secrets.GITHUB_TOKEN }}

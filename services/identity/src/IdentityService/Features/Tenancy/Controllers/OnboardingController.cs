@@ -16,14 +16,12 @@ public class OnboardingController : ControllerBase
 {
     private readonly RestaurantOnboardingService _svc;
     private readonly TenantDbContext _tenantDb;
-    private readonly IConfiguration _config;
     private readonly ILogger<OnboardingController> _logger;
 
-    public OnboardingController(RestaurantOnboardingService svc, TenantDbContext tenantDb, IConfiguration config, ILogger<OnboardingController> logger)
+    public OnboardingController(RestaurantOnboardingService svc, TenantDbContext tenantDb, ILogger<OnboardingController> logger)
     {
         _svc = svc;
         _tenantDb = tenantDb;
-        _config = config;
         _logger = logger;
     }
 
@@ -95,14 +93,10 @@ public class OnboardingController : ControllerBase
         if (code is null)
             return NotFound();
 
-        var origins = _config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        var baseUrl = origins.FirstOrDefault() ?? string.Empty;
-        if (baseUrl.EndsWith('/'))
-            baseUrl = baseUrl.TrimEnd('/');
-
-        var slugOrId = string.IsNullOrWhiteSpace(code.Slug) ? code.RestaurantId : code.Slug;
-        var joinUrl = string.IsNullOrEmpty(baseUrl) ? null : $"{baseUrl}/join?code={Uri.EscapeDataString(slugOrId)}";
-
-        return Ok(new { restaurantId = code.RestaurantId, slug = code.Slug, joinUrl });
+        // The join URL itself is built client-side (window.location.origin), not here - the
+        // frontend always knows its own public URL, and deriving it from Cors:AllowedOrigins
+        // (a security allowlist, not a "canonical frontend URL" setting) was fragile: silently
+        // wrong if the list ever had more than one entry or was reordered.
+        return Ok(new { restaurantId = code.RestaurantId, slug = code.Slug });
     }
 }

@@ -58,5 +58,4 @@ export type OnboardingStatus = {
 export type MyJoinCodeRes = {
   restaurantId: string;
   slug: string | null;
-  joinUrl: string | null;
 } | null;

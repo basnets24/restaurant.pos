@@ -18,7 +18,7 @@ Add your GitHub NuGet source/credentials (see the root [README](../../README.md#
 
 Local dry run, no publish:
 ```bash
-dotnet pack shared/Common.Library/Common.Library.csproj -c Release -p:PackageVersion=1.0.21 -o ./packages
+dotnet pack shared/Common.Library/Common.Library.csproj -c Release -p:PackageVersion=1.0.28 -o ./packages
 ```
 
 Namespaces live under `Common.Library.*`.
@@ -84,6 +84,9 @@ App settings (illustrative):
 | `Common.Library.Identity` | `AddPosJwtBearer()` — JWT Bearer configured from `ServiceSettings:Authority` · `ScopeRequirement` + `ScopeHandler` — require OAuth scopes in policies |
 | `Common.Library.Tenancy` | `AddTenancy()` / `UseTenancy()` — middleware + `ITenantContext` · `ITenantEntity` — interface for storing `RestaurantId`/`LocationId` on an entity |
 | `Common.Library.Settings` | `ServiceSettings`, `PostgresSettings`, `RabbitMqSettings`, `SeqSettings` — bound from configuration |
+| `Common.Library.HealthChecks` | `AddPostgres<TContext>()` — registers a Postgres health check · `MapPosHealthChecks()` — maps the standard health endpoint |
+| `Common.Library.OpenTelemetry` | `AddTracing()` / `AddMetrics()` — OpenTelemetry wiring for Jaeger/Prometheus export |
+| `Common.Library.Configuration` | `ConfigureAzureKeyVault(IHostBuilder)` — optional Azure Key Vault config source; not used by anything currently deployed |
 
 ## Usage Tips
 

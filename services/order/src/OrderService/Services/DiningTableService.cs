@@ -73,7 +73,7 @@ public class DiningTableService : IDiningTableService
     {
         (string Type, string Title)? notification = t.Status switch
         {
-            DiningTableStatus.Occupied  => (NotificationType.TableSeated, $"Table {t.Number} seated — party of {t.PartySize}"),
+            DiningTableStatus.Occupied  => (NotificationType.TableSeated, $"Table {t.Number} seated, party of {t.PartySize}"),
             DiningTableStatus.Available => (NotificationType.TableAvailable, $"Table {t.Number} is now available"),
             DiningTableStatus.Reserved  => (NotificationType.TableReserved, $"Table {t.Number} reserved"),
             DiningTableStatus.Dirty     => (NotificationType.TableDirty, $"Table {t.Number} needs cleaning"),
