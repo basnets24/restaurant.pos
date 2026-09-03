@@ -2,14 +2,13 @@ import { Suspense } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppHeader } from "@/components/AppHeader";
-import { User, ShieldCheck, type LucideIcon } from "lucide-react";
+import { User, type LucideIcon } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
-type SettingsTab = "account" | "security";
+type SettingsTab = "account";
 
 const TAB_LIST: { value: SettingsTab; label: string; Icon: LucideIcon }[] = [
-  { value: "account",  label: "Account",  Icon: User },
-  { value: "security", label: "Security", Icon: ShieldCheck },
+  { value: "account", label: "Account", Icon: User },
 ];
 
 export default function SettingsLayout() {
