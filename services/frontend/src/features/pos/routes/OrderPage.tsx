@@ -39,7 +39,7 @@ export default function OrderPage() {
   const [paying, setPaying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [paymentDialog, setPaymentDialog] = useState<{ clientSecret: string } | null>(null);
+  const [paymentDialog, setPaymentDialog] = useState<{ clientSecret: string; attemptId: string } | null>(null);
 
   const isPaid = !!order?.paidAt;
   const isRejected = order?.status === "Rejected";
@@ -50,9 +50,9 @@ export default function OrderPage() {
     setPaying(true);
     try {
       await requestPayment.mutateAsync(orderId);
-      const clientSecret = await pollForClientSecret(orderId, 12_000, 600);
-      if (clientSecret) {
-        setPaymentDialog({ clientSecret });
+      const session = await pollForClientSecret(orderId, 12_000, 600);
+      if (session) {
+        setPaymentDialog(session);
       } else {
         toast.error("Payment session not ready yet. Please try again.");
       }
@@ -201,6 +201,7 @@ export default function OrderPage() {
           open
           orderId={orderId}
           clientSecret={paymentDialog.clientSecret}
+          attemptId={paymentDialog.attemptId}
           onOpenChange={(open) => { if (!open) setPaymentDialog(null); }}
           onSuccess={() => { void handlePaymentSuccess(); }}
           onFailure={handlePaymentFailure}

@@ -120,10 +120,11 @@ export const DinerOrders = {
   async confirmPayment(
     token: string,
     tenant: DinerTenant,
-    orderId: string
+    orderId: string,
+    attemptId: string
   ): Promise<DinerPaymentConfirm> {
     const { data } = await dinerHttp.post<DinerPaymentConfirm>(
-      DinerOrdersAPI.paymentConfirm(orderId),
+      DinerOrdersAPI.paymentConfirm(orderId, attemptId),
       null,
       { headers: headers(token, tenant) }
     );

@@ -37,6 +37,7 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             return;
         }
 
+        var attemptId = Guid.NewGuid();
         var payment = existing ?? new Payment
         {
             Id = Guid.NewGuid(),
@@ -47,23 +48,30 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             Currency = "usd",
             Provider = "Stripe",
             Status = "Pending",
+            AttemptId = attemptId,
             RestaurantId = _tenant.RestaurantId,
             LocationId = _tenant.LocationId
         };
-        // Persist first if new, to have a stable paymentId
+
         if (existing is null)
         {
+            // Persist first, to have a stable paymentId before talking to Stripe.
             await _paymentsRepo.CreateAsync(payment);
         }
         else
         {
-            // Starting a new attempt on a previously failed payment - reset all
-            // attempt-scoped fields together, not just PaymentIntentId/ClientSecret below,
-            // so GetPaymentSession/ConfirmPayment don't keep seeing the old decline.
-            // CustomerId is deliberately left alone: it is set once, when the payment is
-            // created, and a later event must never be able to hand ownership to someone else.
+            // Starting a new attempt on a previously abandoned/failed payment. Invalidate
+            // and commit this BEFORE calling Stripe below: a GetPaymentSession poll that
+            // lands during the Stripe round-trip must see a cleared ClientSecret (attempt
+            // in progress), never the previous attempt's stale one. CustomerId is
+            // deliberately left alone - set once at creation, never reassignable later.
             payment.Status = "Pending";
             payment.ErrorMessage = null;
+            payment.PaymentIntentId = null;
+            payment.ClientSecret = null;
+            payment.AttemptId = attemptId;
+            payment.UpdatedAt = DateTimeOffset.UtcNow;
+            await _paymentsRepo.UpdateAsync(payment);
         }
 
         // Create a PaymentIntent - the frontend confirms it directly with Stripe.js
@@ -83,12 +91,23 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         };
 
         var intent = await new PaymentIntentService(_stripeClient).CreateAsync(create);
-        payment.PaymentIntentId = intent.Id;
-        payment.ClientSecret    = intent.ClientSecret;
 
-        payment.UpdatedAt = DateTimeOffset.UtcNow;
+        // Re-check before writing the intent back: if a newer PaymentRequested for this
+        // order was processed while we were waiting on Stripe, our attempt already lost -
+        // writing now would clobber the newer attempt's ClientSecret with a dead one.
+        var current = await _paymentsRepo.GetAsync(p => p.OrderId == msg.OrderId);
+        if (current is null || current.AttemptId != attemptId)
+        {
+            _logger.LogWarning(
+                "Attempt {AttemptId} for Order {OrderId} superseded before its PaymentIntent could be attached; discarding.",
+                attemptId, msg.OrderId);
+            return;
+        }
 
-        await _paymentsRepo.UpdateAsync(payment);
+        current.PaymentIntentId = intent.Id;
+        current.ClientSecret = intent.ClientSecret;
+        current.UpdatedAt = DateTimeOffset.UtcNow;
+        await _paymentsRepo.UpdateAsync(current);
 
         await context.Publish(new PaymentSessionCreated(
             msg.CorrelationId, msg.OrderId, intent.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));

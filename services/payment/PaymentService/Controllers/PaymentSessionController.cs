@@ -47,20 +47,26 @@ public class PaymentSessionController : ControllerBase
         if (status == "succeeded") return Ok(new { status = "succeeded" });
         if (status == "failed")    return Ok(new { status = "failed" });
 
-        // Pending
+        // Pending. ClientSecret is null while a retry is invalidating the previous attempt
+        // and talking to Stripe (see PaymentRequestedConsumer) - keep the caller polling
+        // rather than handing out data left over from an earlier, abandoned attempt.
         if (string.IsNullOrWhiteSpace(payment.ClientSecret))
             return StatusCode(202, new { clientSecret = (string?)null, status = "pending" });
 
-        return Ok(new { clientSecret = payment.ClientSecret });
+        return Ok(new { clientSecret = payment.ClientSecret, attemptId = payment.AttemptId });
     }
 
-    // POST orders/{orderId}/payment-confirm
+    // POST orders/{orderId}/payment-confirm?attemptId=...
     // Called by the frontend right after stripe.confirmCardPayment() resolves - verifies
     // the result with Stripe server-side (never trusts the browser's word alone) and
     // publishes PaymentSucceeded/PaymentFailed immediately, instead of waiting on a webhook.
+    // attemptId must be the one handed out with the ClientSecret the caller just confirmed
+    // with Stripe - if a retry has since started a newer attempt, payment.PaymentIntentId no
+    // longer refers to what the caller actually confirmed, and checking it would report the
+    // wrong intent's (unconfirmed) status. See PaymentRequestedConsumer for the write side.
     [Authorize(Policy = PaymentPolicyExtensions.Read)]
     [HttpPost("{orderId:guid}/payment-confirm")]
-    public async Task<IActionResult> ConfirmPayment([FromRoute] Guid orderId)
+    public async Task<IActionResult> ConfirmPayment([FromRoute] Guid orderId, [FromQuery] Guid attemptId)
     {
         var payment = await LoadForCallerAsync(orderId);
         if (payment is null) return NotFound(new { status = "pending" });
@@ -69,6 +75,14 @@ public class PaymentSessionController : ControllerBase
             return Ok(new { status = "succeeded", receiptUrl = payment.ReceiptUrl });
         if (string.Equals(payment.Status, "Failed", StringComparison.OrdinalIgnoreCase))
             return Ok(new { status = "failed", error = payment.ErrorMessage });
+
+        if (payment.AttemptId != attemptId)
+        {
+            _logger.LogWarning(
+                "ConfirmPayment for Order {OrderId} carried stale AttemptId {Attempt}; current is {Current}",
+                orderId, attemptId, payment.AttemptId);
+            return Ok(new { status = "stale" });
+        }
 
         if (string.IsNullOrWhiteSpace(payment.PaymentIntentId))
             return Ok(new { status = "pending" });
