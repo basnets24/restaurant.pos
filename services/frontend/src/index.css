@@ -98,6 +98,26 @@
       display: none;
     }
   }
+
+  /* One-time "draw in" for an SVG connector line/path — pair with
+   * useInViewOnce's `inView` flag toggling the `.in-view` class on an
+   * ancestor once the diagram enters the viewport. Each path sets its own
+   * --len custom property to its own pathLength (or a safe overestimate)
+   * so the dash covers the whole line regardless of shape. Static (no
+   * animation, fully drawn) for prefers-reduced-motion and for anyone who
+   * hasn't scrolled to it yet but has JS disabled — the offset only ever
+   * applies once `.in-view` is present AND the enclosing figure opts in via
+   * `.diagram-animated`, so a plain diagram never depends on this at all. */
+  @media (prefers-reduced-motion: no-preference) {
+    .diagram-animated .connector-draw {
+      stroke-dasharray: var(--len, 400);
+      stroke-dashoffset: var(--len, 400);
+      transition: stroke-dashoffset 650ms ease;
+    }
+    .diagram-animated.in-view .connector-draw {
+      stroke-dashoffset: 0;
+    }
+  }
 }
 
 /**
