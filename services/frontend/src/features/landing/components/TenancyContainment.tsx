@@ -13,7 +13,7 @@
 const LEVELS = [
     { label: "Restaurant", detail: "the tenant itself — e.g. \"acme-bistro\"" },
     { label: "Location", detail: "one of its locations — e.g. \"sjc-01\"" },
-    { label: "Your request", detail: "carries both, from your login" },
+    { label: "Your request", detail: "carries the restaurant + location ID from your login" },
     { label: "What you get back", detail: "only that restaurant + location's data" },
 ];
 
