@@ -1,10 +1,26 @@
 # Restaurant POS Frontend
 
-Single-page app for restaurant operations — floor plan, ordering, payments, management — built with React, TypeScript, and Vite. Served as static assets behind Nginx in production.
+Single-page app for restaurant operations, floor plan, ordering, payments, management. React, TypeScript, Vite. Served as static assets behind Nginx in production.
 
-See [`CLAUDE.md`](./CLAUDE.md) in this folder for the frontend's internal structure and conventions (domain/feature folders, auth layers, testing). This README covers running and building it.
+## Features
 
-## Quick Start
+- Staff POS: floor plan, ordering, payments, management, admin, settings
+- A separate customer-facing diner ordering surface in the same app, its own auth, header, and cart
+- Real-time table updates over SignalR
+- OIDC login for staff (Authorization Code + PKCE, real redirect to identity's hosted login page), a separate password-grant flow for diners so an inline sign-in modal works
+- Talks to each backend service directly, no API gateway or BFF in front
+
+## Structure
+
+- One folder per backend resource under a domain layer (menu, orders, cart, tables, payments, notifications, identity, tenant, plus the diner-facing trio), each with its own API calls, types, and query hooks
+- One folder per top-level app area under a features layer (pos, management, admin, settings, home, landing, join, diner)
+- Generic UI primitives are kept separate from domain-aware components
+
+## Config
+
+Backend service URLs live in `public/config.js`, a plain script loaded by the page, not compiled into the build. Running `npm run dev` locally uses Vite env vars instead. To point at a service on a different port, edit `config.js` directly. To change URLs in production, swap in a different `config.js` file, no rebuild needed.
+
+## Getting Started
 
 ```bash
 cd services/frontend
@@ -12,59 +28,13 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-The backend services need to be running for the app to do anything useful — normally you don't run the frontend standalone; `./local/dev.sh` from the repo root starts everything together, frontend included.
+The backend services need to be running for the app to do anything, normally you don't run the frontend standalone, `./local/dev.sh` from the repo root starts everything together.
 
 ```bash
-npm run build     # tsc -b && vite build — also how you typecheck; output to dist/
-npm run preview   # serve dist/ at http://localhost:4173
+npm run build     # tsc -b && vite build, also how you typecheck
 npm run lint       # eslint .
-npm run test:e2e   # Playwright — needs the full local stack running first, see ./CLAUDE.md
+npm run test:e2e   # Playwright, needs the full local stack running first
 ```
-
-## Configuration
-
-Service URLs are **not** baked into the build — they're read at runtime from `window.*` globals, set by `public/config.js`, with `.env.development`'s `VITE_*` values as a Vite dev-server fallback (`src/config/env.ts`).
-
-| Global | Local dev value |
-|---|---|
-| `window.IDENTITY_SERVICE_URL` | `http://localhost:5265` |
-| `window.CATALOG_SERVICE_URL` | `http://localhost:5062` |
-| `window.ORDER_SERVICE_URL` | `http://localhost:5236` |
-| `window.PAYMENT_SERVICE_URL` | `http://localhost:5238` |
-| `window.RABBITMQ_URL` | `http://localhost:15672` |
-
-- **Local dev**: these come from `public/config.js` (checked in with the defaults above) — edit it if you're running a service on a different port.
-- **Other environments**: mount a different `config.js` at `/usr/share/nginx/html/config.js` in the container rather than rebuilding the image.
-- Adding a call to a new backend? Extend `ENV` and the `Window` interface in `src/config/env.ts`, and add the matching entry to `config.js` — don't hardcode a URL inline.
-
-## Architecture
-
-- `src/app/` — router (`createBrowserRouter`, all routes lazy-loaded) and top-level providers
-- `src/api-authorization/` + `src/auth/` — OIDC login/logout (Authorization Code + PKCE, real cross-origin redirect to Duende's hosted login page), silent renew, tenant/scope accessors
-- `src/lib/http.ts` — shared axios instance; injects the bearer token and tenant headers on every request
-- `src/domain/<resource>/` — one folder per backend resource (`menu`, `orders`, `cart`, `tables`, `payments`, `notifications`, `identity`, `tenant`, …), each with `api.ts`/`types.ts`/`hooks.ts`
-- `src/features/<area>/` — route-level pages per top-level app area (`pos`, `management`, `admin`, `settings`, `home`, `landing`, `join`)
-- `src/components/ui/` — generic shadcn-style primitives; domain-aware components live under `features/`
-- Real-time table updates over SignalR (`@microsoft/signalr`)
-
-## Docker
-
-```bash
-docker build -t restaurant-pos/frontend:1.0.0 .
-docker run -d -p 5173:80 restaurant-pos/frontend:1.0.0
-```
-
-Nginx serves the static build with an `index.html` SPA fallback for client-side routing. Override config per environment by mounting a different `config.js`:
-
-```bash
-docker run --rm -p 8080:80 \
-  -v $(pwd)/ops/prod/config.js:/usr/share/nginx/html/config.js:ro \
-  restaurant-pos/frontend:1.0.0
-```
-
-## Production deployment
-
-The actual production deploy is a single VM + Caddy + GHCR image pipeline, not AKS/Helm — see [`deploy/README.md`](../../deploy/README.md) at the repo root for the full CI/CD flow.
 
 ---
 
