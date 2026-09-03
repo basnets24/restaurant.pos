@@ -137,7 +137,7 @@ function EngineeringSection({ id, number, eyebrow, headline, intro, children, in
                 <span className="mb-3 block font-mono text-[13px] uppercase tracking-[0.08em] text-brand-strong sm:text-sm">
                     {number} / {eyebrow}
                 </span>
-                <h2 className="max-w-3xl font-display text-[32px] leading-[1.1] text-foreground sm:text-[42px]">
+                <h2 className="max-w-3xl font-display text-2xl leading-tight text-foreground sm:text-3xl">
                     {headline}
                 </h2>
                 <div className="mb-4 mt-3 h-[3px] w-10" style={{ background: "var(--ochre-500)" }} />
