@@ -88,10 +88,26 @@ function ViewMode({ tables, onEdit }: { tables: TableViewDto[]; onEdit: () => vo
   );
 }
 
+/** Stored table positions are raw editor coordinates with no guaranteed
+ * margin from (0, 0) - a table snapped to the top-left edge in the editor
+ * renders flush against this container's own rounded, clipped edge otherwise.
+ * Shift everything by the layout's own top-left bound plus a fixed padding,
+ * the same "normalize to content" idea EditMode's fitToContent (below) does
+ * with pan/zoom, just without the scaling since this view never zooms. */
+const READ_ONLY_PAD = 24;
+
 function ReadOnlyCanvas({ tables }: { tables: TableViewDto[] }) {
+  const { minX, minY } = useMemo(() => {
+    if (tables.length === 0) return { minX: 0, minY: 0 };
+    return {
+      minX: Math.min(...tables.map((t) => t.position.x)),
+      minY: Math.min(...tables.map((t) => t.position.y)),
+    };
+  }, [tables]);
+
   return (
     <div
-      className="relative h-[640px] rounded-2xl border border-border bg-muted overflow-hidden"
+      className="relative h-[640px] rounded-2xl border border-border bg-muted overflow-auto"
       style={{ backgroundImage: "linear-gradient(90deg, rgba(53,25,3,.05) 1px, transparent 1px), linear-gradient(180deg, rgba(53,25,3,.05) 1px, transparent 1px)", backgroundSize: "20px 20px" }}
     >
       <SectionSigns tables={tables} />
@@ -101,7 +117,12 @@ function ReadOnlyCanvas({ tables }: { tables: TableViewDto[] }) {
           <div
             key={t.id}
             className={`absolute border-2 shadow-sm ${s.bg} ${s.border} ${shapeRadiusClass(t.shape)}`}
-            style={{ left: t.position.x, top: t.position.y, width: t.size.width, height: t.size.height }}
+            style={{
+              left: t.position.x - minX + READ_ONLY_PAD,
+              top: t.position.y - minY + READ_ONLY_PAD,
+              width: t.size.width,
+              height: t.size.height,
+            }}
           >
             <div className="text-xs px-2 py-1 text-muted-foreground">{t.section || "Section"}</div>
             <div className="px-2 font-numeric font-semibold text-foreground">#{t.number}</div>
