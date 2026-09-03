@@ -41,7 +41,7 @@ export function HeroReceipt() {
                 }}
             >
                 <div className="text-center">
-                    <div className="font-display text-lg text-foreground">Spoontab</div>
+                    <div className="font-display text-lg text-fig-strong">Spoontab</div>
                     <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
                         Order Ticket
                     </div>
