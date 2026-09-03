@@ -12,13 +12,15 @@ import { isDemoProfile } from "@/auth/demoSession";
 
 type Props = React.PropsWithChildren<{
     roles?: string[];
-    /** Redirect away (to /management) instead of rendering, for a route the
-     * public demo_admin session shouldn't reach even though it carries the
-     * same roles/scopes as a real Admin/Manager login (see auth/demoSession.ts). */
+    /** Redirect away instead of rendering, for a route the public demo_admin
+     * session shouldn't reach even though it carries the same roles/scopes as
+     * a real Admin/Manager login (see auth/demoSession.ts). Redirects to
+     * demoRedirectTo (default "/management"). */
     blockDemo?: boolean;
+    demoRedirectTo?: string;
 }>;
 
-export const ProtectedRoute: React.FC<Props> = ({ roles, blockDemo, children }) => {
+export const ProtectedRoute: React.FC<Props> = ({ roles, blockDemo, demoRedirectTo = "/management", children }) => {
     const { isReady, isAuthenticated, isSigningOut, profile } = useAuth();
     const loc = useLocation();
     const returnUrl = `${window.location.origin}${loc.pathname}${loc.search}${loc.hash}`;
@@ -82,7 +84,7 @@ export const ProtectedRoute: React.FC<Props> = ({ roles, blockDemo, children }) 
     }
 
     if (blockDemo && isDemoProfile(profile)) {
-        return <Navigate to="/management" replace />;
+        return <Navigate to={demoRedirectTo} replace />;
     }
 
     return <>{children}</>;

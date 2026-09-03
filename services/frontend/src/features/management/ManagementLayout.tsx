@@ -4,8 +4,6 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Utensils, Settings } from "lucide-react";
 import { useCan } from "@/auth/permissions";
-import { useAuth } from "@/api-authorization/AuthProvider";
-import { isDemoProfile } from "@/auth/demoSession";
 import { User, Shield, Bell } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
@@ -41,14 +39,12 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
 
     const go = (to: string) => navigate(to);
     const canManageStaff = useCan("manageStaff");
-    const { profile } = useAuth();
-    // The public demo_admin session carries the same Admin/Manager roles as a
-    // real login (see auth/demoSession.ts), so role checks alone don't hide
-    // this - Admin is an org-settings/floor-plan/roles editor demo visitors
-    // shouldn't be able to reach. Route access is separately blocked via
-    // ProtectedRoute's blockDemo prop (app/router.tsx) in case someone
-    // navigates here directly instead of through this nav.
-    const showAdmin = canManageStaff && !isDemoProfile(profile);
+    // The Admin tab itself stays visible for the demo_admin session - the
+    // floor plan editor under it is a legitimate demo destination. The
+    // organization-settings and roles sub-pages it also contains are hidden/
+    // blocked separately, in AdminTab (its own sub-nav) and app/router.tsx
+    // (ProtectedRoute's blockDemo), since demo shouldn't reach those.
+    const showAdmin = canManageStaff;
 
     const coreTabs = TAB_LIST.filter(t => t.value !== "staff" || canManageStaff);
 

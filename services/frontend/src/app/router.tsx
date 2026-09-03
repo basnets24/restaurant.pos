@@ -139,17 +139,34 @@ export const router = createBrowserRouter([
       { path: "staff",        element: <Suspense fallback={<Fallback />}><StaffTab /></Suspense> },
       { path: "menu",         element: <Suspense fallback={<Fallback />}><MenuTab /></Suspense> },
       {
+        // The floor plan editor stays reachable for the demo_admin session -
+        // organization settings and role management don't (see the two
+        // sub-routes below), so this parent route isn't demo-blocked itself.
         path: "admin",
         element: (
-          <ProtectedRoute roles={["Admin", "Manager"]} blockDemo>
+          <ProtectedRoute roles={["Admin", "Manager"]}>
             <Suspense fallback={<Fallback />}><AdminTab /></Suspense>
           </ProtectedRoute>
         ),
         children: [
           { index: true, element: <Navigate to="organization" replace /> },
-          { path: "organization", element: <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense> },
-          { path: "floor-plan",   element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
-          { path: "roles",        element: <Suspense fallback={<Fallback />}><RolesPage /></Suspense> },
+          {
+            path: "organization",
+            element: (
+              <ProtectedRoute blockDemo demoRedirectTo="/management/admin/floor-plan">
+                <Suspense fallback={<Fallback />}><OrganizationPage /></Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          { path: "floor-plan", element: <Suspense fallback={<Fallback />}><FloorPlanDesigner /></Suspense> },
+          {
+            path: "roles",
+            element: (
+              <ProtectedRoute blockDemo demoRedirectTo="/management/admin/floor-plan">
+                <Suspense fallback={<Fallback />}><RolesPage /></Suspense>
+              </ProtectedRoute>
+            ),
+          },
         ],
       },
     ],
