@@ -24,9 +24,8 @@ test("browse, customize, sign in and pay as a diner", async ({ page, request, di
   await page.waitForURL(new RegExp(`/order/${dinerMenu.restaurantId}/${dinerMenu.locationId}`), { timeout: 15000 });
   const menuItemHeading = page.getByRole("heading", { name: dinerMenu.menuItemName, level: 3 });
   await expect(menuItemHeading).toBeVisible({ timeout: 15000 });
-  // Scope to this item's own row: the E2E tenant accumulates the shared demo menu
-  // (scripts/seed-discovery.sh has been run against it before), so several other items on
-  // this page also have their own "Customize" button.
+  // Scope to this item's own row: the E2E tenant accumulates a shared demo menu across
+  // runs, so several other items on this page also have their own "Customize" button.
   const itemRow = page
     .locator("div")
     .filter({ has: menuItemHeading })

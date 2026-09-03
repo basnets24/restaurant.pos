@@ -103,8 +103,7 @@ just took down.
 
 `ModifierGroup`/`ModifierOption` (`SelectionType`: `Single`|`Multi`, `Required`,
 tenant-scoped) are staff-managed through `ModifierGroupsController` (see the API
-table above) — `scripts/seed-discovery.sh` still seeds demo data but is no
-longer the only writer. Every create/update/delete republishes the item's full
+table above). Every create/update/delete republishes the item's full
 current modifier set as `MenuItemModifiersChanged` (`Messaging.Contracts`,
 `Events/Menu`) — always the complete snapshot, never a delta, so a consumer
 never has to diff or reason about arrival order. The order service used to
