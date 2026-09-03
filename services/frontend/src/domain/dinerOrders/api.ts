@@ -15,5 +15,6 @@ export const DinerOrdersAPI = {
   order: (orderId: string) => `${base}/orders/${orderId}`,
   cancelOrder: (orderId: string) => `${base}/orders/${orderId}/cancel`,
   paymentSession: (orderId: string) => `${payments}/${orderId}/payment-session`,
-  paymentConfirm: (orderId: string) => `${payments}/${orderId}/payment-confirm`,
+  paymentConfirm: (orderId: string, attemptId: string) =>
+    `${payments}/${orderId}/payment-confirm?attemptId=${encodeURIComponent(attemptId)}`,
 } as const;

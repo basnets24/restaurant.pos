@@ -71,6 +71,7 @@ export default function OrderStatusPage() {
   });
 
   const clientSecret = session.data?.clientSecret ?? null;
+  const attemptId = session.data?.attemptId ?? null;
 
   const cancel = useMutation({
     mutationFn: async () => {
@@ -225,20 +226,21 @@ export default function OrderStatusPage() {
         )}
       </main>
 
-      {clientSecret && (
+      {clientSecret && attemptId && (
         <StripeCheckoutDialog
           open={payOpen}
           onOpenChange={setPayOpen}
           orderId={orderId}
           clientSecret={clientSecret}
+          attemptId={attemptId}
           onSuccess={onPaid}
           onFailure={(message) => toast.error(message)}
           // The diner's own token and tenant. The default confirm mints a staff token from the
           // POS session, which a diner does not have.
-          confirm={async (id) => {
+          confirm={async (id, attempt) => {
             const token = await getToken();
             if (!token) throw new Error("Please sign in again to finish paying.");
-            return DinerOrders.confirmPayment(token, tenant as DinerTenant, id);
+            return DinerOrders.confirmPayment(token, tenant as DinerTenant, id, attempt);
           }}
         />
       )}

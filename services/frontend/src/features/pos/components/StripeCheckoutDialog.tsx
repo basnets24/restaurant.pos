@@ -15,12 +15,13 @@ const stripePromise = loadStripe(ENV.STRIPE_PUBLISHABLE_KEY);
  * scoped token from the POS session; the diner app passes its own because a diner token comes
  * from a different provider entirely and carries explicit tenant headers.
  */
-type ConfirmFn = (orderId: string) => Promise<PaymentConfirmResponse>;
+type ConfirmFn = (orderId: string, attemptId: string) => Promise<PaymentConfirmResponse>;
 
 type StripeCheckoutDialogProps = {
   open: boolean;
   orderId: string;
   clientSecret: string;
+  attemptId: string;
   onSuccess: () => void;
   onFailure: (message: string) => void;
   onOpenChange: (open: boolean) => void;
@@ -31,6 +32,7 @@ export function StripeCheckoutDialog({
   open,
   orderId,
   clientSecret,
+  attemptId,
   onSuccess,
   onFailure,
   onOpenChange,
@@ -45,6 +47,7 @@ export function StripeCheckoutDialog({
         <StripeElementsForm
           orderId={orderId}
           clientSecret={clientSecret}
+          attemptId={attemptId}
           onSuccess={onSuccess}
           onFailure={onFailure}
           confirm={confirm}
@@ -62,12 +65,14 @@ export function StripeCheckoutDialog({
 export function StripeElementsForm({
   orderId,
   clientSecret,
+  attemptId,
   onSuccess,
   onFailure,
   confirm,
 }: {
   orderId: string;
   clientSecret: string;
+  attemptId: string;
   onSuccess: () => void;
   onFailure: (message: string) => void;
   confirm?: ConfirmFn;
@@ -76,6 +81,7 @@ export function StripeElementsForm({
     <Elements stripe={stripePromise} options={{ clientSecret }}>
       <PaymentForm
         orderId={orderId}
+        attemptId={attemptId}
         onSuccess={onSuccess}
         onFailure={onFailure}
         confirm={confirm}
@@ -86,11 +92,13 @@ export function StripeElementsForm({
 
 function PaymentForm({
   orderId,
+  attemptId,
   onSuccess,
   onFailure,
   confirm = confirmPayment,
 }: {
   orderId: string;
+  attemptId: string;
   onSuccess: () => void;
   onFailure: (message: string) => void;
   confirm?: ConfirmFn;
@@ -122,11 +130,13 @@ function PaymentForm({
 
       // Ask our backend to verify with Stripe server-side and publish the
       // saga event - never trust the client-side result alone.
-      const result = await confirm(orderId);
+      const result = await confirm(orderId, attemptId);
       if (result.status === "succeeded") {
         onSuccess();
       } else if (result.status === "failed") {
         onFailure(result.error ?? "Payment failed");
+      } else if (result.status === "stale") {
+        setError("This payment session has expired - please close and try paying again.");
       } else {
         setError("Payment is still processing - please try again in a moment.");
       }
