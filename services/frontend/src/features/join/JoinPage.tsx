@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CircleUserRound, Building2, MapPin, Clock, KeySquare, PlusCircle, LogIn, User, Shield, Bell, LogOut } from "lucide-react";
+import { CircleUserRound, Building2, MapPin, Clock, KeySquare, PlusCircle, LogIn, User, Shield, LogOut } from "lucide-react";
 import { AuthorizationPaths } from "@/api-authorization/ApiAuthorizationConstants";
 import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provider";
 import { createEmployeeApi } from "@/domain/employee";
@@ -180,9 +180,6 @@ export default function JoinPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/settings/security")}>
                 <Shield className="h-4 w-4 mr-2" /> Security
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/settings/notifications")}>
-                <Bell className="h-4 w-4 mr-2" /> Notifications
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onLogout}>

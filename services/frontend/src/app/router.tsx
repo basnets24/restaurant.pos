@@ -50,7 +50,6 @@ const RolesPage          = lazy(() => import("@/features/admin/pages/RolesPage")
 const SettingsLayout     = lazy(() => import("@/features/settings/SettingsLayout"));
 const AccountPage        = lazy(() => import("@/features/settings/pages/AccountPage"));
 const SecurityPage       = lazy(() => import("@/features/settings/pages/SecurityPage"));
-const NotificationsPage  = lazy(() => import("@/features/settings/pages/NotificationsPage"));
 
 // ---- POS ----
 const PosLayout     = lazy(() => import("@/features/pos/PosLayout"));
@@ -183,9 +182,8 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <Navigate to="account" replace /> },
-      { path: "account",       element: <Suspense fallback={<Fallback />}><AccountPage /></Suspense> },
-      { path: "security",      element: <Suspense fallback={<Fallback />}><SecurityPage /></Suspense> },
-      { path: "notifications", element: <Suspense fallback={<Fallback />}><NotificationsPage /></Suspense> },
+      { path: "account",  element: <Suspense fallback={<Fallback />}><AccountPage /></Suspense> },
+      { path: "security", element: <Suspense fallback={<Fallback />}><SecurityPage /></Suspense> },
     ],
   },
 

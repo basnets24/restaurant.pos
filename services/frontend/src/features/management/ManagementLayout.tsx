@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Utensils, Settings } from "lucide-react";
 import { useCan } from "@/auth/permissions";
-import { User, Shield, Bell } from "lucide-react";
+import { User, Shield } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { GrowthChartIcon } from "@/components/brand-icons/report-icons";
@@ -56,7 +56,6 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                 menuItems={[
                     { label: "Account", icon: User, onClick: () => navigate("/settings/account") },
                     { label: "Security", icon: Shield, onClick: () => navigate("/settings/security") },
-                    { label: "Notifications", icon: Bell, onClick: () => navigate("/settings/notifications") },
                 ]}
             />
 
