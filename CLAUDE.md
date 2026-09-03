@@ -11,10 +11,10 @@ Cloud-native, multi-tenant restaurant POS platform: .NET microservices + a React
 ### Local dev (all services + frontend)
 ```bash
 cp .env.example .env   # first time only — fill in GH_PAT, POSTGRES_PASSWORD, IdentitySettings__AdminUserPassword, Stripe test keys
-./scripts/dev.sh        # starts infra (postgres/rabbitmq/seq) via docker compose, then all 4 .NET services + frontend via dotnet run/npm run dev
-./scripts/dev.sh stop   # stops the services this script started; infra containers keep running
+./local/dev.sh        # starts infra (postgres/rabbitmq/seq) via docker compose, then all 4 .NET services + frontend via dotnet run/npm run dev
+./local/dev.sh stop   # stops the services this script started; infra containers keep running
 ```
-`scripts/dev.sh` loads `.env`, waits for infra containers to be healthy, and trusts the local HTTPS dev cert automatically. Don't `docker compose up` the services themselves — only infra is containerized locally; each backend service runs directly via `dotnet run`.
+`local/dev.sh` loads `.env`, waits for infra containers to be healthy, and trusts the local HTTPS dev cert automatically. Don't `docker compose up` the services themselves — only infra is containerized locally; each backend service runs directly via `dotnet run`.
 
 - Frontend: http://localhost:5173
 - Seq (logs): http://localhost:5341
@@ -32,7 +32,7 @@ dotnet build services/order/src/OrderService/OrderService.csproj   # build one s
 dotnet test services/identity/tests/IdentityService.Tests          # only test project in the repo (xUnit + Moq)
 dotnet test services/identity/tests/IdentityService.Tests --filter "FullyQualifiedName~SomeTestClass"
 ```
-No `global.json`, `Directory.Build.props`, or `.editorconfig` — each `.csproj` is self-contained. GitHub Packages restore requires `GH_PAT` (see NuGet.config) — same token used by `scripts/dev.sh` and CI (`secrets.GITHUB_TOKEN`).
+No `global.json`, `Directory.Build.props`, or `.editorconfig` — each `.csproj` is self-contained. GitHub Packages restore requires `GH_PAT` (see NuGet.config) — same token used by `local/dev.sh` and CI (`secrets.GITHUB_TOKEN`).
 
 ### Frontend (`services/frontend`)
 ```bash

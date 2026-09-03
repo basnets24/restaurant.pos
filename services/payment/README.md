@@ -43,7 +43,7 @@ Also exposed: `/swagger` (Development only), `/health/ready`, `/health/live`, an
 - PostgreSQL and RabbitMQ (both come from `local/docker-compose.yml`)
 - A Stripe account and a **test-mode secret key**
 
-Normally you don't run this service by hand — `./scripts/dev.sh` from the repo root starts infra plus all four services and the frontend.
+Normally you don't run this service by hand — `./local/dev.sh` from the repo root starts infra plus all four services and the frontend.
 
 ### Configuration
 
@@ -54,7 +54,7 @@ Bound from `appsettings.json`, environment variables, or User Secrets. Note the 
 dotnet user-secrets set "StripeSettings:SecretKey" "sk_test_xxx"
 ```
 
-Or via the repo-root `.env` (what `scripts/dev.sh` reads):
+Or via the repo-root `.env` (what `local/dev.sh` reads):
 
 ```
 StripeSettings__SecretKey=sk_test_xxx

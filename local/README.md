@@ -1,46 +1,17 @@
 # Local development stack
 
-The local Docker Compose stack for the Restaurant POS platform. Production deployment (VM + Caddy + GHCR CI/CD) lives under [`deploy/`](../deploy/) at the repo root, not here — see [`deploy/README.md`](../deploy/README.md).
+Docker Compose for local infrastructure only. Production lives in [deploy/](../deploy/), see [deploy/README.md](../deploy/README.md).
 
-## Layout
+## Usage
 
-| Path | What it is |
-|---|---|
-| `docker-compose.yml` | The local dev stack (see below) |
+- From the repo root: `./local/dev.sh` brings up infrastructure, waits for it to be healthy, then runs all services and the frontend directly.
+- Infrastructure only: `docker compose -f local/docker-compose.yml up -d`
+- Only infrastructure runs in containers, the services themselves run via `dotnet run` / `npm run dev`.
 
-Note that **Postgres is not provisioned here**. Deployed environments use Supabase (schema-per-service, Supavisor **session-mode** pooling on port `5432` — transaction mode on `6543` breaks EF Core's migration batches); locally it's the compose container.
+## What's here
 
----
+- Postgres, `localhost:5432`, all service data, one schema per service.
+- RabbitMQ, `localhost:15672`, message broker and management UI.
+- Seq, `localhost:5341`, structured logs.
 
-## Local development
-
-This is what you use day to day. From the **repo root**:
-
-```bash
-./scripts/dev.sh
-```
-
-That brings up the compose stack, waits for it to be healthy, then runs all four .NET services and the frontend directly via `dotnet run` / `npm run dev`. Only infrastructure is containerized locally — don't try to `docker compose up` the services themselves.
-
-To start just the infrastructure:
-
-```bash
-docker compose -f local/docker-compose.yml up -d
-```
-
-Three containers, all defined in `docker-compose.yml`:
-
-| Container | URL | Purpose |
-|---|---|---|
-| postgres | `localhost:5432` | All service data, schema-per-service |
-| rabbitmq | http://localhost:15672 | Message broker + management UI |
-| seq | http://localhost:5341 | Structured logs |
-
-`scripts/dev.sh` health-waits on all three. `./scripts/dev.sh stop` stops the services the script started and leaves these containers running.
-
-
----
-
-## Production deployment
-
-Not here. See [`deploy/README.md`](../deploy/README.md) at the repo root — a single VM running `deploy/docker-compose.yml` behind Caddy, images built and pushed to GHCR by `.github/workflows/build-and-push-images.yml` and deployed by `.github/workflows/deploy.yml`. An earlier AKS/Helm/Emissary/cert-manager path was explored but never actually deployed; it's been removed.
+Not used in production, deployed environments run Supabase Postgres instead.

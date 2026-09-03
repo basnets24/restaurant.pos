@@ -12,7 +12,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-The backend services need to be running for the app to do anything useful — normally you don't run the frontend standalone; `./scripts/dev.sh` from the repo root starts everything together, frontend included.
+The backend services need to be running for the app to do anything useful — normally you don't run the frontend standalone; `./local/dev.sh` from the repo root starts everything together, frontend included.
 
 ```bash
 npm run build     # tsc -b && vite build — also how you typecheck; output to dist/

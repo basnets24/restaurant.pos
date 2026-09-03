@@ -35,7 +35,7 @@ a second entity. `Entities/` additionally holds `ModifierGroup`/`ModifierOption`
 - PostgreSQL and RabbitMQ (both come from `local/docker-compose.yml`)
 - The identity service running, for JWT validation
 
-Normally you don't run this by hand — `./scripts/dev.sh` from the repo root starts
+Normally you don't run this by hand — `./local/dev.sh` from the repo root starts
 infra plus all four services and the frontend.
 
 ### Configuration

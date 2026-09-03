@@ -29,7 +29,7 @@ See [`CLAUDE.md`](./CLAUDE.md) in this folder for saga/consumer gotchas and the 
 - PostgreSQL and RabbitMQ (both come from `local/docker-compose.yml`)
 - The identity service running, for JWT validation
 
-Normally you don't run this by hand — `./scripts/dev.sh` from the repo root starts infra plus all four services and the frontend.
+Normally you don't run this by hand — `./local/dev.sh` from the repo root starts infra plus all four services and the frontend.
 
 ### Configuration
 From `appsettings.json`, overridable via environment variables or User Secrets.

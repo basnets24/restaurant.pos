@@ -15,11 +15,11 @@ cp .env.example .env
 ```
 
 ```bash
-./scripts/dev.sh        # starts infra (docker compose) + all 4 services + frontend
-./scripts/dev.sh stop   # stops the services this script started; infra keeps running
+./local/dev.sh        # starts infra (docker compose) + all 4 services + frontend
+./local/dev.sh stop   # stops the services this script started; infra keeps running
 ```
 
-`scripts/dev.sh` loads `.env`, waits for infra to be healthy, and trusts the local HTTPS dev cert automatically. Only infrastructure runs in Docker locally — each backend service runs directly via `dotnet run`, and the frontend via `npm run dev`.
+`local/dev.sh` loads `.env`, waits for infra to be healthy, and trusts the local HTTPS dev cert automatically. Only infrastructure runs in Docker locally — each backend service runs directly via `dotnet run`, and the frontend via `npm run dev`.
 
 | | URL |
 |---|---|
@@ -33,7 +33,7 @@ cp .env.example .env
 | Symptom | Fix |
 |---|---|
 | NuGet restore fails | `GH_PAT` isn't set in `.env`, or lacks `read:packages` |
-| Postgres auth error | `POSTGRES_PASSWORD` in `.env` doesn't match what services expect — `scripts/dev.sh` derives `PostgresSettings__Password` from it automatically, so don't set that separately |
+| Postgres auth error | `POSTGRES_PASSWORD` in `.env` doesn't match what services expect — `local/dev.sh` derives `PostgresSettings__Password` from it automatically, so don't set that separately |
 | A service can't reach RabbitMQ | Check `docker compose ps` in `local/` — infra containers may not have come up healthy |
 | 401s despite a valid login | Check the JWT's tenant claims (`restaurant_id`/`location_id`) match the `X-Restaurant-Id`/`X-Location-Id` headers being sent |
 
