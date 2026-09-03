@@ -15,3 +15,12 @@ Docker Compose for local infrastructure only. Production lives in [deploy/](../d
 - Seq, `localhost:5341`, structured logs.
 
 Not used in production, deployed environments run Supabase Postgres instead.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| NuGet restore fails | `GH_PAT` isn't set in `.env`, or lacks `read:packages` |
+| Postgres auth error | `POSTGRES_PASSWORD` in `.env` doesn't match what services expect, `local/dev.sh` derives `PostgresSettings__Password` from it automatically, don't set that separately |
+| A service can't reach RabbitMQ | Check `docker compose ps` in `local/`, infra containers may not have come up healthy |
+| 401s despite a valid login | Check the JWT's tenant claims (`restaurant_id`/`location_id`) match the `X-Restaurant-Id`/`X-Location-Id` headers being sent |
