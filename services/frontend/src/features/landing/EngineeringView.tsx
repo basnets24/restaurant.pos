@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
     ArrowLeft, ArrowRight, ArrowDown, ExternalLink, Home, Users, UtensilsCrossed, ShoppingCart, CreditCard,
     TestTube, GitBranch, Server,
@@ -35,6 +34,21 @@ const SERVICES = [
     {
         icon: CreditCard, name: "Payment", tags: ["Stripe PaymentIntents"],
         description: "Stripe PaymentIntents and payment verification.",
+    },
+];
+
+const PRODUCTION = [
+    {
+        icon: TestTube, title: "Testing", stack: "xUnit · Playwright",
+        detail: "Backend unit tests cover identity and user behavior, with Playwright covering critical staff and customer flows end to end.",
+    },
+    {
+        icon: GitBranch, title: "CI/CD", stack: "GitHub Actions",
+        detail: "Every change runs through an automated build pipeline, with images built and deployed automatically on merge to main.",
+    },
+    {
+        icon: Server, title: "Deployment", stack: "DigitalOcean · Caddy",
+        detail: "The frontend and .NET services are containerized and deployed on DigitalOcean behind Caddy, with RabbitMQ and the observability stack alongside them and Postgres managed via Supabase.",
     },
 ];
 
@@ -325,44 +339,36 @@ export default function EngineeringView() {
             <SectionRule />
 
             {/* 07 — PRODUCTION */}
-            <NarrativeSection
-                index="07"
-                label="Production"
-                title="Tested, automated, and deployed."
-                wide
-                weight="medium"
+            <EngineeringSection
+                id="production"
+                number="07"
+                eyebrow="Production"
+                headline="Tested, automated, and deployed."
             >
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <Card size="lg" className="p-5 gap-0 border-border bg-card">
-                        <TestTube className="w-5 h-5 text-brand-strong mb-3" />
-                        <h3 className="text-sm font-semibold text-foreground mb-1">Testing</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">Backend unit tests cover identity and user behavior, with Playwright covering critical staff and customer flows end to end.</p>
-                    </Card>
-                    <Card size="lg" className="p-5 gap-0 border-border bg-card">
-                        <GitBranch className="w-5 h-5 text-brand-strong mb-3" />
-                        <h3 className="text-sm font-semibold text-foreground mb-1">CI/CD</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">Every change runs through an automated build pipeline, with images built and deployed automatically on merge to main.</p>
-                    </Card>
-                    <Card size="lg" className="p-5 gap-0 border-border bg-card">
-                        <Server className="w-5 h-5 text-brand-strong mb-3" />
-                        <h3 className="text-sm font-semibold text-foreground mb-1">Deployment</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">The frontend and .NET services are containerized and deployed on DigitalOcean behind Caddy, with RabbitMQ and the observability stack alongside them and Postgres managed via Supabase.</p>
-                    </Card>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+                    {PRODUCTION.map((p) => (
+                        <div key={p.title} className="rounded-lg border border-border bg-card p-5">
+                            <p.icon className="mb-3 h-5 w-5 text-brand-strong" />
+                            <h3 className="mb-1 text-sm font-semibold text-foreground">{p.title}</h3>
+                            <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-brand-strong/80">{p.stack}</p>
+                            <p className="text-sm leading-relaxed text-muted-foreground">{p.detail}</p>
+                        </div>
+                    ))}
                 </div>
-            </NarrativeSection>
+            </EngineeringSection>
 
             <SectionRule />
 
             {/* 08 — TRADEOFFS. Editorial rows rather than §07's card grid — this section
                 closes the piece, so it should read as reflective rather than another
                 feature-card beat. */}
-            <NarrativeSection
-                index="08"
-                label="Tradeoffs"
-                title="What I'd change at commercial scale."
-                lede="The architecture above fits a solo-built, portfolio-scale system. Here's what I'd revisit first."
-                wide
-                weight="medium"
+            <EngineeringSection
+                id="tradeoffs"
+                number="08"
+                eyebrow="Tradeoffs"
+                headline="What I'd change at commercial scale."
+                intro="The architecture above fits a solo-built, portfolio-scale system. Here's what I'd revisit first."
+                tone="parchment"
             >
                 <div className="divide-y divide-border">
                     {TRADEOFFS.map((t, i) => (
@@ -375,7 +381,7 @@ export default function EngineeringView() {
                         </div>
                     ))}
                 </div>
-            </NarrativeSection>
+            </EngineeringSection>
 
             {/* CTA */}
             <section className="border-t border-border py-10 lg:py-14 relative overflow-hidden">
