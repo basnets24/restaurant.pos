@@ -122,7 +122,7 @@ export default function EngineeringView() {
         <div className="min-h-screen bg-background">
             {/* Hero — brand + back link live in the hero itself, not a sticky bar,
                 matching Landing's dropped nav-bar treatment. */}
-            <section className="relative overflow-hidden bg-background">
+            <section className="relative overflow-hidden bg-gradient-to-br from-background to-[var(--surface-sunken)]">
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 sm:pt-8 lg:pb-20">
                     <div className="flex items-center justify-between mb-16">
                         <Link to="/" className="font-display text-3xl text-foreground">Spoontab</Link>
