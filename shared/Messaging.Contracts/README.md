@@ -22,7 +22,7 @@ Or as a project reference for local development:
 
 | Namespace | Events |
 |---|---|
-| `Messaging.Contracts.Events.Menu` | `MenuItemCreated`, `MenuItemUpdated`, `MenuItemDeleted` |
+| `Messaging.Contracts.Events.Menu` | `MenuItemCreated`, `MenuItemUpdated`, `MenuItemDeleted`, `MenuItemModifiersChanged` |
 | `Messaging.Contracts.Events.Inventory` | `InventoryItemDepleted`, `InventoryItemRestocked`, `InventoryItemUpdated`, `ReserveInventory`, `ReleaseInventory`, `InventoryReserved`, `InventoryReserveFaulted` |
 | `Messaging.Contracts.Events.Order` | `OrderSubmitted`, `OrderItemMessage` |
 | `Messaging.Contracts.Events.Payment` | `PaymentRequested`, `PaymentSessionCreated`, `PaymentSucceeded`, `PaymentFailed` |

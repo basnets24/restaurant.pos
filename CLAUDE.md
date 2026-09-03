@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Cloud-native, multi-tenant restaurant POS platform: .NET microservices + a React frontend, deployed on Azure Kubernetes Service. Event-driven (MassTransit + RabbitMQ locally / Azure Service Bus in prod), CQRS-ish read models, PostgreSQL everywhere (schema-per-service).
+Cloud-native, multi-tenant restaurant POS platform: .NET microservices + a React frontend, deployed to a single VM (Docker Compose + Caddy). Event-driven (MassTransit + RabbitMQ, locally and in prod), CQRS-ish read models, PostgreSQL everywhere (schema-per-service).
 
 ## Commands
 
@@ -87,7 +87,7 @@ A second, anonymous-first surface alongside the staff POS, built on the same fou
 - **Checkout is one call, not two.** `POST /diner/checkout` (`OrderService/Controllers/DinerController.cs`) commits the order and reserves inventory like staff's "Fire to Kitchen", but `PaymentRequested` then publishes automatically once inventory is confirmed (`InventoryReservedConsumer`, gated on `OrderType == Pickup`) rather than needing a separate staff-initiated call. Staff keep the two-step fire-then-pay flow unchanged.
 - **Abandonment needs a sweep.** A diner has no staff backstop to cancel a walked-away order, so `AbandonedOrderSweeper` (order service, `BackgroundService`) cancels unpaid `Pickup` orders past a TTL (dine-in exempt) and releases their inventory — the same `ReleaseInventory` path as a manual cancel.
 - **Order history and notifications are the other two cross-tenant exceptions** — `CustomerOrderSummary`/`CustomerNotification` are deliberately not `ITenantEntity`, queried by `CustomerId` across restaurants, and written inline from the order lifecycle rather than projected off events.
-- **Modifiers have a staff authoring UI** (added 2026-08-05, superseding the earlier "seeded by script only" decision). Catalog's `ModifierGroupsController` (`/menu-items/{id}/modifier-groups`, `/modifier-groups/{id}`) gives staff full CRUD, gated on the existing `menu.read`/`menu.write` policies — no new scope. Every write republishes the item's full current modifier set as `MenuItemModifiersChanged` (a snapshot, never a delta), which order's `PosReadModelProjector` folds into `PosCatalogItem.Modifiers`; `CatalogMenuClient` in the order service now prices a diner's selections from that local projection instead of a synchronous call to catalog's `/public/menu`. `scripts/seed-discovery.sh` still seeds demo data, but it's no longer the only way modifiers get created.
+- **Modifiers have a staff authoring UI** (added 2026-08-05, superseding the earlier "seeded by script only" decision). Catalog's `ModifierGroupsController` (`/menu-items/{id}/modifier-groups`, `/modifier-groups/{id}`) gives staff full CRUD, gated on the existing `menu.read`/`menu.write` policies — no new scope. Every write republishes the item's full current modifier set as `MenuItemModifiersChanged` (a snapshot, never a delta), which order's `PosReadModelProjector` folds into `PosCatalogItem.Modifiers`; `CatalogMenuClient` in the order service now prices a diner's selections from that local projection instead of a synchronous call to catalog's `/public/menu`.
 
 See `services/order/CLAUDE.md` and `services/frontend/CLAUDE.md` for the implementation-level detail (consumers, DbContext layout, `domain/discovery`/`features/diner` structure).
 

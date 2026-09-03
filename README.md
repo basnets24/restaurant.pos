@@ -1,8 +1,8 @@
 # Restaurant POS
 
-A cloud-native, multi-tenant restaurant POS platform: four .NET microservices plus a React frontend, event-driven via MassTransit/RabbitMQ, deployed on Azure Kubernetes Service.
+A cloud-native, multi-tenant restaurant POS platform: four .NET microservices plus a React frontend, event-driven via MassTransit/RabbitMQ, deployed to a single VM behind Caddy.
 
-![Restaurant POS Architecture](./docs/images/architecture-diagram.png)
+**Live demo:** [spoontab.com](https://spoontab.com)
 
 ## Quick Start
 
@@ -71,7 +71,6 @@ services/    frontend, identity, catalog, order, payment — see each service's 
 shared/      Common.Library, Messaging.Contracts, Tenant.Domain — published as NuGet via GitHub Packages
 local/       docker-compose (local dev stack only) — see local/README.md
 deploy/      production compose + Caddyfile for the deployed VM — see deploy/README.md
-docs/        architecture diagrams and migration notes
 ```
 
 Each service and the frontend has its own `README.md`/`CLAUDE.md` with service-specific commands, structure, and gotchas — start there once you're working inside one.
