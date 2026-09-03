@@ -13,6 +13,7 @@ import {
     OrderSagaDiagram, ReadModelDiagram, TenancyDiagram,
 } from "@/features/landing/components/NarrativeDiagrams";
 import { PaymentWorkflowDiagram } from "@/features/landing/components/PaymentWorkflowDiagram";
+import { OpsTraceTimeline } from "@/features/landing/components/OpsTraceTimeline";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
@@ -290,23 +291,17 @@ export default function EngineeringView() {
             <SectionRule />
 
             {/* 06 — OPERATIONS */}
-            <NarrativeSection
-                index="06"
-                label="Operations"
-                title="Every cross-service workflow is traceable."
-                lede="OpenTelemetry connects traces, metrics, and structured logs across service boundaries so failures can be followed from request to event to consumer."
-                wide
-                weight="compact"
+            <EngineeringSection
+                id="operations"
+                number="06"
+                eyebrow="Operations"
+                headline="Every cross-service workflow is traceable."
+                intro="OpenTelemetry connects traces, metrics, and structured logs across service boundaries so failures can be followed from request to event to consumer."
+                tone="parchment"
             >
-                <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-foreground">
-                    <span className="rounded border border-border bg-card px-3 py-1.5">Request</span>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="rounded border border-border bg-card px-3 py-1.5">Trace</span>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="rounded border border-brand bg-brand-soft px-3 py-1.5 text-brand-strong">Service / Event / Consumer</span>
-                </div>
+                <OpsTraceTimeline />
 
-                <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                     <a href="https://jaeger.spoontab.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2 hover:text-brand-strong">
                         Jaeger<ExternalLink className="w-3 h-3" />
                     </a>
@@ -325,7 +320,7 @@ export default function EngineeringView() {
                 <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
                     The demo stack is observable in production, though telemetry storage is intentionally non-persistent.
                 </p>
-            </NarrativeSection>
+            </EngineeringSection>
 
             <SectionRule />
 
