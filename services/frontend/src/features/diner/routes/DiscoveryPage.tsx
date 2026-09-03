@@ -21,6 +21,7 @@ import { DinerHeader } from "../components/DinerHeader";
 import { DinerNotificationBell } from "../components/DinerNotificationBell";
 import { DinerAccountMenu } from "../components/DinerAccountMenu";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
+import { getRestaurantBanner } from "../restaurantBanners";
 
 const ALL_CUISINES = "__all__";
 
@@ -211,6 +212,8 @@ function ListingCard({
   listing: DiscoveryListingDto;
   onSelect: () => void;
 }) {
+  const banner = getRestaurantBanner(listing.restaurantId);
+
   return (
     <Card
       onClick={onSelect}
@@ -224,6 +227,13 @@ function ListingCard({
       }}
       className="cursor-pointer overflow-hidden p-0 gap-0 transition-[transform,box-shadow] duration-[120ms] ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
+      {banner && (
+        <img
+          src={banner}
+          alt=""
+          className="h-32 w-full object-cover"
+        />
+      )}
       <div className="px-4 py-[18px]">
         <div className="flex items-start justify-between gap-2">
           <h2 className="text-[17px] font-semibold leading-snug truncate">
