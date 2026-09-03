@@ -6,7 +6,7 @@ Shared EF Core domain for multi-tenant data: `DbContext`, entities, and schema c
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="Tenant.Domain" Version="1.0.*" />
+  <PackageReference Include="Tenant.Domain" Version="2.*" />
 </ItemGroup>
 ```
 
@@ -26,8 +26,8 @@ Or as a project reference for local development:
 |---|---|---|
 | `Restaurant` | `tenant.Tenants` | The tenant itself |
 | `Location` | `tenant.TenantLocations` | A restaurant's physical locations |
-| `RestaurantMembership` | — | User ↔ restaurant associations |
-| `RestaurantUserRole` | — | Role assignments per tenant |
+| `RestaurantMembership` | `tenant.RestaurantMemberships` | User ↔ restaurant associations |
+| `RestaurantUserRole` | `tenant.RestaurantUserRoles` | Role assignments per tenant |
 
 `TenantRoles` (`Tenant.Domain.Constants`) — predefined role constants for authorization.
 
@@ -67,12 +67,13 @@ public class RestaurantService
     
     public RestaurantService(TenantDbContext context) => _context = context;
     
-    public async Task<Restaurant?> GetRestaurantAsync(string restaurantId)
-    {
-        return await _context.Restaurants
-            .Include(r => r.Locations)
-            .FirstOrDefaultAsync(r => r.Id == restaurantId);
-    }
+    public async Task<Restaurant?> GetRestaurantAsync(string restaurantId) =>
+        await _context.Restaurants.FirstOrDefaultAsync(r => r.Id == restaurantId);
+
+    public async Task<List<Location>> GetLocationsAsync(string restaurantId) =>
+        // No navigation property between Restaurant and Location - it's a plain
+        // RestaurantId foreign key, query Locations directly.
+        await _context.Locations.Where(l => l.RestaurantId == restaurantId).ToListAsync();
 }
 ```
 
@@ -82,7 +83,7 @@ public class RestaurantService
 
 Local dry run, no publish:
 ```bash
-dotnet pack shared/tenant.domain/Tenant.Domain.csproj -c Release -p:PackageVersion=1.0.1 -o ./packages
+dotnet pack shared/tenant.domain/Tenant.Domain.csproj -c Release -p:PackageVersion=2.1.2 -o ./packages
 ```
 
 ## Data Model Notes

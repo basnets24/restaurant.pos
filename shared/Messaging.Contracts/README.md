@@ -53,12 +53,12 @@ using MassTransit;
 using Messaging.Contracts.Events.Payment;
 
 await publishEndpoint.Publish(new PaymentRequested(
-    correlationId: Guid.NewGuid(),
-    orderId: order.Id,
-    tableId: order.TableId,
-    amountCents: (long)(order.Total * 100),
-    restaurantId: tenant.RestaurantId!,
-    locationId: tenant.LocationId!
+    CorrelationId: Guid.NewGuid(),
+    OrderId: order.Id,
+    TableId: order.TableId,
+    AmountCents: (long)(order.Total * 100),
+    RestaurantId: tenant.RestaurantId!,
+    LocationId: tenant.LocationId!
 ));
 ```
 
@@ -68,7 +68,7 @@ await publishEndpoint.Publish(new PaymentRequested(
 
 Local dry run, no publish:
 ```bash
-dotnet pack shared/Messaging.Contracts/Messaging.Contracts.csproj -c Release -p:PackageVersion=1.0.1 -o ./packages
+dotnet pack shared/Messaging.Contracts/Messaging.Contracts.csproj -c Release -p:PackageVersion=1.0.8 -o ./packages
 ```
 
 ## Versioning
