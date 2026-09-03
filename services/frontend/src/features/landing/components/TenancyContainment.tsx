@@ -52,14 +52,14 @@ export function TenancyContainment() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3 font-mono text-[12px]">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand-soft px-3 py-1 text-brand-strong">
                     <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-hidden="true" />
-                    Matches your restaurant — allowed
+                    Matches your restaurant, allowed
                 </span>
                 <span
                     className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1"
                     style={{ borderColor: "color-mix(in srgb, var(--rust-500) 40%, transparent)", color: "var(--rust-600)" }}
                 >
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--rust-500)" }} aria-hidden="true" />
-                    Belongs to someone else — blocked
+                    Belongs to someone else, blocked
                 </span>
             </div>
         </div>
