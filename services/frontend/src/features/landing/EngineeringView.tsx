@@ -260,16 +260,15 @@ export default function EngineeringView() {
             <SectionRule />
 
             {/* 04 — DATA */}
-            <NarrativeSection
-                index="04"
-                label="Data"
-                title="Order reads locally, Catalog stays decoupled."
-                lede="Catalog publishes updates. Order keeps a local read model for the staff POS, so it doesn't need to call Catalog during every interaction."
-                wide
-                weight="compact"
+            <EngineeringSection
+                id="data"
+                number="04"
+                eyebrow="Data"
+                headline="Order reads locally, Catalog stays decoupled."
+                intro="Catalog publishes updates. Order keeps a local read model for the staff POS, so it doesn't need to call Catalog during every interaction."
             >
                 <ReadModelDiagram />
-            </NarrativeSection>
+            </EngineeringSection>
 
             <SectionRule />
 
