@@ -67,65 +67,9 @@ const TRADEOFFS = [
     },
 ];
 
-interface NarrativeSectionProps {
-    index: string;
-    label: string;
-    title: string;
-    lede?: ReactNode;
-    /** Let the title/lede run the section's full width instead of the default
-     * max-w-2xl reading column — for a section whose lede is short enough that
-     * the narrow column reads as an unintentionally small block, not a deliberate
-     * one. Off by default so the rest of the article keeps its narrower rhythm. */
-    wide?: boolean;
-    /** Vertical rhythm tier: "major" (01-02, the core engineering work) keeps the
-     * page's most generous spacing; "compact" (03-06, faster supporting beats)
-     * cuts it by roughly a third; "medium" (07-08, closing beats) sits between
-     * the two. Default is "major" so existing full-weight sections need no change. */
-    weight?: "major" | "compact" | "medium";
-    children: ReactNode;
-}
-
-const SECTION_PADDING: Record<NonNullable<NarrativeSectionProps["weight"]>, string> = {
-    major: "py-12 lg:py-16",
-    medium: "py-10 lg:py-14",
-    compact: "py-8 lg:py-10",
-};
-
-/** One numbered beat of the article: "01 / THE SYSTEM" eyebrow, a single-sentence
- * question-style claim, optional supporting line, then whatever proves it
- * (a diagram, a list, evidence). Every section answers one new question — this
- * wrapper is what keeps that rhythm consistent without repeating markup. */
-function NarrativeSection({ index, label, title, lede, wide, weight = "major", children }: NarrativeSectionProps) {
-    const measure = wide ? "" : "max-w-2xl";
-    return (
-        <section className={`max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 ${SECTION_PADDING[weight]}`}>
-            <span className="block text-xs font-medium tracking-wide uppercase text-brand-strong mb-3">
-                {index} / {label}
-            </span>
-            <h2 className={`font-display text-2xl sm:text-3xl text-foreground leading-tight mb-3 ${measure}`}>
-                {title}
-            </h2>
-            <div className="h-0.5 w-10 bg-border mb-4" />
-            {lede && <p className={`text-lg text-muted-foreground leading-relaxed mb-6 ${measure}`}>{lede}</p>}
-            {!lede && <div className="mb-6" />}
-            {children}
-        </section>
-    );
-}
-
-/** Strong "keep reading" beat — reserved for Hero -> 01 and 01 -> 02, the two
- * transitions into and within the page's major beats. */
-function ScrollConnector() {
-    return (
-        <div className="flex justify-center border-t border-border">
-            <ArrowDown className="w-4 h-4 text-muted-foreground/50 -mt-2 bg-background" />
-        </div>
-    );
-}
-
-/** Subtle boundary for every other section transition (02 through 08) — a plain
- * rule scoped to the reading column rather than a full-bleed line with an arrow,
- * so supporting beats don't each get the same "chapter break" treatment as 01/02. */
+/** Subtle boundary between numbered sections — a plain rule scoped to the
+ * reading column, so section breaks stay quiet rather than each reading as
+ * its own chapter-break event. */
 function SectionRule() {
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -134,11 +78,11 @@ function SectionRule() {
     );
 }
 
-/** New editorial section pattern being rolled out section by section: a mono
- * numbered eyebrow, a larger display headline, a 40px ochre rule, one
+/** Shared editorial section pattern for every numbered beat of the article: a
+ * mono numbered eyebrow, a display headline, a 40px ochre rule, one
  * plain-language intro paragraph, the main visual, then a short
- * interpretation. Only Section 03 uses this today — the rest of the page
- * still uses NarrativeSection above until they're redone in turn. */
+ * interpretation. Alternates "cream"/"parchment" backgrounds across sections
+ * to establish rhythm without every section becoming a white card. */
 function EngineeringSection({ id, number, eyebrow, headline, intro, children, interpretation, tone = "cream" }: {
     id: string; number: string; eyebrow: string; headline: string; intro?: ReactNode; children: ReactNode;
     interpretation?: ReactNode; tone?: "cream" | "parchment";
@@ -223,14 +167,21 @@ export default function EngineeringView() {
                 </div>
             </section>
 
-            <ScrollConnector />
+            <SectionRule />
 
-            {/* 01 — THE SYSTEM. Hovering a service box pops its detail card open right
-                under it, so the diagram itself is the way into what each service owns. */}
-            <section id="system" className="scroll-mt-8">
-                <NarrativeSection index="01" label="The System" title="Four services, four ownership boundaries." wide>
-                    <SystemTopologyDiagram services={SERVICES} hovered={hoveredService} onHoverChange={setHoveredService} />
-                    <div className="mt-6 border-l-2 border-brand/40 pl-4">
+            {/* 01 — THE SYSTEM. Locked component below: SystemTopologyDiagram and its
+                surrounding DiagramScrollArea are untouched, including their
+                interactions, colors, and responsive behavior — hovering a service box
+                pops its detail card open right under it. Only the outer section chrome
+                (spacing, eyebrow/heading treatment) follows the shared pattern. */}
+            <EngineeringSection
+                id="system"
+                number="01"
+                eyebrow="The System"
+                headline="Four services, four ownership boundaries."
+                tone="parchment"
+                interpretation={
+                    <div className="border-l-2 border-brand/40 pl-4">
                         <span className="block text-[11px] font-medium tracking-wide uppercase text-brand-strong/80 mb-1">
                             Architectural Rule
                         </span>
@@ -238,25 +189,28 @@ export default function EngineeringView() {
                             A service may consume another service's events, but it never reaches into another service's schema.
                         </p>
                     </div>
-                </NarrativeSection>
-            </section>
+                }
+            >
+                <SystemTopologyDiagram services={SERVICES} hovered={hoveredService} onHoverChange={setHoveredService} />
+            </EngineeringSection>
 
-            <ScrollConnector />
+            <SectionRule />
 
             {/* 02 — THE ORDER */}
-            <NarrativeSection
-                index="02"
-                label="The Order"
-                title={'"Fire to Kitchen" starts the distributed workflow.'}
-                lede={<><code>OrderSubmitted</code> starts a MassTransit saga that asks Catalog to reserve inventory before fulfillment can proceed.</>}
-                wide
+            <EngineeringSection
+                id="order"
+                number="02"
+                eyebrow="The Order"
+                headline={'"Fire to Kitchen" starts the distributed workflow.'}
+                intro={<><code>OrderSubmitted</code> starts a MassTransit saga that asks Catalog to reserve inventory before fulfillment can proceed.</>}
+                interpretation={
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        The saga has one job: resolve inventory reservation to <code>Confirmed</code> or <code>Rejected</code>. Payment is not part of its state machine.
+                    </p>
+                }
             >
                 <OrderSagaDiagram />
-
-                <p className="mt-6 text-sm text-muted-foreground leading-relaxed">
-                    The saga has one job: resolve inventory reservation to <code>Confirmed</code> or <code>Rejected</code>. Payment is not part of its state machine.
-                </p>
-            </NarrativeSection>
+            </EngineeringSection>
 
             <SectionRule />
 
@@ -288,19 +242,20 @@ export default function EngineeringView() {
             <SectionRule />
 
             {/* 05 — TENANCY */}
-            <NarrativeSection
-                index="05"
-                label="Tenancy"
-                title="Tenant context travels with every request."
-                lede="Restaurant and location context is resolved once, then carried through application and messaging layers so data stays scoped to the correct tenant."
-                wide
-                weight="compact"
+            <EngineeringSection
+                id="tenancy"
+                number="05"
+                eyebrow="Tenancy"
+                headline="Tenant context travels with every request."
+                intro="Restaurant and location context is resolved once, then carried through application and messaging layers so data stays scoped to the correct tenant."
+                interpretation={
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        Nothing downstream re-derives the tenant. Every hop reads the same context the request arrived with.
+                    </p>
+                }
             >
                 <TenancyDiagram />
-                <p className="mt-6 text-sm text-muted-foreground leading-relaxed">
-                    Nothing downstream re-derives the tenant. Every hop reads the same context the request arrived with.
-                </p>
-            </NarrativeSection>
+            </EngineeringSection>
 
             <SectionRule />
 
