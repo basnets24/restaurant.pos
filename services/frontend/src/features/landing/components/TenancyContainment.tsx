@@ -1,22 +1,23 @@
 /** Section 05 (Tenancy) visual — nested containment rather than a linear flow
- * or a service network: Tenant contains Restaurant, which contains Location,
- * which contains the authenticated request, which resolves to tenant-scoped
- * service data. Matches TenantMiddleware.cs (Common.Library): an
- * authenticated caller's restaurant_id/location_id JWT claims (issued by
- * Identity) are authoritative whenever present, taking priority over
- * X-Restaurant-Id/X-Location-Id headers - "Identity establishes it, every
- * service enforces it" below is a direct read of that behavior, not a
- * simplification of something else. */
+ * or a service network. There is deliberately no separate "Tenant" box above
+ * "Restaurant": in this system a restaurant IS the tenant (root CLAUDE.md,
+ * Diner ordering section — "Restaurant/Location aren't ITenantEntity rows,
+ * they *are* the tenant"), so a wrapping level would just relabel the same
+ * thing twice and misrepresent the actual data model. The real containment
+ * is Restaurant -> Location -> your request -> the data you get back.
+ * Matches TenantMiddleware.cs (Common.Library): an authenticated caller's
+ * restaurant_id/location_id JWT claims (issued by Identity) are
+ * authoritative whenever present, taking priority over X-Restaurant-Id/
+ * X-Location-Id headers. */
 
 const LEVELS = [
-    { label: "Tenant", detail: "e.g. \"acme-bistro\"" },
-    { label: "Restaurant", detail: "one business, many locations" },
-    { label: "Location", detail: "e.g. \"sjc-01\"" },
-    { label: "Your request", detail: "who you are, from your login" },
-    { label: "What you get back", detail: "only this restaurant's data" },
+    { label: "Restaurant", detail: "the tenant itself — e.g. \"acme-bistro\"" },
+    { label: "Location", detail: "one of its locations — e.g. \"sjc-01\"" },
+    { label: "Your request", detail: "carries both, from your login" },
+    { label: "What you get back", detail: "only that restaurant + location's data" },
 ];
 
-const ARIA_LABEL = "Tenant contains Restaurant, which contains Location, which contains your request, which resolves to only that restaurant's data. Every service enforces this from the request's own login information.";
+const ARIA_LABEL = "Restaurant contains Location, which contains your request, which resolves to only that restaurant and location's data. Every service enforces this from the request's own login information.";
 
 export function TenancyContainment() {
     return (
