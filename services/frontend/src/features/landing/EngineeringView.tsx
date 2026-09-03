@@ -12,6 +12,7 @@ import {
     OrderSagaDiagram, ReadModelDiagram, TenancyDiagram,
 } from "@/features/landing/components/NarrativeDiagrams";
 import { PaymentWorkflowDiagram } from "@/features/landing/components/PaymentWorkflowDiagram";
+import { HeroReceipt } from "@/features/landing/components/HeroReceipt";
 import { OpsTraceTimeline } from "@/features/landing/components/OpsTraceTimeline";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -130,38 +131,44 @@ export default function EngineeringView() {
                         </Link>
                     </div>
 
-                    <div className="max-w-3xl">
-                        <span className="block text-xs font-medium tracking-wide uppercase text-muted-foreground mb-3">
-                            Engineering Spoontab
-                        </span>
-                        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-3">
-                            Behind the ticket.
-                        </h1>
-                        <div className="h-0.5 w-10 bg-border mb-5" />
-                        <p className="text-xl text-muted-foreground leading-relaxed mb-4">
-                            How Spoontab handles service boundaries, asynchronous fulfillment, tenant-scoped data, payment, and observability in a deployed restaurant system.
-                        </p>
-                        <p className="text-sm font-medium tracking-wide text-muted-foreground mb-8">
-                            Event-driven · Multi-tenant · Observable · Deployed
-                        </p>
-                        <div className="flex flex-wrap gap-4">
-                            <Button size="lg" asChild className="text-lg px-8 py-5 rounded-none shadow-md hover:shadow-lg transition-all duration-200">
-                                <a href="#system">
-                                    Read the architecture
-                                    <ArrowDown className="ml-2 h-5 w-5" />
-                                </a>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="lg"
-                                asChild
-                                className="text-lg px-8 py-5 rounded-none hover:bg-brand-strong hover:border-brand-strong hover:text-white transition-colors"
-                            >
-                                <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                                    View source
-                                    <ExternalLink className="ml-2 h-5 w-5" />
-                                </a>
-                            </Button>
+                    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center lg:gap-8">
+                        <div className="max-w-3xl">
+                            <span className="block text-xs font-medium tracking-wide uppercase text-muted-foreground mb-3">
+                                Engineering Spoontab
+                            </span>
+                            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-foreground leading-tight mb-3">
+                                Behind the ticket.
+                            </h1>
+                            <div className="h-0.5 w-10 bg-border mb-5" />
+                            <p className="text-xl text-muted-foreground leading-relaxed mb-4">
+                                How Spoontab handles service boundaries, asynchronous fulfillment, tenant-scoped data, payment, and observability in a deployed restaurant system.
+                            </p>
+                            <p className="text-sm font-medium tracking-wide text-muted-foreground mb-8">
+                                Event-driven · Multi-tenant · Observable · Deployed
+                            </p>
+                            <div className="flex flex-wrap gap-4">
+                                <Button size="lg" asChild className="text-lg px-8 py-5 rounded-none shadow-md hover:shadow-lg transition-all duration-200">
+                                    <a href="#system">
+                                        Read the architecture
+                                        <ArrowDown className="ml-2 h-5 w-5" />
+                                    </a>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    asChild
+                                    className="text-lg px-8 py-5 rounded-none hover:bg-brand-strong hover:border-brand-strong hover:text-white transition-colors"
+                                >
+                                    <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                                        View source
+                                        <ExternalLink className="ml-2 h-5 w-5" />
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <HeroReceipt />
                         </div>
                     </div>
                 </div>
