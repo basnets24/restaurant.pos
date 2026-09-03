@@ -27,6 +27,7 @@ import CancelView from "@/components/CancelView";
 // so deferring their JS is a real win rather than pure overhead.
 import LandingView from "@/features/landing/LandingView";
 import EngineeringView from "@/features/landing/EngineeringView";
+import { TourProvider } from "@/features/tour/TourProvider";
 
 // ---- Shared fallback ----
 const Fallback = () => <FullScreenLoader />;
@@ -221,6 +222,13 @@ export function AppRouter() {
   return (
     <Suspense fallback={<Fallback />}>
       <RouterProvider router={router} />
+      {/* Sibling of RouterProvider, not a route element - stays mounted across
+          every navigation the guided tour walks through (/home -> /pos/tables
+          -> /pos/table/:id/menu), instead of remounting (and losing step
+          state) each time ProtectedRoute swaps in a different page. Reads
+          location off the `router` singleton directly rather than
+          useLocation(), since it renders outside the router's own context. */}
+      <TourProvider />
     </Suspense>
   );
 }

@@ -119,7 +119,7 @@ export default function TablesPage() {
           </div>
         )}
 
-        <div className="absolute top-4 right-4 flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
+        <div data-tour="floor-canvas" className="absolute top-4 right-4 flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setView(v => ({ ...v, zoom: Math.max(0.35, +(v.zoom - 0.1).toFixed(2)) }))}>
             <ZoomOut className="h-4 w-4" />
           </Button>
@@ -277,9 +277,9 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
 
         <DialogFooter className="flex-row gap-2 mb-2">
           {table.status !== "occupied" ? (
-            <Button size="lg" className="flex-1" disabled={seat.isPending} onClick={onSeatParty}>Seat Party</Button>
+            <Button data-tour="seat-party-btn" size="lg" className="flex-1" disabled={seat.isPending} onClick={onSeatParty}>Seat Party</Button>
           ) : (
-            <Button size="lg" className="flex-1" onClick={onOpenOrder}>Open Order</Button>
+            <Button data-tour="seat-party-btn" size="lg" className="flex-1" onClick={onOpenOrder}>Open Order</Button>
           )}
         </DialogFooter>
       </DialogContent>

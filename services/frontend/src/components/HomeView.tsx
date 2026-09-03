@@ -157,16 +157,18 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     ];
 
     const workspaces = [
-        { icon: FloorsOrdersIcon, title: "Floor & Orders", description: "Take orders, process payments, and manage your restaurant floor", onClick: onSelectPOS },
+        { icon: FloorsOrdersIcon, title: "Floor & Orders", description: "Take orders, process payments, and manage your restaurant floor", onClick: onSelectPOS, tourId: "floor-orders-tile" },
         { icon: ManagementHubIcon, title: "Management Hub", description: "Analytics, staff management, inventory, and business insights", onClick: onSelectManagement },
     ];
 
     return (
         <div className="min-h-screen bg-background">
-            <AppHeader
-                title={restaurantName}
-                subtitle={locationLabel || undefined}
-            />
+            <div data-tour="app-header">
+                <AppHeader
+                    title={restaurantName}
+                    subtitle={locationLabel || undefined}
+                />
+            </div>
 
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 {/* Quick Stats */}
@@ -193,6 +195,7 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                         {workspaces.map((w, i) => (
                             <button
                                 key={w.title}
+                                data-tour={w.tourId}
                                 onClick={w.onClick}
                                 className={`group flex flex-1 items-center gap-5 px-5 py-6 text-left transition-colors hover:bg-secondary focus:outline-none focus-visible:bg-secondary ${i < workspaces.length - 1 ? "border-b border-border" : ""}`}
                             >

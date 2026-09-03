@@ -323,6 +323,7 @@ function OrderSidebarContent({
                         reserves inventory; payment happens later, separately, below. */}
                     <Button
                         type="button"
+                        data-tour="fire-btn"
                         variant={isFired ? "outline" : "default"}
                         disabled={isFired || firing || order.items.length === 0}
                         onClick={onFire}
@@ -344,6 +345,7 @@ function OrderSidebarContent({
                     </Button>
 
                     <Button
+                        data-tour="pay-btn"
                         onClick={onPay}
                         variant="outline"
                         className="w-full"
