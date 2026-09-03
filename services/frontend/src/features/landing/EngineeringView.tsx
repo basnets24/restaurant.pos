@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
     ArrowLeft, ArrowRight, ExternalLink, Users, UtensilsCrossed, ShoppingCart, CreditCard,
-    Layers, ShieldCheck, Activity, RotateCw, Zap, KeyRound, Repeat2, Link as LinkIcon,
+    Layers, ShieldCheck, Activity, RotateCw, Fingerprint, KeyRound, Repeat2, Link as LinkIcon,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
@@ -60,10 +60,10 @@ const OPS_PROOF = [
 ];
 
 const PAYMENT_ANNOTATIONS = [
-    { icon: KeyRound, text: "Server re-verifies with Stripe, never trusts the browser" },
-    { icon: Repeat2, text: "Idempotent PaymentRequested handling" },
+    { icon: KeyRound, text: "Webhook signature verification" },
+    { icon: Repeat2, text: "Idempotent event handling" },
     { icon: ShieldCheck, text: "Payment state owned by the Payment service" },
-    { icon: Zap, text: "Synchronous confirmation, no webhook" },
+    { icon: Fingerprint, text: "Duplicate webhook protection" },
 ];
 
 /** Small "#id" permalink that appears on hover/focus of its heading — an
@@ -228,7 +228,7 @@ export default function EngineeringView() {
                 <OrderWorkflowDiagram />
                 <AnnotationBar
                     rows={[
-                        { label: "Events", value: "OrderSubmitted · ReserveInventory · InventoryReserved · InventoryReserveFaulted" },
+                        { label: "Events", value: "OrderSubmitted · ReserveInventory · InventoryReserved · InventoryReserveFaulted · OrderConfirmed" },
                         { label: "Transport", value: "RabbitMQ" },
                         { label: "State", value: "MassTransit saga" },
                     ]}
@@ -256,7 +256,7 @@ export default function EngineeringView() {
                 number="03"
                 eyebrow="Payment"
                 headline="Payment completes outside the order saga."
-                intro="After fulfillment is confirmed, Spoontab requests payment, then verifies the result with Stripe once the browser confirms."
+                intro="After fulfillment is confirmed, Spoontab creates the payment request and waits for Stripe to report the outcome."
                 tone="parchment"
             >
                 <PaymentWorkflowDiagram />
@@ -268,7 +268,7 @@ export default function EngineeringView() {
                         </span>
                     ))}
                 </div>
-                <Callout>Spoontab verifies the outcome with Stripe, and records it exactly once.</Callout>
+                <Callout>Stripe reports the outcome. Spoontab records it exactly once.</Callout>
             </EngineeringSection>
 
             {/* 04 — TENANCY */}

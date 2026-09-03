@@ -204,8 +204,8 @@ export function OrderWorkflowDiagram() {
 export function PaymentWorkflowDiagram() {
     const stages = [
         { n: "1", label: "REQUEST", title: "Request", subtitle: "PaymentRequested" },
-        { n: "2", label: "CHECKOUT", title: "Checkout", subtitle: "Confirmed via Stripe PaymentElement" },
-        { n: "3", label: "VERIFY", title: "Verify", subtitle: "Re-checked with Stripe's API" },
+        { n: "2", label: "CHECKOUT", title: "Checkout", subtitle: "Stripe payment session" },
+        { n: "3", label: "VERIFY", title: "Verify", subtitle: "Signed webhook received" },
         { n: "4", label: "RECORD", title: "Record", subtitle: "PaymentSucceeded / Failed" },
     ];
     return (
@@ -213,7 +213,7 @@ export function PaymentWorkflowDiagram() {
             <svg
                 viewBox="0 0 940 220"
                 role="img"
-                aria-label="Payment is requested, the diner confirms it in-browser via Stripe's embedded PaymentElement, Spoontab verifies the result directly with Stripe's API (synchronously, not via a webhook), then records PaymentSucceeded or, on a muted failure path, PaymentFailed."
+                aria-label="Payment is requested, the diner checks out with Stripe, Spoontab verifies the signed webhook, then records PaymentSucceeded or, on a muted failure path, PaymentFailed."
                 className="hidden w-full min-w-[700px] sm:block"
             >
                 {arrowDefs("pay-d")}
@@ -238,7 +238,7 @@ export function PaymentWorkflowDiagram() {
             <svg
                 viewBox="0 0 340 620"
                 role="img"
-                aria-label="Payment is requested, the diner confirms it in-browser via Stripe's embedded PaymentElement, Spoontab verifies the result directly with Stripe's API (synchronously, not via a webhook), then records PaymentSucceeded or, on a muted failure path, PaymentFailed."
+                aria-label="Payment is requested, the diner checks out with Stripe, Spoontab verifies the signed webhook, then records PaymentSucceeded or, on a muted failure path, PaymentFailed."
                 className="w-full sm:hidden"
             >
                 {arrowDefs("pay-m")}
