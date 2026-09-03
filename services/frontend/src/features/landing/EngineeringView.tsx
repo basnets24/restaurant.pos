@@ -9,9 +9,10 @@ import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
 import { SystemTopologyDiagram } from "@/features/landing/components/SystemTopologyDiagram";
 import {
-    OrderSagaDiagram, ReadModelDiagram, TenancyDiagram,
+    OrderSagaDiagram, ReadModelDiagram,
 } from "@/features/landing/components/NarrativeDiagrams";
 import { PaymentWorkflowDiagram } from "@/features/landing/components/PaymentWorkflowDiagram";
+import { TenancyContainment } from "@/features/landing/components/TenancyContainment";
 import { HeroReceipt } from "@/features/landing/components/HeroReceipt";
 import { OpsTraceTimeline } from "@/features/landing/components/OpsTraceTimeline";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -261,7 +262,7 @@ export default function EngineeringView() {
                     </p>
                 }
             >
-                <TenancyDiagram />
+                <TenancyContainment />
             </EngineeringSection>
 
             <SectionRule />

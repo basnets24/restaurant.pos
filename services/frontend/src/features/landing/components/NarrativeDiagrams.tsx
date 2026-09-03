@@ -225,30 +225,3 @@ export function ReadModelDiagram() {
         </figure>
     );
 }
-
-/** 05 — deliberately abstracted above the middleware/bus-filter/EF-filter level:
- * HTTP headers and bus messages aren't one linear path, so a diagram naming both
- * in sequence reads as a wrong claim about how they connect. One resolved context,
- * carried through whichever layer is in play, is the actual shape of the claim. */
-export function TenancyDiagram() {
-    return (
-        <figure className="m-0 max-w-xs mx-auto">
-            <svg viewBox="0 0 500 380" role="img" aria-label="A request carrying restaurant and location resolves to one tenant context, which is carried through both the application and messaging layers to produce tenant-scoped data." className="w-full h-auto">
-                {defs}
-                <FlowBox x={110} y={10} w={280} h={64} title="REQUEST" subtitle="restaurant + location" tone="brand" />
-                <line x1={250} y1={74} x2={250} y2={104} stroke="var(--muted-foreground)" strokeWidth="1.5" markerEnd="url(#narr-arrow)" />
-
-                <FlowBox x={110} y={106} w={280} h={56} title="TENANT CONTEXT" />
-                <line x1={250} y1={162} x2={250} y2={192} stroke="var(--muted-foreground)" strokeWidth="1.5" markerEnd="url(#narr-arrow)" />
-
-                <FlowBox x={90} y={194} w={320} h={56} title="Application + Messaging" />
-                <line x1={250} y1={250} x2={250} y2={280} stroke="var(--muted-foreground)" strokeWidth="1.5" markerEnd="url(#narr-arrow)" />
-
-                <FlowBox x={110} y={282} w={280} h={64} title="SCOPED DATA" tone="brand" />
-            </svg>
-            <figcaption className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                Implemented through request middleware, MassTransit filters, and EF Core query filters.
-            </figcaption>
-        </figure>
-    );
-}
