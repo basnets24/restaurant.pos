@@ -158,7 +158,7 @@ export default function EngineeringView() {
                                     variant="outline"
                                     size="lg"
                                     asChild
-                                    className="text-lg px-8 py-5 rounded-none hover:bg-brand-strong hover:border-brand-strong hover:text-white transition-colors"
+                                    className="text-lg px-8 py-5 rounded-none border-2 border-fig-base text-fig-base hover:bg-fig-strong hover:border-fig-strong hover:text-white transition-colors"
                                 >
                                     <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                                         View source
