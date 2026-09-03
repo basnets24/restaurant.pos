@@ -131,18 +131,18 @@ function EngineeringSection({ id, number, eyebrow, headline, intro, children, in
     return (
         <section
             id={id}
-            className={`scroll-mt-16 py-14 sm:py-[72px] lg:py-24 ${tone === "parchment" ? "bg-[var(--surface-sunken)]/50" : "bg-background"}`}
+            className={`scroll-mt-16 py-8 sm:py-10 lg:py-12 ${tone === "parchment" ? "bg-[var(--surface-sunken)]/50" : "bg-background"}`}
         >
             <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-                <span className="mb-4 block font-mono text-[13px] uppercase tracking-[0.08em] text-brand-strong sm:text-sm">
+                <span className="mb-3 block font-mono text-[13px] uppercase tracking-[0.08em] text-brand-strong sm:text-sm">
                     {number} / {eyebrow}
                 </span>
                 <h2 className="max-w-3xl font-display text-[32px] leading-[1.1] text-foreground sm:text-[42px]">
                     {headline}
                 </h2>
-                <div className="mb-6 mt-4 h-[3px] w-10" style={{ background: "var(--ochre-500)" }} />
+                <div className="mb-4 mt-3 h-[3px] w-10" style={{ background: "var(--ochre-500)" }} />
                 {intro && (
-                    <p className="mb-9 max-w-[760px] text-[20px] leading-relaxed text-muted-foreground sm:text-[22px] sm:mb-10">
+                    <p className="mb-6 max-w-[760px] text-[20px] leading-relaxed text-muted-foreground sm:text-[22px]">
                         {intro}
                     </p>
                 )}
