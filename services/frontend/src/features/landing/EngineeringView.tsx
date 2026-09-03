@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
     ArrowLeft, ArrowRight, ArrowDown, ExternalLink, Home, Users, UtensilsCrossed, ShoppingCart, CreditCard,
-    TestTube, GitBranch, Server,
+    TestTube, GitBranch, Server, KeyRound, Repeat2, ShieldCheck, Zap,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
 import { SystemTopologyDiagram } from "@/features/landing/components/SystemTopologyDiagram";
 import {
-    OrderSagaDiagram, PaymentTriggerDiagram, ReadModelDiagram, TenancyDiagram,
+    OrderSagaDiagram, ReadModelDiagram, TenancyDiagram,
 } from "@/features/landing/components/NarrativeDiagrams";
+import { PaymentWorkflowDiagram, Callout } from "@/features/landing/components/PaymentWorkflowDiagram";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
@@ -34,6 +35,13 @@ const SERVICES = [
         icon: CreditCard, name: "Payment", tags: ["Stripe PaymentIntents"],
         description: "Stripe PaymentIntents and payment verification.",
     },
+];
+
+const PAYMENT_ANNOTATIONS = [
+    { icon: KeyRound, text: "Server re-verifies with Stripe, never trusts the browser" },
+    { icon: Repeat2, text: "Idempotent PaymentRequested handling" },
+    { icon: ShieldCheck, text: "Payment state owned by the Payment service" },
+    { icon: Zap, text: "Synchronous confirmation, no webhook" },
 ];
 
 const TRADEOFFS = [
@@ -115,6 +123,40 @@ function SectionRule() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="border-t border-border/60" />
         </div>
+    );
+}
+
+/** New editorial section pattern being rolled out section by section: a mono
+ * numbered eyebrow, a larger display headline, a 40px ochre rule, one
+ * plain-language intro paragraph, the main visual, then a short
+ * interpretation. Only Section 03 uses this today — the rest of the page
+ * still uses NarrativeSection above until they're redone in turn. */
+function EngineeringSection({ id, number, eyebrow, headline, intro, children, interpretation, tone = "cream" }: {
+    id: string; number: string; eyebrow: string; headline: string; intro?: ReactNode; children: ReactNode;
+    interpretation?: ReactNode; tone?: "cream" | "parchment";
+}) {
+    return (
+        <section
+            id={id}
+            className={`scroll-mt-16 py-14 sm:py-[72px] lg:py-24 ${tone === "parchment" ? "bg-[var(--surface-sunken)]/50" : "bg-background"}`}
+        >
+            <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <span className="mb-4 block font-mono text-[13px] uppercase tracking-[0.08em] text-brand-strong sm:text-sm">
+                    {number} / {eyebrow}
+                </span>
+                <h2 className="max-w-3xl font-display text-[32px] leading-[1.1] text-foreground sm:text-[42px]">
+                    {headline}
+                </h2>
+                <div className="mb-6 mt-4 h-[3px] w-10" style={{ background: "var(--ochre-500)" }} />
+                {intro && (
+                    <p className="mb-9 max-w-[760px] text-[20px] leading-relaxed text-muted-foreground sm:text-[22px] sm:mb-10">
+                        {intro}
+                    </p>
+                )}
+                {children}
+                {interpretation && <div className="mt-7 max-w-[760px] sm:mt-9">{interpretation}</div>}
+            </div>
+        </section>
     );
 }
 
@@ -211,16 +253,25 @@ export default function EngineeringView() {
             <SectionRule />
 
             {/* 03 — PAYMENT */}
-            <NarrativeSection
-                index="03"
-                label="Payment"
-                title="Payment stays outside the saga."
-                lede="Pickup requests payment automatically; dine-in waits until staff chooses Pay. Both use the same Payment service and Stripe flow."
-                wide
-                weight="compact"
+            <EngineeringSection
+                id="payment"
+                number="03"
+                eyebrow="Payment"
+                headline="Payment completes outside the order saga."
+                intro="After fulfillment is confirmed, Spoontab requests payment, then verifies the result with Stripe once the browser confirms."
+                tone="parchment"
             >
-                <PaymentTriggerDiagram />
-            </NarrativeSection>
+                <PaymentWorkflowDiagram />
+                <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3">
+                    {PAYMENT_ANNOTATIONS.map((a) => (
+                        <span key={a.text} className="inline-flex items-center gap-1.5 font-mono text-[12px] text-muted-foreground sm:text-[13px]">
+                            <a.icon className="h-3.5 w-3.5 text-brand-strong/70" aria-hidden="true" />
+                            {a.text}
+                        </span>
+                    ))}
+                </div>
+                <Callout>Spoontab verifies the outcome with Stripe, and records it exactly once.</Callout>
+            </EngineeringSection>
 
             <SectionRule />
 
