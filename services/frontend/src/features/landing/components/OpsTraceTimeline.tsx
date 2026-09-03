@@ -9,7 +9,7 @@ import { DiagramField } from "@/features/landing/components/DiagramField";
 import { dashVar } from "@/features/landing/components/dashVar";
 
 const HOPS = [
-    { label: "Frontend request", detail: "POST /carts/{id}/checkout" },
+    { label: "Frontend request", detail: "POST /checkout" },
     { label: "Order service", detail: "OrderSubmitted" },
     { label: "Event bus", detail: "RabbitMQ · MassTransit" },
     { label: "Catalog service", detail: "ReserveInventory" },
@@ -29,9 +29,9 @@ export function OpsTraceTimeline() {
 
             {/* Desktop / tablet: one horizontal rail. */}
             <svg viewBox="0 0 940 120" role="img" aria-label={ARIA_LABEL} className="hidden w-full min-w-[700px] sm:block">
-                <line className="connector-draw" style={dashVar(900)} x1={30} y1={40} x2={910} y2={40} stroke="var(--border-strong)" strokeWidth="1.5" />
+                <line className="connector-draw" style={dashVar(780)} x1={80} y1={40} x2={860} y2={40} stroke="var(--border-strong)" strokeWidth="1.5" />
                 {HOPS.map((hop, i) => {
-                    const x = 30 + i * (880 / (HOPS.length - 1));
+                    const x = 80 + i * (780 / (HOPS.length - 1));
                     return (
                         <g key={hop.label}>
                             <circle cx={x} cy={40} r="6" fill="var(--brand)" />
