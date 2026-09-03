@@ -4,6 +4,8 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Utensils, Settings } from "lucide-react";
 import { useCan } from "@/auth/permissions";
+import { useAuth } from "@/api-authorization/AuthProvider";
+import { isDemoProfile } from "@/auth/demoSession";
 import { User, Shield, Bell } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
@@ -39,6 +41,14 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
 
     const go = (to: string) => navigate(to);
     const canManageStaff = useCan("manageStaff");
+    const { profile } = useAuth();
+    // The public demo_admin session carries the same Admin/Manager roles as a
+    // real login (see auth/demoSession.ts), so role checks alone don't hide
+    // this - Admin is an org-settings/floor-plan/roles editor demo visitors
+    // shouldn't be able to reach. Route access is separately blocked via
+    // ProtectedRoute's blockDemo prop (app/router.tsx) in case someone
+    // navigates here directly instead of through this nav.
+    const showAdmin = canManageStaff && !isDemoProfile(profile);
 
     const coreTabs = TAB_LIST.filter(t => t.value !== "staff" || canManageStaff);
 
@@ -73,7 +83,7 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                             </TabsTrigger>
                         ))}
 
-                        {canManageStaff && (
+                        {showAdmin && (
                             <>
                                 <div className="h-px bg-border my-2 mx-1" />
                                 <TabsTrigger
@@ -95,7 +105,7 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
                     className="md:hidden w-full"
                 >
                     <TabsList className="w-full h-auto rounded-2xl p-1.5 flex items-center gap-1.5 bg-muted/50 overflow-x-auto">
-                        {(canManageStaff ? [...coreTabs, ADMIN_ITEM] : coreTabs).map(({ value, label, Icon }) => (
+                        {(showAdmin ? [...coreTabs, ADMIN_ITEM] : coreTabs).map(({ value, label, Icon }) => (
                             <TabsTrigger
                                 key={value}
                                 value={value}

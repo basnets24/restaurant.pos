@@ -141,7 +141,7 @@ export const router = createBrowserRouter([
       {
         path: "admin",
         element: (
-          <ProtectedRoute roles={["Admin", "Manager"]}>
+          <ProtectedRoute roles={["Admin", "Manager"]} blockDemo>
             <Suspense fallback={<Fallback />}><AdminTab /></Suspense>
           </ProtectedRoute>
         ),
