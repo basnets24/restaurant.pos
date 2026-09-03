@@ -113,9 +113,9 @@ function EventLabel({ x, y, text, tone = "brand" }: { x: number; y: number; text
 
 const STAGES = [
     { n: "1", label: "REQUEST", title: "Request", subtitle: "PaymentRequested" },
-    { n: "2", label: "CHECKOUT", title: "Checkout", subtitle: "Confirmed via Stripe PaymentElement" },
-    { n: "3", label: "VERIFY", title: "Verify", subtitle: "Re-checked with Stripe's API" },
-    { n: "4", label: "RECORD", title: "Record", subtitle: "PaymentSucceeded / Failed" },
+    { n: "2", label: "CHECKOUT", title: "Checkout", subtitle: "Confirmed in-browser" },
+    { n: "3", label: "VERIFY", title: "Verify", subtitle: "Verified with Stripe" },
+    { n: "4", label: "RECORD", title: "Record", subtitle: "Succeeded / Failed" },
 ];
 
 const ARIA_LABEL = "Payment is requested, the diner confirms it in-browser via Stripe's embedded PaymentElement, Spoontab verifies the result directly with Stripe's API (synchronously, not via a webhook), then records PaymentSucceeded or, on a muted failure path, PaymentFailed.";

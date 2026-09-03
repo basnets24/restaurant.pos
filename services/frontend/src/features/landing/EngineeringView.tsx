@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
     ArrowLeft, ArrowRight, ArrowDown, ExternalLink, Home, Users, UtensilsCrossed, ShoppingCart, CreditCard,
-    TestTube, GitBranch, Server, KeyRound, Repeat2, ShieldCheck, Zap,
+    TestTube, GitBranch, Server,
 } from "lucide-react";
 import { GithubIcon } from "@/components/brand-icons/github-icon";
 import { AppFooter } from "@/components/AppFooter";
@@ -12,7 +12,7 @@ import { SystemTopologyDiagram } from "@/features/landing/components/SystemTopol
 import {
     OrderSagaDiagram, ReadModelDiagram, TenancyDiagram,
 } from "@/features/landing/components/NarrativeDiagrams";
-import { PaymentWorkflowDiagram, Callout } from "@/features/landing/components/PaymentWorkflowDiagram";
+import { PaymentWorkflowDiagram } from "@/features/landing/components/PaymentWorkflowDiagram";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 const GITHUB_URL = "https://github.com/basnets24/restaurant.pos";
@@ -35,13 +35,6 @@ const SERVICES = [
         icon: CreditCard, name: "Payment", tags: ["Stripe PaymentIntents"],
         description: "Stripe PaymentIntents and payment verification.",
     },
-];
-
-const PAYMENT_ANNOTATIONS = [
-    { icon: KeyRound, text: "Server re-verifies with Stripe, never trusts the browser" },
-    { icon: Repeat2, text: "Idempotent PaymentRequested handling" },
-    { icon: ShieldCheck, text: "Payment state owned by the Payment service" },
-    { icon: Zap, text: "Synchronous confirmation, no webhook" },
 ];
 
 const TRADEOFFS = [
@@ -262,15 +255,6 @@ export default function EngineeringView() {
                 tone="parchment"
             >
                 <PaymentWorkflowDiagram />
-                <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3">
-                    {PAYMENT_ANNOTATIONS.map((a) => (
-                        <span key={a.text} className="inline-flex items-center gap-1.5 font-mono text-[12px] text-muted-foreground sm:text-[13px]">
-                            <a.icon className="h-3.5 w-3.5 text-brand-strong/70" aria-hidden="true" />
-                            {a.text}
-                        </span>
-                    ))}
-                </div>
-                <Callout>Spoontab verifies the outcome with Stripe, and records it exactly once.</Callout>
             </EngineeringSection>
 
             <SectionRule />
