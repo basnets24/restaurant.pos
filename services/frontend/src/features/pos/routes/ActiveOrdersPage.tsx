@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useActiveOrders, useCancelOrder, useMarkServed } from "@/domain/orders/hooks";
+import { isPickupOrder } from "@/domain/orders/utils";
 import { useTables } from "@/domain/tables/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,15 +77,16 @@ export default function ActiveOrdersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {active.map((o) => {
+            const pickup = isPickupOrder(o);
             const tableNumber = o.tableId ? tableNumberById.get(o.tableId) : undefined;
             return (
               <Card key={o.id} className="border-border">
                 <CardHeader className="py-3 flex-row items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
                     <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold font-numeric">
-                      {tableNumber || "?"}
+                      {pickup ? "P" : tableNumber || "?"}
                     </span>
-                    Table <span className="font-numeric">{tableNumber || o.tableId}</span>
+                    {pickup ? "Pickup" : <>Table <span className="font-numeric">{tableNumber || o.tableId}</span></>}
                   </CardTitle>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Timer className="h-3.5 w-3.5" /> {formatAge(o.createdAt)}
@@ -104,12 +106,11 @@ export default function ActiveOrdersPage() {
                     <Button
                       size="sm"
                       onClick={() => {
-                        if (!o.tableId) return;
-                        navigate(`/pos/table/${o.tableId}/menu`, { state: { cartId: o.id } });
+                        if (o.tableId) navigate(`/pos/table/${o.tableId}/menu`, { state: { cartId: o.id } });
+                        else navigate(`/pos/orders/${o.id}`);
                       }}
-                      disabled={!o.tableId}
                     >
-                      Resume
+                      {pickup ? "View" : "Resume"}
                     </Button>
                     <Button
                       size="sm"

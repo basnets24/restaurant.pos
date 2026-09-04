@@ -37,6 +37,20 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
             return;
         }
 
+        // A duplicate PaymentRequested (a retry click, the same order open in two places,
+        // a redelivered event) for an attempt that's still live and already has a
+        // ClientSecret must not invalidate it - a browser could be mid-confirmation with
+        // Stripe against exactly that ClientSecret right now. Re-announce the existing
+        // attempt instead of starting a new one out from under it; only Failed, or Pending
+        // with no ClientSecret yet (a previous attempt crashed before reaching Stripe),
+        // actually need a fresh attempt below.
+        if (existing != null && existing.Status == "Pending" && !string.IsNullOrWhiteSpace(existing.ClientSecret))
+        {
+            await context.Publish(new PaymentSessionCreated(
+                msg.CorrelationId, msg.OrderId, existing.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));
+            return;
+        }
+
         var attemptId = Guid.NewGuid();
         var payment = existing ?? new Payment
         {

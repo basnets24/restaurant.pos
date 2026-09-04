@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "@/auth/tenant";
 import { useOrders } from "@/domain/orders/hooks";
+import { isPickupOrder } from "@/domain/orders/utils";
 import { useTables } from "@/domain/tables/hooks";
 import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
 import type { TableViewDto } from "@/domain/tables/types";
@@ -72,6 +73,8 @@ export default function OrdersPage() {
             return;
         }
         if (o.tableId) navigate(`/pos/table/${o.tableId}/order?order=${encodeURIComponent(o.id)}`);
+        // Pickup order (no table) - same OrderPage, reached without a tableId param.
+        else navigate(`/pos/orders/${encodeURIComponent(o.id)}`);
     };
 
     return (
@@ -117,15 +120,16 @@ export default function OrdersPage() {
                     {shown.map((o) => {
                         const key = toStatusKey(o);
                         const s = ORDER_STATUS[key];
+                        const pickup = isPickupOrder(o);
                         const tbl = o.tableId ? tableMap.get(o.tableId) : undefined;
                         const tableNumber = tbl?.number ?? (o.tableId ? o.tableId.slice(0, 4) : "N/A");
                         const itemCount = o.items?.length ?? 0;
                         return (
                             <div key={o.id} className="flex items-center gap-3 px-1 py-2.5 border-b border-border">
-                                <span className="w-9 shrink-0 font-numeric text-sm text-muted-foreground truncate">{tableNumber}</span>
+                                <span className="w-9 shrink-0 font-numeric text-sm text-muted-foreground truncate">{pickup ? "—" : tableNumber}</span>
                                 <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium text-foreground truncate">
-                                        Table {tableNumber}
+                                        {pickup ? "Pickup" : `Table ${tableNumber}`}
                                         {tbl?.section ? ` · ${tbl.section}` : ""}
                                     </div>
                                     <div className="text-xs text-muted-foreground">

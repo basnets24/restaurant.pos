@@ -26,10 +26,17 @@ const TOUR_CARD_STYLE: React.CSSProperties = {
 
 export function TourTooltip({
     step,
+    duringModal,
     onNext,
     onSkip,
 }: {
     step: TourStep;
+    // A real modal (e.g. the payment dialog) is open and already dims the
+    // rest of the page with its own backdrop - the tour's own dimming
+    // overlay would stack on top of that and darken the modal's content too
+    // (it's never part of the spotlight cutout), so skip it in that case and
+    // show only the card, at full brightness like the modal itself.
+    duringModal?: boolean;
     onNext: () => void;
     onSkip: () => void;
 }) {
@@ -53,9 +60,14 @@ export function TourTooltip({
     // bottom-left is clear of both.
     return (
         <>
-            <TourOverlay target={step.target} />
+            {!duringModal && <TourOverlay target={step.target} />}
             {createPortal(
                 <div
+                    // Identifies this card to any Dialog's onPointerDownOutside
+                    // (e.g. CheckoutPaymentDialog) so a click here can be told
+                    // apart from a real outside click and not dismiss it - see
+                    // that component's own comment.
+                    data-tour-portal
                     className="pointer-events-auto fixed bottom-6 left-6 z-[100] w-80 rounded-xl p-5"
                     style={TOUR_CARD_STYLE}
                 >

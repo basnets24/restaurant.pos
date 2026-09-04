@@ -74,7 +74,54 @@ export function useGuidedTour(enabled: boolean) {
         return () => window.clearInterval(id);
     }, [step]);
 
+    // Watches for a step's own target disappearing again after having
+    // existed (regressIfTargetLost) - the targetReady effect above only
+    // ever waits for a target to *appear*, so without this a step whose
+    // precondition became false again (e.g. the cart emptied back out)
+    // would just sit there invisible instead of falling back to a step
+    // whose guidance still applies.
+    useEffect(() => {
+        if (!step?.regressIfTargetLost || !step.target) return;
+        const fallbackId = step.regressIfTargetLost;
+        const target = step.target;
+        let wasPresent = document.querySelector(target) != null;
+        const id = window.setInterval(() => {
+            const present = document.querySelector(target) != null;
+            if (wasPresent && !present) {
+                const idx = TOUR_STEPS.findIndex((s) => s.id === fallbackId);
+                if (idx !== -1) {
+                    setStepIndex(idx);
+                    window.clearInterval(id);
+                    return;
+                }
+            }
+            wasPresent = present;
+        }, 300);
+        return () => window.clearInterval(id);
+    }, [step]);
+
     const isOnStepRoute = step ? routeMatches(step.route, pathname) : false;
+
+    // Radix Dialog sets document.body's inline pointer-events to "none"
+    // while any of its modals is open (its own focus-trap/outside-click
+    // mechanism). Reused here as a cheap, generic "is a modal open right
+    // now" signal - the tour tooltip is a plain sibling portal, not part of
+    // any Dialog's own tree, so leaving it rendered on top of an open modal
+    // (a table's action dialog, the cancel/release confirmations) can
+    // register as an "outside click" and dismiss that modal out from under
+    // the visitor. Hiding the tooltip for as long as a modal is open
+    // sidesteps that by default - a step can opt back in via
+    // visibleDuringModal when its own modal has been made safe against this
+    // instead (see the "pay" step and CheckoutPaymentDialog's
+    // onPointerDownOutside).
+    const [modalOpen, setModalOpen] = useState(false);
+    useEffect(() => {
+        const check = () => setModalOpen(document.body.style.pointerEvents === "none");
+        check();
+        const observer = new MutationObserver(check);
+        observer.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+        return () => observer.disconnect();
+    }, []);
 
     const advance = useCallback(() => {
         setStepIndex((i) => Math.min(i + 1, TOUR_STEPS.length - 1));
@@ -132,13 +179,53 @@ export function useGuidedTour(enabled: boolean) {
         return () => document.removeEventListener("click", handler, { capture: true });
     }, [step, isOnStepRoute, targetReady, advance]);
 
+    // "condition" steps advance as soon as advanceCheck turns true, with no
+    // click of their own to hook - polled for the same reason targetReady
+    // above is (cheaper than wiring a dedicated observer per step, and the
+    // condition here is itself just DOM existence).
+    useEffect(() => {
+        if (!step || step.advanceOn !== "condition" || !step.advanceCheck || !isOnStepRoute) return;
+        const check = step.advanceCheck;
+        if (check()) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            advance();
+            return;
+        }
+        const id = window.setInterval(() => {
+            if (check()) {
+                advance();
+                window.clearInterval(id);
+            }
+        }, 300);
+        return () => window.clearInterval(id);
+    }, [step, isOnStepRoute, advance]);
+
+    // "event" steps advance on a real completion signal dispatched from
+    // outside the tour (e.g. Stripe confirming payment) rather than on the
+    // click that merely starts that async action - see tourSteps.ts's
+    // PAYMENT_SUCCEEDED_EVENT.
+    useEffect(() => {
+        if (!step || step.advanceOn !== "event" || !step.eventName) return;
+        const eventName = step.eventName;
+        const handler = () => advance();
+        window.addEventListener(eventName, handler);
+        return () => window.removeEventListener(eventName, handler);
+    }, [step, advance]);
+
+    const hiddenByModal = modalOpen && !step?.visibleDuringModal;
+
     return useMemo(
         () => ({
-            step: isOnStepRoute && targetReady ? step : null,
+            step: isOnStepRoute && targetReady && !hiddenByModal ? step : null,
+            // Told to TourTooltip so it can skip its own page-dimming overlay
+            // for a visibleDuringModal step - the modal already dims the rest
+            // of the page itself, and re-dimming on top of that would darken
+            // the modal's own content too (it isn't part of the cutout).
+            duringModal: modalOpen,
             isActive: enabled && !dismissed,
             next: advance,
             skip,
         }),
-        [step, isOnStepRoute, targetReady, enabled, dismissed, advance, skip]
+        [step, isOnStepRoute, targetReady, hiddenByModal, modalOpen, enabled, dismissed, advance, skip]
     );
 }

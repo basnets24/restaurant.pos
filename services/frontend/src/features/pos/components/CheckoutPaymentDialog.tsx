@@ -16,7 +16,7 @@ type CheckoutPaymentDialogProps = {
   /**
    * Side effects to run once payment is server-verified as succeeded (e.g.
    * releasing the table). The dialog stays open on a success confirmation
-   * card afterwards — dismissing it (or "Back to Tables") is what routes away.
+   * card afterwards — dismissing it (or "Back to Home") is what routes away.
    */
   onPaid: () => void;
 };
@@ -63,7 +63,20 @@ export function CheckoutPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto"
+        // The guided tour keeps its own corner card visible during this
+        // dialog (visibleDuringModal on the "pay" step) since its Stripe
+        // test-card guidance matters most while this is up - without this,
+        // a click on that card (a plain sibling portal, not part of this
+        // Dialog's tree) reads to Radix as a click outside this dialog and
+        // dismisses it. Every other outside click still dismisses normally.
+        onPointerDownOutside={(e) => {
+          if ((e.target as HTMLElement | null)?.closest("[data-tour-portal]")) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {done ? "Payment complete" : session ? "Card details" : "Payment"}
@@ -85,7 +98,7 @@ export function CheckoutPaymentDialog({
               )}
             </p>
             <Button className="w-full" size="lg" onClick={() => onOpenChange(false)}>
-              Back to Tables
+              Back to Home
             </Button>
           </div>
         ) : session ? (

@@ -22,13 +22,15 @@ import { useStore } from "@/stores";
 import { errorMessage } from "@/lib/apiErrors";
 
 export default function OrderPage() {
-  const { tableId = "" } = useParams<{ tableId: string }>();
+  // Present when reached as /pos/table/:tableId/order (dine-in). Absent when
+  // reached as /pos/orders/:orderId (pickup - no table to release/unlink).
+  const { tableId = "", orderId: orderIdParam } = useParams<{ tableId?: string; orderId?: string }>();
   const location = useLocation() as Location & { state?: { orderId?: string } };
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const store = useStore();
 
-  const orderId = location.state?.orderId ?? search.get("order") ?? "";
+  const orderId = location.state?.orderId ?? search.get("order") ?? orderIdParam ?? "";
 
   const { data: order, isLoading, refetch } = useOrder(orderId || undefined);
   const requestPayment = useRequestPayment();
@@ -84,10 +86,13 @@ export default function OrderPage() {
   async function handlePaymentSuccess() {
     setPaymentDialog(null);
     // Table-freeing logic - the guest has paid and is done, so this is the
-    // right moment to release the table, not at fire-time.
-    try { await unlinkOrder.mutateAsync(orderId); } catch (e) { console.warn("OrderPage: failed to unlink order from table", e); }
-    try { await setTableStatus.mutateAsync({ status: "available" }); } catch (e) { console.warn("OrderPage: failed to mark table available", e); }
-    store.clearTableSession(tableId);
+    // right moment to release the table, not at fire-time. A pickup order
+    // (reached via /pos/orders/:orderId, no tableId) never held a table.
+    if (tableId) {
+      try { await unlinkOrder.mutateAsync(orderId); } catch (e) { console.warn("OrderPage: failed to unlink order from table", e); }
+      try { await setTableStatus.mutateAsync({ status: "available" }); } catch (e) { console.warn("OrderPage: failed to mark table available", e); }
+      store.clearTableSession(tableId);
+    }
     await refetch();
     toast.success("Payment confirmed!");
   }
@@ -190,8 +195,8 @@ export default function OrderPage() {
                     {paying ? "Starting payment…" : "Pay Now"}
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => navigate(`/pos/table/${tableId}/menu`)}>
-                  Back to Menu
+                <Button variant="ghost" onClick={() => navigate(tableId ? `/pos/table/${tableId}/menu` : "/pos/orders")}>
+                  {tableId ? "Back to Menu" : "Back to Orders"}
                 </Button>
               </div>
             </>

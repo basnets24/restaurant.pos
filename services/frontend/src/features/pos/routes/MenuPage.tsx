@@ -22,6 +22,7 @@ import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
 import { OrderSidebar, type SidebarOrder, type SidebarTable } from "@/features/pos/components/OrderSideBar";
 import { CheckoutPaymentDialog } from "@/features/pos/components/CheckoutPaymentDialog";
+import { PAYMENT_SUCCEEDED_EVENT } from "@/features/tour/tourSteps";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import {
   useCreateCart,
@@ -109,6 +110,10 @@ export default function MenuPage() {
   const [firing, setFiring] = useState(false);
   // Once checked out, the placed order id drives the inline payment dialog.
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  // Distinguishes "dismissed after paying" (head back to the dashboard) from
+  // dismissing before paying (stay put - the unpaid order is still payable
+  // later from Orders, see onOpenChange below).
+  const [justPaid, setJustPaid] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -595,19 +600,30 @@ export default function MenuPage() {
           open
           orderId={paymentOrderId}
           onOpenChange={(o) => {
-            // Dismissing the dialog (Back to Tables, X, or before paying)
-            // leaves the menu screen. An unpaid placed order stays payable
-            // later from Orders; a paid one already released the table below.
+            // Dismissing before paying (X) just closes it and stays on this
+            // table's menu screen - the unpaid placed order stays payable
+            // later from Orders. Dismissing *after* paying (the success
+            // card's own "Back to Home") heads back to the dashboard
+            // instead, for every staff session, since there's nothing left
+            // to do at this table - it was already released below.
             if (!o) {
               setPaymentOrderId(null);
-              navigate("/pos/tables");
+              if (justPaid) navigate("/home");
             }
           }}
           onPaid={async () => {
+            // Set synchronously, before the awaits below - the success card's
+            // "Back to Home" is clickable the instant it renders, and can
+            // beat releaseTable()'s round trips if this waited on them too.
+            setJustPaid(true);
             // Payment confirmed — release the table; the dialog stays open on
             // its success card until the user dismisses it.
             await releaseTable();
             toast.success("Payment confirmed!");
+            // Harmless when no tour is listening — see tourSteps.ts's "pay"
+            // step, which waits for this rather than the earlier click that
+            // just opened this dialog.
+            window.dispatchEvent(new Event(PAYMENT_SUCCEEDED_EVENT));
           }}
         />
       )}

@@ -200,6 +200,9 @@ export const router = createBrowserRouter([
       { path: "tables", element: <Suspense fallback={<Fallback />}><TablesPage /></Suspense> },
       { path: "current", element: <Suspense fallback={<Fallback />}><ActiveOrdersPage /></Suspense> },
       { path: "orders", element: <Suspense fallback={<Fallback />}><OrdersPage /></Suspense> },
+      // Pickup orders have no table to nest under (see table/:tableId/order below) -
+      // this is the same OrderPage, reached without a tableId param.
+      { path: "orders/:orderId", element: <Suspense fallback={<Fallback />}><OrderPage /></Suspense> },
       {
         path: "table/:tableId",
         element: <Suspense fallback={<Fallback />}><TableRoute /></Suspense>,

@@ -10,9 +10,9 @@ import { TourTooltip } from "./TourTooltip";
 export function TourProvider() {
     const { profile } = useAuth();
     const enabled = isDemoProfile(profile);
-    const { step, next, skip } = useGuidedTour(enabled);
+    const { step, duringModal, next, skip } = useGuidedTour(enabled);
 
     if (!step) return null;
 
-    return <TourTooltip key={step.id} step={step} onNext={next} onSkip={skip} />;
+    return <TourTooltip key={step.id} step={step} duringModal={duringModal} onNext={next} onSkip={skip} />;
 }

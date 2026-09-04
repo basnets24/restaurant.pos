@@ -74,19 +74,31 @@ test.describe("Guided demo tour", () => {
     await page.waitForURL(/\/pos\/tables/, { timeout: 15000 });
 
     // Step 2 - "click any table" (see openAvailableTable for why this test
-    // still has to pick a specific, actually-available one). Advances the
-    // instant a table is clicked, opening the real TableActionDialog - no
-    // separate tour step narrates that dialog, its own Seat Party/Open
-    // Order labeling carries it.
+    // still has to pick a specific, actually-available one, and why it may
+    // click and close a few before finding it - advanceOn: "route-change"
+    // means none of that probing advances the tour early, only actually
+    // landing on a table's menu page does). No separate tour step narrates
+    // the TableActionDialog itself - its own Seat Party/Open Order labeling
+    // carries it.
+    await expect(page.getByText(stepCounter(2))).toBeVisible({ timeout: 15000 });
+    await openAvailableTable(page);
+    // TableActionDialog counts as a modal (useGuidedTour's modalOpen), so
+    // the tooltip is hidden while any dialog is open regardless of step -
+    // close without seating first, to confirm the click alone didn't
+    // silently advance past step 2 (advanceOn: "route-change" means only
+    // actually navigating into a menu does).
+    await page.getByRole("dialog").first().getByRole("button", { name: "Close" }).click();
     await expect(page.getByText(stepCounter(2))).toBeVisible({ timeout: 15000 });
     await openAvailableTable(page);
     await page.locator('[data-tour="seat-party-btn"]').click();
     await page.waitForURL(/\/pos\/table\/.+\/menu/, { timeout: 15000 });
 
-    // Step 3 - the menu grid, cart still empty.
+    // Step 3 - the menu grid, cart still empty. Advances on its own
+    // (advanceOn: "condition") once an item lands in the cart - no Next
+    // button on this step.
     await expect(page.getByText(stepCounter(3))).toBeVisible({ timeout: 15000 });
     await addRandomMenuItem(page);
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByText(stepCounter(3))).not.toBeVisible({ timeout: 15000 });
 
     // Step 4 (Fire to Kitchen) - openAvailableTable guarantees a fresh cart,
     // so this should always be reachable, but accept step 5 too: useGuidedTour
@@ -99,21 +111,46 @@ test.describe("Guided demo tour", () => {
       await expect(page.getByText(stepCounter(5))).toBeVisible({ timeout: 15000 });
     }
 
-    // Step 5 - Pay, now enabled since the order is fired either way.
+    // Step 5 - Pay. Opening the dialog no longer advances the tour by itself
+    // (advanceOn: "event") - the tooltip stays on step 5 and stays visible
+    // through the payment dialog (visibleDuringModal, since its test-card
+    // guidance matters most right here), without registering as an outside
+    // click that closes the dialog (CheckoutPaymentDialog's
+    // onPointerDownOutside ignores clicks on the tour's own portal).
     await page.locator('[data-tour="pay-btn"]').click();
+    await expect(page.getByRole("dialog", { name: "Payment" })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(stepCounter(5))).toBeVisible();
 
-    // Step 6 - closing card, no page anchor (Stripe's payment dialog opens
-    // underneath). "Done" both finishes the tour and dismisses it. Matched
-    // by text rather than getByRole("button", ...): Radix's payment Dialog
-    // applies aria-hidden to sibling DOM (this tooltip included, since it's
-    // a plain div rather than a coordinated Radix overlay) while it's open,
-    // which drops the button from the accessibility tree even though it's
-    // still visibly on top and mouse-clickable - a real, if narrow, a11y gap
-    // worth a follow-up, but getByText matches on raw DOM text and isn't
-    // affected by it.
-    await expect(page.getByText(stepCounter(6))).toBeVisible({ timeout: 15000 });
-    await page.getByText("Done", { exact: true }).click();
+    await page.setViewportSize({ width: 1280, height: 1600 });
+    await page.getByRole("button", { name: "Pay Now" }).click();
+
+    const stripeFrame = page.frameLocator(
+      'iframe[title="Secure payment input frame"][src*="accessory-target"]'
+    );
+    await stripeFrame.locator('[data-value="card"]').click();
+    await stripeFrame.locator('[name="number"]').fill("4242424242424242");
+    await stripeFrame.locator('[name="expiry"]').fill("12/34");
+    await stripeFrame.locator('[name="cvc"]').fill("123");
+    await stripeFrame.locator('[name="postalCode"]').fill("94103");
+    await page.getByRole("button", { name: "Pay now" }).click();
+
+    // Payment confirmed server-side - MenuPage dispatches the tour's
+    // PAYMENT_SUCCEEDED_EVENT here, advancing to step 6, but the tooltip
+    // stays hidden until the success card's own dialog is dismissed - and
+    // since it was a paid dismissal, MenuPage sends us back to /home too.
+    await expect(page.getByText("Payment complete")).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(stepCounter(6))).not.toBeVisible();
+    await page.getByRole("button", { name: "Back to Home" }).click();
+    await page.waitForURL(/\/home/, { timeout: 15000 });
+
+    // Step 6 - closing card, no page anchor, now on the dashboard the
+    // payment flow returned to. "Done" finishes and dismisses the tour
+    // without navigating anywhere further.
+    await expect(page.getByText(stepCounter(6))).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: "Done" })).toBeVisible();
+    await page.getByRole("button", { name: "Done" }).click();
+    await expect(page.getByText(stepCounter(6))).not.toBeVisible();
+    await expect(page).toHaveURL(/\/home/);
 
     await context.close();
   });
