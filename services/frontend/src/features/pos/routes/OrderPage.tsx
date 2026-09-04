@@ -43,7 +43,10 @@ export default function OrderPage() {
 
   const isPaid = !!order?.paidAt;
   const isRejected = order?.status === "Rejected";
-  const isCancellable = order?.status === "Pending";
+  // Once served the reserved ingredients were actually used - the server
+  // rejects cancelling a served order (would phantom-restock inventory), so
+  // don't offer the action here either.
+  const isCancellable = order?.status === "Pending" && !order?.servedAt;
 
   async function handlePayNow() {
     if (!orderId) return;

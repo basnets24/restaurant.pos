@@ -52,6 +52,7 @@ export interface OrderDto {
     paidAt?: string | null;
     lastPaymentError?: string | null;
     lastPaymentFailedAt?: string | null;
+    servedAt?: string | null;
 }
 
 export type { TenantHeaders } from "@/auth/tenantHeaders";

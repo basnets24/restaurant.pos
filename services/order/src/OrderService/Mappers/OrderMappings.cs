@@ -33,6 +33,7 @@ public static class OrderMappings
             PaidAt = order.PaidAt,
             LastPaymentError = order.LastPaymentError,
             LastPaymentFailedAt = order.LastPaymentFailedAt,
+            ServedAt = order.ServedAt,
         };
     }
 

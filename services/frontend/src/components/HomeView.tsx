@@ -22,10 +22,10 @@ import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provide
 import { useTenant } from "@/auth/tenant";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
-import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import { useNotifications, useMarkNotificationRead, useNotificationHub } from "@/domain/notifications";
 import type { NotificationType as ApiNotificationType } from "@/domain/notifications";
 import { useOrders } from "@/domain/orders/hooks";
+import { isActiveKitchenOrder } from "@/domain/orders/utils";
 import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
 
 export default function Home() {
@@ -123,8 +123,6 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     const { data: tablesData } = useDomainTables();
     const employee = useEmployeeDomain();
     const employees = employee.useEmployees(rid ?? "", { page: 1, pageSize: 1 }, { enabled: !!rid });
-    const kitchen = useKitchen();
-    const activeOrdersCount = kitchen.active().length;
 
     const orderTenant: TenantHeaders | undefined = useMemo(
         () => (rid ? { restaurantId: rid, locationId: lid ?? undefined } : undefined),
@@ -132,6 +130,8 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
     );
     const { data: ordersData } = useOrders(orderTenant);
     const orders = useMemo(() => (ordersData?.items ?? []) as OrderDto[], [ordersData]);
+    // Server-wide, not just orders this browser happens to have fired locally.
+    const activeOrdersCount = useMemo(() => orders.filter(isActiveKitchenOrder).length, [orders]);
 
     const stats = useMemo(() => {
         const list = tablesData ?? [];

@@ -51,5 +51,6 @@ public record OrderDto
     public DateTimeOffset? PaidAt { get; set; }
     public string? LastPaymentError { get; set; }
     public DateTimeOffset? LastPaymentFailedAt { get; set; }
+    public DateTimeOffset? ServedAt { get; set; }
 
 }

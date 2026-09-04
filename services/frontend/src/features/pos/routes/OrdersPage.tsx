@@ -7,24 +7,28 @@ import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
 import type { TableViewDto } from "@/domain/tables/types";
 import { ClipboardCheck } from "lucide-react";
 
-// Design's four order statuses. NOTE(backend): the order service currently only
-// emits "Pending" / "Paid" (+ Rejected) — it has no "Ready to Serve" or
-// "Served · Awaiting Payment" states yet. `toStatusKey` maps what exists today;
-// once the backend supports the richer kitchen→service lifecycle, extend it so
-// "ready" and "served" are produced too.
-type StatusKey = "fired" | "ready" | "served" | "paid";
+// Design's order statuses. NOTE(backend): no "Ready to Serve" state exists -
+// the kitchen has no "food's up, not yet delivered" signal distinct from
+// firing, so that status was dropped rather than left as dead/unreachable UI.
+// "Served · Awaiting Payment" is real: Order.ServedAt, set via the Active
+// Orders screen's "Served" action (see useMarkServed).
+type StatusKey = "fired" | "served" | "paid" | "cancelled";
 const ORDER_STATUS: Record<StatusKey, { label: string; dot: string; text: string }> = {
     fired: { label: "In Kitchen", dot: "bg-status-occupied", text: "text-status-occupied" },
-    ready: { label: "Ready to Serve", dot: "bg-status-reserved", text: "text-status-reserved" },
     served: { label: "Served · Awaiting Payment", dot: "bg-status-available", text: "text-status-available" },
     paid: { label: "Paid", dot: "bg-muted-foreground", text: "text-muted-foreground" },
+    cancelled: { label: "Cancelled", dot: "bg-destructive", text: "text-destructive" },
 };
 const ORDER_FILTERS = ["All", ...Object.values(ORDER_STATUS).map((s) => s.label)];
 
 function toStatusKey(o: OrderDto): StatusKey {
     const s = (o.status ?? "").toLowerCase();
     if (o.paidAt || s === "paid") return "paid";
-    // TODO(backend): no Ready/Served states yet — treat every unpaid order as In Kitchen.
+    // Cancelled/Rejected are both terminal "never going to be served" - void
+    // (staff cancelling a fired order) and reject (inventory reservation
+    // failed before firing even completed) read the same to a viewer here.
+    if (s === "cancelled" || s === "rejected") return "cancelled";
+    if (o.servedAt) return "served";
     return "fired";
 }
 
@@ -140,7 +144,7 @@ export default function OrdersPage() {
                                         onClick={() => openOrder(o)}
                                         className="text-sm font-semibold text-brand-strong hover:underline"
                                     >
-                                        {key === "paid" ? "View" : "Open"}
+                                        {key === "paid" || key === "cancelled" ? "View" : "Open"}
                                     </button>
                                 </span>
                             </div>

@@ -7,6 +7,8 @@ public interface IOrderService
 {
     Task MarkPaidAsync(Guid orderId, CancellationToken ct = default);
 
+    Task MarkServedAsync(Guid orderId, CancellationToken ct = default);
+
     /// <param name="reason">Why, in words the diner will read - it becomes the body of their
     /// cancellation notification. Null for an ordinary cancel, where the fact is the whole story;
     /// set by the sweep, where "your order was cancelled" without "because it went unpaid" would

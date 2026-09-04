@@ -8,6 +8,7 @@ import type { TableViewDto, TableStatus } from "@/domain/tables/types";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { SectionSigns, shapeRadiusClass, STATUS_STYLE, StatusLegend, countByStatus } from "@/components/floor-plan/floorVisuals";
 import { isAxiosError } from "@/lib/apiErrors";
+import { useStore } from "@/stores";
 
 const GRID = 20;
 
@@ -158,6 +159,7 @@ function TableMark({ t, onOpen }: { t: TableViewDto; onOpen: () => void }) {
 
 function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onClose: () => void }) {
   const navigate = useNavigate();
+  const store = useStore();
   const seat = useSeat(table?.id ?? "");
   const setStatus = useSetTableStatus(table?.id ?? "");
   const clear = useClear(table?.id ?? "");
@@ -203,6 +205,11 @@ function TableActionDialog({ table, onClose }: { table: TableViewDto | null; onC
   // them why, so skip straight to clearing.
   const onClearFromBlockedDialog = () => {
     clear.mutate();
+    // The cleared table's activeCartId is gone server-side, but a stale
+    // localStorage cartId for this table would otherwise survive on this
+    // device and get relinked to whatever cart the table gets seated with
+    // next, causing a spurious link-order 409 in MenuPage.
+    store.clearTableSession(table.id);
     setBlockedReason(null);
     onClose();
   };
