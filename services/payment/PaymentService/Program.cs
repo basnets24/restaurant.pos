@@ -12,6 +12,7 @@ using OpenTelemetry.Metrics;
 using PaymentService.Auth;
 using PaymentService.Data;
 using PaymentService.Entities;
+using PaymentService.Services;
 using PaymentService.Settings;
 using Serilog;
 using Stripe;
@@ -23,6 +24,7 @@ builder.Host.UseSerilog();
 builder.Services.AddTracing(builder.Configuration);
 builder.Services.AddMetrics(builder.Configuration);
 builder.Services.AddControllers();
+builder.Services.AddSingleton<IPaymentSessionNotifier, PaymentSessionNotifier>();
 
 // Bind options
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(nameof(StripeSettings)));

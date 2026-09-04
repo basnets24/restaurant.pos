@@ -3,6 +3,7 @@ using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
 using PaymentService.Entities;
+using PaymentService.Services;
 using Stripe;
 
 namespace PaymentService.Consumers;
@@ -13,17 +14,20 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
     private readonly ILogger<PaymentRequestedConsumer> _logger;
     private readonly ITenantContext _tenant;
     private readonly IStripeClient _stripeClient;
+    private readonly IPaymentSessionNotifier _notifier;
 
     public PaymentRequestedConsumer(
         ILogger<PaymentRequestedConsumer> logger,
         IRepository<Payment> repository,
         ITenantContext tenant,
-        IStripeClient stripeClient)
+        IStripeClient stripeClient,
+        IPaymentSessionNotifier notifier)
     {
         _logger = logger;
         _paymentsRepo = repository;
         _tenant = tenant;
         _stripeClient = stripeClient;
+        _notifier = notifier;
     }
 
     public async Task Consume(ConsumeContext<PaymentRequested> context)
@@ -48,6 +52,7 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         {
             await context.Publish(new PaymentSessionCreated(
                 msg.CorrelationId, msg.OrderId, existing.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));
+            _notifier.NotifyUpdated(msg.OrderId);
             return;
         }
 
@@ -125,5 +130,6 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
 
         await context.Publish(new PaymentSessionCreated(
             msg.CorrelationId, msg.OrderId, intent.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));
+        _notifier.NotifyUpdated(msg.OrderId);
     }
 }

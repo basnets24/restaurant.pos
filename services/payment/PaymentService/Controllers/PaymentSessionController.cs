@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Common.Library;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using PaymentService.Auth;
 using PaymentService.Entities;
 using PaymentService.Metrics;
+using PaymentService.Services;
 using Stripe;
 
 namespace PaymentService.Controllers;
@@ -18,16 +20,19 @@ public class PaymentSessionController : ControllerBase
     private readonly IPublishEndpoint _publish;
     private readonly IStripeClient _stripeClient;
     private readonly ILogger<PaymentSessionController> _logger;
+    private readonly IPaymentSessionNotifier _notifier;
 
     public PaymentSessionController(IRepository<Payment> payments,
         IPublishEndpoint publish,
         IStripeClient stripeClient,
-        ILogger<PaymentSessionController> logger)
+        ILogger<PaymentSessionController> logger,
+        IPaymentSessionNotifier notifier)
     {
         _payments = payments;
         _publish = publish;
         _stripeClient = stripeClient;
         _logger = logger;
+        _notifier = notifier;
     }
 
     // GET orders/{orderId}/payment-session
@@ -54,6 +59,57 @@ public class PaymentSessionController : ControllerBase
             return StatusCode(202, new { clientSecret = (string?)null, status = "pending" });
 
         return Ok(new { clientSecret = payment.ClientSecret, attemptId = payment.AttemptId });
+    }
+
+    // GET orders/{orderId}/payment-session/stream — SSE alternative to polling
+    // GetPaymentSession above. Holds the connection open until PaymentRequestedConsumer
+    // signals a ClientSecret is ready (or the payment resolves as succeeded/failed
+    // elsewhere), emits one event, and closes. A single event is all a caller ever needs -
+    // this isn't a general status feed, just a wakeup for the one thing pollForClientSecret
+    // used to poll for. Frontend closes and reopens per attempt rather than this endpoint
+    // tracking retries itself - see PaymentSessionNotifier for why that's the simpler split.
+    [Authorize(Policy = PaymentPolicyExtensions.Read)]
+    [HttpGet("{orderId:guid}/payment-session/stream")]
+    public async Task StreamPaymentSession([FromRoute] Guid orderId, CancellationToken ct)
+    {
+        Response.Headers.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(15);
+        while (!ct.IsCancellationRequested)
+        {
+            var payment = await LoadForCallerAsync(orderId);
+            if (payment is not null)
+            {
+                var status = (payment.Status ?? "").Trim().ToLowerInvariant();
+                if (status is "succeeded" or "failed")
+                {
+                    // Resolved through some other path already - nothing to hand out, mirrors
+                    // pollForClientSecret returning null for a terminal status.
+                    return;
+                }
+                if (!string.IsNullOrWhiteSpace(payment.ClientSecret))
+                {
+                    await WriteEventAsync(new { clientSecret = payment.ClientSecret, attemptId = payment.AttemptId }, ct);
+                    return;
+                }
+            }
+
+            var remaining = deadline - DateTimeOffset.UtcNow;
+            if (remaining <= TimeSpan.Zero) return;
+
+            await _notifier.WaitForUpdateAsync(orderId, remaining, ct);
+            // Loop regardless of whether that returned true or timed out - either re-check
+            // finds the answer, or the deadline check above ends the stream next iteration.
+        }
+    }
+
+    private async Task WriteEventAsync(object payload, CancellationToken ct)
+    {
+        var json = JsonSerializer.Serialize(payload);
+        await Response.WriteAsync($"data: {json}\n\n", ct);
+        await Response.Body.FlushAsync(ct);
     }
 
     // POST orders/{orderId}/payment-confirm?attemptId=...

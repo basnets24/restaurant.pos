@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Check, CreditCard, Loader2 } from "lucide-react";
 import { useOrder, useRequestPayment } from "@/domain/orders/hooks";
-import { pollForClientSecret } from "@/domain/payments/api";
+import { waitForClientSecret } from "@/domain/payments/api";
 import { StripeElementsForm } from "./StripeCheckoutDialog";
 import { errorMessage } from "@/lib/apiErrors";
 
@@ -48,7 +48,7 @@ export function CheckoutPaymentDialog({
       // Kick off the saga's payment request, then poll for the PaymentIntent
       // client secret the payment service publishes back (same as OrderPage).
       await requestPayment.mutateAsync(orderId);
-      const s = await pollForClientSecret(orderId, 12_000, 600);
+      const s = await waitForClientSecret(orderId);
       if (s) {
         setSession(s);
       } else {

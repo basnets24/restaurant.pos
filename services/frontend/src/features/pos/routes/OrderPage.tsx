@@ -15,7 +15,7 @@ import {
 import { Loader2, Receipt, CheckCircle2, AlertTriangle, MoreVertical, Ban } from "lucide-react";
 
 import { useOrder, useRequestPayment, useCancelOrder } from "@/domain/orders/hooks";
-import { pollForClientSecret } from "@/domain/payments/api";
+import { waitForClientSecret } from "@/domain/payments/api";
 import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
 import { useSetTableStatus, useUnlinkOrder } from "@/domain/tables/hooks";
 import { useStore } from "@/stores";
@@ -55,7 +55,7 @@ export default function OrderPage() {
     setPaying(true);
     try {
       await requestPayment.mutateAsync(orderId);
-      const session = await pollForClientSecret(orderId, 12_000, 600);
+      const session = await waitForClientSecret(orderId);
       if (session) {
         setPaymentDialog(session);
       } else {

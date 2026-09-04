@@ -50,26 +50,58 @@ export async function getPaymentClientSecret(
 
 export type PaymentSession = { clientSecret: string; attemptId: string };
 
-export async function pollForClientSecret(
+// Single SSE connection instead of polling getPaymentClientSecret every step ms - the backend
+// (PaymentSessionController.StreamPaymentSession) holds the request open and emits exactly one
+// event once PaymentRequestedConsumer's ClientSecret is ready, or closes with none if the
+// payment resolved (succeeded/failed) through some other path. Native EventSource can't carry
+// an Authorization header, hence the manual fetch + stream read below rather than that API.
+export async function waitForClientSecret(
   orderId: string,
-  ms = 6000,
-  step = 600,
+  timeoutMs = 15_000,
   opts?: { signal?: AbortSignal }
 ): Promise<PaymentSession | null> {
-  const start = Date.now();
-  while (Date.now() - start < ms) {
-    if (opts?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
-    try {
-      const { clientSecret, attemptId, status } = await getPaymentClientSecret(orderId, { signal: opts?.signal });
-      if (clientSecret && attemptId) return { clientSecret, attemptId };
-      const s = status?.toLowerCase();
-      if (s === "succeeded" || s === "failed") return null;
-    } catch (err: unknown) {
-      if (errorName(err) === "AbortError") throw err;
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => timeoutController.abort(), timeoutMs);
+  const onOuterAbort = () => timeoutController.abort();
+  opts?.signal?.addEventListener("abort", onOuterAbort);
+
+  try {
+    const url = `${ENV.PAYMENT_URL}/orders/${orderId}/payment-session/stream`;
+    const res = await fetch(url, { headers: await authHeaders(), signal: timeoutController.signal });
+    if (!res.ok || !res.body) return null;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) return null;
+      buffer += decoder.decode(value, { stream: true });
+
+      let sepIndex: number;
+      while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+        const rawEvent = buffer.slice(0, sepIndex);
+        buffer = buffer.slice(sepIndex + 2);
+        const dataLine = rawEvent.split("\n").find((l) => l.startsWith("data:"));
+        if (!dataLine) continue;
+        try {
+          const parsed = JSON.parse(dataLine.slice(5).trim()) as Partial<PaymentSession>;
+          if (parsed.clientSecret && parsed.attemptId) {
+            void reader.cancel().catch(() => { });
+            return { clientSecret: parsed.clientSecret, attemptId: parsed.attemptId };
+          }
+        } catch {
+          // Malformed/partial chunk - keep reading.
+        }
+      }
     }
-    await sleep(step, opts?.signal);
+  } catch (err: unknown) {
+    if (errorName(err) === "AbortError" && opts?.signal?.aborted) throw err;
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    opts?.signal?.removeEventListener("abort", onOuterAbort);
   }
-  return null;
 }
 
 // Called right after stripe.confirmCardPayment() resolves - asks the backend to
@@ -88,28 +120,4 @@ export async function confirmPayment(
     headers: await authHeaders(),
   });
   return data;
-}
-
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    let done = false;
-    const onResolve = () => {
-      if (done) return;
-      done = true;
-      if (signal) signal.removeEventListener("abort", onAbort);
-      resolve();
-    };
-    const onAbort = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      if (signal) signal.removeEventListener("abort", onAbort);
-      reject(new DOMException("Aborted", "AbortError"));
-    };
-    const timer = setTimeout(onResolve, ms);
-    if (signal) {
-      if (signal.aborted) return onAbort();
-      signal.addEventListener("abort", onAbort);
-    }
-  });
 }
