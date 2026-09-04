@@ -1,0 +1,135 @@
+{
+  "id": null,
+  "uid": "pos-overview",
+  "title": "Restaurant POS — Platform Overview",
+  "tags": ["pos"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    { "id": 100, "type": "row", "title": "Service Health", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+    {
+      "id": 1, "type": "stat", "title": "Identity",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "up{job=\"identity\"}", "legendFormat": "identity", "refId": "A" }],
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] }
+    },
+    {
+      "id": 2, "type": "stat", "title": "Catalog",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "up{job=\"catalog\"}", "legendFormat": "catalog", "refId": "A" }],
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] }
+    },
+    {
+      "id": 3, "type": "stat", "title": "Order",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "up{job=\"order\"}", "legendFormat": "order", "refId": "A" }],
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] }
+    },
+    {
+      "id": 4, "type": "stat", "title": "Payment",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "up{job=\"payment\"}", "legendFormat": "payment", "refId": "A" }],
+      "options": { "colorMode": "background", "graphMode": "none", "textMode": "value", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] }
+    },
+
+    { "id": 101, "type": "row", "title": "HTTP Traffic", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 } },
+    {
+      "id": 10, "type": "timeseries", "title": "Request rate by service",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(rate(http_server_duration_ms_count[5m])) by (job)", "legendFormat": "{{job}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Error rate (4xx/5xx) by service",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(rate(http_server_duration_ms_count{http_status_code=~\"4..|5..\"}[5m])) by (job)", "legendFormat": "{{job}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "drawStyle": "line", "fillOpacity": 10 }, "color": { "mode": "fixed", "fixedColor": "red" } }, "overrides": [] }
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "p95 request latency by service (ms)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_ms_bucket[5m])) by (job, le))", "legendFormat": "{{job}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+
+    { "id": 102, "type": "row", "title": "Order & Payment Activity", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 } },
+    {
+      "id": 20, "type": "stat", "title": "Orders Confirmed",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(orders_confirmed_total)", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] }
+    },
+    {
+      "id": 21, "type": "stat", "title": "Payments Succeeded",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(payments_succeeded_total)", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }, "overrides": [] }
+    },
+    {
+      "id": 22, "type": "stat", "title": "Payments Failed",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(payments_failed_total)", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "red" }] } }, "overrides": [] }
+    },
+    {
+      "id": 23, "type": "timeseries", "title": "Orders confirmed (rate)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(rate(orders_confirmed_total[5m]))", "legendFormat": "confirmed", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 24, "type": "timeseries", "title": "Payment outcomes (rate)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [
+        { "expr": "sum(rate(payments_succeeded_total[5m]))", "legendFormat": "succeeded", "refId": "A" },
+        { "expr": "sum(rate(payments_failed_total[5m]))", "legendFormat": "failed", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [{ "matcher": { "id": "byName", "options": "failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }, { "matcher": { "id": "byName", "options": "succeeded" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }] }
+    },
+
+    { "id": 103, "type": "row", "title": "Messaging (MassTransit)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 } },
+    {
+      "id": 30, "type": "timeseries", "title": "Consume rate by consumer",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "sum(rate(messaging_masstransit_consume_duration_ms_count[5m])) by (messaging_masstransit_consumer_type)", "legendFormat": "{{messaging_masstransit_consumer_type}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "ops", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 31, "type": "timeseries", "title": "Consume p95 duration by consumer (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(messaging_masstransit_consume_duration_ms_bucket[5m])) by (messaging_masstransit_consumer_type, le))", "legendFormat": "{{messaging_masstransit_consumer_type}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    },
+    {
+      "id": 32, "type": "timeseries", "title": "Active consumers in flight",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 44 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [{ "expr": "messaging_masstransit_consume_active_ea", "legendFormat": "{{messaging_masstransit_consumer_type}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] }
+    }
+  ]
+}

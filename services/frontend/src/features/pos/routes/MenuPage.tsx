@@ -32,6 +32,7 @@ import {
 } from "@/domain/cart";
 import type { CartDto } from "@/domain/cart";
 import { useStore } from "@/stores";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import { errorMessage, errorStatus, isAxiosError } from "@/lib/apiErrors";
 import type { MenuItem as POSMenuItem } from "@/types/pos";
 
@@ -105,8 +106,17 @@ export default function MenuPage() {
   const cartIdFromQuery = search.get("cartId") || undefined;
   const store = useStore();
 
+  // Below sm, the cart renders as a slide-over Sheet (see OrderSidebar)
+  // instead of the fixed panel that otherwise sits permanently over the
+  // menu grid - a fixed w-72 panel leaves no usable width for the grid on a
+  // phone-sized viewport. Read once per mount for the sidebarOpen default
+  // below: starting closed on mobile (opened on demand by adding an item,
+  // or the floating cart button) avoids popping a full-screen Sheet over
+  // the grid before the visitor has touched anything.
+  const isMobile = useIsMobileViewport();
+
   // Sidebar visibility
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => !isMobile);
   const [firing, setFiring] = useState(false);
   // Once checked out, the placed order id drives the inline payment dialog.
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
@@ -461,7 +471,7 @@ export default function MenuPage() {
   }, [blocker.state, blocker.location?.pathname, tableId]);
 
   return (
-    <div className="pr-[19rem] sm:pr-[19.5rem] lg:pr-[21.5rem] xl:pr-[25rem]"> {/* reserve space for fixed sidebar at every breakpoint it renders at (widths match OrderSidebar's own w-72/lg:w-80/xl:w-96 + right offset) */}
+    <div className="sm:pr-[19.5rem] lg:pr-[21.5rem] xl:pr-[25rem]"> {/* reserve space for the fixed sidebar at sm+ (widths match OrderSidebar's own w-72/lg:w-80/xl:w-96 + right offset) - below sm the cart is a Sheet overlay, not part of this flow, so no reserved space there */}
       <div className="flex min-h-[calc(100dvh-3.5rem)]">
         {/* Category icon rail (sm+) */}
         <aside
@@ -559,7 +569,7 @@ export default function MenuPage() {
         order={sidebarOrder}
         table={sidebarTable}
         isOpen={sidebarOpen}
-        isMobile={false}
+        isMobile={isMobile}
         onClose={() => setSidebarOpen(false)}
         onUpdateItem={handleUpdateItem}
         onRemoveItem={handleRemoveItem}

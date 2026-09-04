@@ -7,10 +7,16 @@ import { useAuth } from "../api-authorization/AuthProvider";
 import { AppHeader } from "@/components/AppHeader";
 import { CardGrid } from "@/components/primitives/CardGrid";
 import { StatCard } from "@/components/primitives/StatCard";
+import { Badge } from "@/components/ui/badge";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Icons (lucide-react)
 import {
-    ChevronRight,
+    ChevronRight, Bell,
     AlertTriangle, CalendarClock, UserPlus, CreditCard, Package, CheckCircle2, X,
     type LucideIcon,
 } from "lucide-react";
@@ -23,7 +29,7 @@ import { useTenant } from "@/auth/tenant";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useNotifications, useMarkNotificationRead, useNotificationHub } from "@/domain/notifications";
-import type { NotificationType as ApiNotificationType } from "@/domain/notifications";
+import type { NotificationType as ApiNotificationType, NotificationViewDto } from "@/domain/notifications";
 import { useOrders } from "@/domain/orders/hooks";
 import { isActiveKitchenOrder } from "@/domain/orders/utils";
 import type { OrderDto, TenantHeaders } from "@/domain/orders/types";
@@ -87,6 +93,95 @@ const NOTIFICATION_VARIANT: Record<ApiNotificationType, NotificationVariant> = {
 };
 
 const isPaid = (o: OrderDto) => !!o.paidAt || (o.status ?? "").toLowerCase() === "paid";
+
+// Shared between the desktop panel and the mobile header dropdown - same rows,
+// just a different container/header around them (see NotificationsCard and
+// NotificationsBell below).
+function NotificationRows({
+    notifications,
+    onMarkRead,
+}: {
+    notifications: NotificationViewDto[];
+    onMarkRead: (id: string) => void;
+}) {
+    if (notifications.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-2 px-5 py-9 text-center text-muted-foreground">
+                <CheckCircle2 className="w-6 h-6" />
+                <span className="text-sm">You're all caught up</span>
+            </div>
+        );
+    }
+    return (
+        <div className="flex flex-col overflow-y-auto">
+            {notifications.map((n) => {
+                const Icon = NOTIFICATION_ICON[n.type] ?? AlertTriangle;
+                const variant = NOTIFICATION_VARIANT[n.type] ?? "neutral";
+                return (
+                    <div
+                        key={n.id}
+                        className={`flex items-start gap-2.5 px-5 py-3 border-b border-border last:border-b-0 ${NOTIFICATION_ROW_BG[variant]}`}
+                    >
+                        <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${NOTIFICATION_ICON_COLOR[variant]}`} />
+                        <div className="flex-1 flex flex-col gap-0.5">
+                            <span className="text-sm text-foreground">{n.title}</span>
+                            <span className="text-xs text-muted-foreground">{formatRelativeTime(n.createdAt)}</span>
+                        </div>
+                        <button
+                            onClick={() => onMarkRead(n.id)}
+                            className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md hover:bg-secondary"
+                            aria-label="Dismiss"
+                        >
+                            <X className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// Mobile-only: the desktop panel (NotificationsCard below) has its own
+// standing spot in the page body, but that layout collapses to a single
+// column on mobile where it would just push Workspaces/everything else
+// further down. Folding it into the header instead - opened the same way
+// the account avatar's own menu opens - keeps it reachable without costing
+// page real estate. Rendered via AppHeader's rightExtra, hidden at sm+ where
+// the panel below takes over.
+function NotificationsBell({
+    notifications,
+    onMarkRead,
+}: {
+    notifications: NotificationViewDto[];
+    onMarkRead: (id: string) => void;
+}) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    className="relative w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:hidden"
+                    aria-label="Notifications"
+                >
+                    <Bell className="w-5 h-5" />
+                    {notifications.length > 0 && (
+                        <Badge
+                            variant="destructive"
+                            className="absolute -top-0.5 -right-0.5 h-4 min-w-4 flex items-center justify-center p-0 text-[10px]"
+                        >
+                            {notifications.length}
+                        </Badge>
+                    )}
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0 max-h-[60vh] overflow-hidden flex flex-col">
+                <div className="px-5 py-3.5 border-b border-border shrink-0">
+                    <span className="text-sm font-semibold text-foreground">Notifications</span>
+                </div>
+                <NotificationRows notifications={notifications} onMarkRead={onMarkRead} />
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 function formatRelativeTime(iso: string): string {
     const diffMs = Date.now() - new Date(iso).getTime();
@@ -167,12 +262,18 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                 <AppHeader
                     title={restaurantName}
                     subtitle={locationLabel || undefined}
+                    rightExtra={
+                        <NotificationsBell
+                            notifications={notifications}
+                            onMarkRead={(id) => markNotificationRead.mutate(id)}
+                        />
+                    }
                 />
             </div>
 
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
                 {/* Quick Stats */}
-                <CardGrid cols={{ base: 1, md: 4 }} gap="gap-4" className="mb-8">
+                <CardGrid cols={{ base: 2, md: 4 }} gap="gap-4" className="mb-8">
                     {quickStats.map((s, i) => (
                         <StatCard
                             key={i}
@@ -197,58 +298,28 @@ export function Dashboard({ onSelectPOS, onSelectManagement }: DashboardProps) {
                                 key={w.title}
                                 data-tour={w.tourId}
                                 onClick={w.onClick}
-                                className={`group flex flex-1 items-center gap-5 px-5 py-6 text-left transition-colors hover:bg-secondary focus:outline-none focus-visible:bg-secondary ${i < workspaces.length - 1 ? "border-b border-border" : ""}`}
+                                className={`group flex flex-1 items-center gap-3 sm:gap-5 px-5 py-4 sm:py-6 text-left transition-colors hover:bg-secondary focus:outline-none focus-visible:bg-secondary ${i < workspaces.length - 1 ? "border-b border-border" : ""}`}
                             >
-                                <div className="w-20 h-20 shrink-0 bg-brand-soft rounded-[18px] flex items-center justify-center">
-                                    <w.icon className="w-14 h-14" />
+                                <div className="w-12 h-12 sm:w-20 sm:h-20 shrink-0 bg-brand-soft rounded-[18px] flex items-center justify-center">
+                                    <w.icon className="w-8 h-8 sm:w-14 sm:h-14" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="mb-1 text-xl font-semibold text-foreground">{w.title}</h3>
-                                    <p className="text-sm text-muted-foreground">{w.description}</p>
+                                    <h3 className="text-base sm:text-xl font-semibold text-foreground sm:mb-1">{w.title}</h3>
+                                    {/* Supporting copy only earns its space once the row has room to
+                                        breathe - on mobile the title + chevron already say enough. */}
+                                    <p className="hidden sm:block text-sm text-muted-foreground">{w.description}</p>
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
                             </button>
                         ))}
                     </div>
 
-                    {/* Notifications */}
-                    <div className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[340px]">
+                    {/* Notifications - desktop/tablet only, see NotificationsBell for mobile */}
+                    <div className="hidden sm:flex bg-card border border-border rounded-2xl overflow-hidden flex-col max-h-[340px]">
                         <div className="px-5 py-3.5 border-b border-border">
                             <span className="text-sm font-semibold text-foreground">Notifications</span>
                         </div>
-
-                        {notifications.length === 0 ? (
-                            <div className="flex flex-col items-center gap-2 px-5 py-9 text-center text-muted-foreground">
-                                <CheckCircle2 className="w-6 h-6" />
-                                <span className="text-sm">You're all caught up</span>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col overflow-y-auto">
-                                {notifications.map((n) => {
-                                    const Icon = NOTIFICATION_ICON[n.type] ?? AlertTriangle;
-                                    const variant = NOTIFICATION_VARIANT[n.type] ?? "neutral";
-                                    return (
-                                        <div
-                                            key={n.id}
-                                            className={`flex items-start gap-2.5 px-5 py-3 border-b border-border last:border-b-0 ${NOTIFICATION_ROW_BG[variant]}`}
-                                        >
-                                            <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${NOTIFICATION_ICON_COLOR[variant]}`} />
-                                            <div className="flex-1 flex flex-col gap-0.5">
-                                                <span className="text-sm text-foreground">{n.title}</span>
-                                                <span className="text-xs text-muted-foreground">{formatRelativeTime(n.createdAt)}</span>
-                                            </div>
-                                            <button
-                                                onClick={() => markNotificationRead.mutate(n.id)}
-                                                className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md hover:bg-secondary"
-                                                aria-label="Dismiss"
-                                            >
-                                                <X className="w-3.5 h-3.5 text-muted-foreground" />
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                        <NotificationRows notifications={notifications} onMarkRead={(id) => markNotificationRead.mutate(id)} />
                     </div>
                 </div>
             </div>

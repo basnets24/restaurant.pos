@@ -89,7 +89,7 @@ export default function AccountPage() {
 
       {/* Profile (account + employee record — same underlying entity) */}
       <Card className="overflow-hidden py-0">
-        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 bg-brand-soft/40 py-5 border-b">
+        <CardHeader className="flex flex-col sm:flex-row items-start justify-between gap-4 space-y-0 bg-brand-soft/40 py-5 border-b">
           <div className="flex items-center gap-4 min-w-0">
             <div className="h-14 w-14 shrink-0 rounded-full bg-brand-soft text-brand-strong grid place-items-center text-lg font-semibold ring-1 ring-brand/20">
               {getInitials(headerName)}
@@ -102,7 +102,7 @@ export default function AccountPage() {
             </div>
           </div>
           {canAdmin && !isDemo && (
-            <Button variant="secondary" size="sm" className="shrink-0" onClick={onOpenEdit} disabled={!employeeDetail.data}>
+            <Button variant="secondary" size="sm" className="shrink-0 w-full sm:w-auto" onClick={onOpenEdit} disabled={!employeeDetail.data}>
               <PencilLine className="h-3.5 w-3.5" /> Edit Profile
             </Button>
           )}
@@ -125,7 +125,11 @@ export default function AccountPage() {
             <>
               <Separator />
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* One column below sm - a 2-up grid squeezed values like a
+                  full email address down to "admin@p…" on a phone-width
+                  card, which is worse than just giving each tile its own
+                  row. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InfoTile icon={Mail} label="Email" value={employeeDetail.data.email ?? "N/A"} />
                 <InfoTile icon={UserIcon} label="User Name" value={employeeDetail.data.userName ?? "N/A"} />
                 <InfoTile
@@ -158,9 +162,9 @@ export default function AccountPage() {
                 </div>
                 {locs.length > 0 && (
                   <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                       <Select value={selectedDefaultLoc} onValueChange={(v) => { setDefaultLocDraft(v); setDefaultLocError(undefined); }}>
-                        <SelectTrigger className="w-72">
+                        <SelectTrigger className="w-full sm:w-72">
                           <SelectValue placeholder="Change default location" />
                         </SelectTrigger>
                         <SelectContent>
@@ -171,6 +175,7 @@ export default function AccountPage() {
                       </Select>
                       <Button
                         size="sm"
+                        className="w-full sm:w-auto"
                         onClick={async () => {
                           if (!selectedDefaultLoc || selectedDefaultLoc === currentDefaultLocId) return;
                           setDefaultLocError(undefined);

@@ -134,15 +134,6 @@ export function AppHeader({
             </DropdownMenu>
           </div>
         </div>
-
-        {/* Mobile nav chip row */}
-        {nav && nav.length > 0 && (
-          <div className="md:hidden pt-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
-            {nav.map((item) => (
-              <NavChip key={item.label} {...item} />
-            ))}
-          </div>
-        )}
       </div>
     </header>
   );
@@ -167,25 +158,6 @@ function NavButton({ to, icon, label, badge, disabled, activeVariant = "soft" }:
               {badge}
             </Badge>
           )}
-        </Button>
-      )}
-    </NavLink>
-  );
-}
-
-/** Mobile chip */
-function NavChip({ to, label, disabled }: AppHeaderNavItem) {
-  return (
-    <NavLink to={to} className="shrink-0">
-      {({ isActive }) => (
-        <Button
-          type="button"
-          variant={isActive ? "default" : "outline"}
-          size="sm"
-          disabled={disabled}
-          className="rounded-full"
-        >
-          {label}
         </Button>
       )}
     </NavLink>

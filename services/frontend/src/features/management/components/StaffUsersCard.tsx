@@ -7,13 +7,12 @@ import { useRestaurantUserProfile } from "@/domain/restaurantUserProfile/Provide
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Users as UsersIcon } from "lucide-react";
 import { errorMessage } from "@/lib/apiErrors";
 
 export default function StaffUsersCard() {
@@ -47,38 +46,76 @@ export default function StaffUsersCard() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2"><UsersIcon className="h-5 w-5" /> Employees</CardTitle>
-          <CardDescription>Manage tenant employees</CardDescription>
-        </div>
-        <div className="flex gap-2">
+    // Borderless/flush on mobile - a card-around-a-card reads as visual
+    // clutter once the table below is already its own per-row cards there;
+    // sm+ keeps the standard bordered Card frame.
+    <Card className="border-0 bg-transparent rounded-none sm:border sm:bg-card sm:rounded-xl">
+      {/* No "Employees" / "Manage tenant employees" title block here - the
+          page-level "Staff Management" heading (StaffTab) already says the
+          same thing, stacking a third repeat of it right underneath was
+          just noise, worst on mobile once the card lost its own border. */}
+      <CardHeader className="px-0 sm:px-6">
+        {/* flex-wrap rather than a rigid single row - at tablet widths (the
+            management sidebar leaves less room than it looks like), forcing
+            every control onto one line pushed the whole row past the page
+            edge instead of the row itself scrolling, taking the entire
+            document with it (Add/Filter clipped, no way to reach them). */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Input
             placeholder="Search name/email/username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-64"
+            className="w-full sm:w-64"
           />
-          <Select
-            value={role ?? "all"}
-            onValueChange={(v) => setRole(v === "all" ? undefined : v)}
-          >
-            <SelectTrigger><SelectValue placeholder="All roles" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>  {/* ✅ non-empty */}
-              {rolesData.data?.map(r => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => { setPage(1); refetch(); }}>Filter</Button>
-          {canManage && <AddEmployeeButton rid={rid ?? ""} roles={rolesData.data ?? []} locations={locations ?? []} />}
+          <div className="flex flex-wrap gap-2">
+            <Select
+              value={role ?? "all"}
+              onValueChange={(v) => setRole(v === "all" ? undefined : v)}
+            >
+              <SelectTrigger className="flex-1 sm:w-auto"><SelectValue placeholder="All roles" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>  {/* ✅ non-empty */}
+                {rolesData.data?.map(r => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={() => { setPage(1); refetch(); }}>Filter</Button>
+            {canManage && <AddEmployeeButton rid={rid ?? ""} roles={rolesData.data ?? []} locations={locations ?? []} />}
+          </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="rounded-2xl border">
+      <CardContent className="px-0 sm:px-6 space-y-4">
+        {/* Mobile: one card per employee - a 3-column table has no room to
+            breathe below sm, columns were clipping off-screen instead of
+            wrapping. */}
+        <div className="sm:hidden rounded-2xl border divide-y divide-border">
+          {isLoading && <div className="p-4 text-sm text-muted-foreground">Loading…</div>}
+          {!isLoading && items.length === 0 && <div className="p-4 text-sm text-muted-foreground">No employees</div>}
+          {items.map((e) => (
+            <div key={e.userId} className="p-4 flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 shrink-0 rounded-full bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center">
+                  {(e.displayName || e.userName || "?").trim()[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{e.displayName || e.userName || "(no name)"}</div>
+                  <div className="text-xs opacity-70 truncate">{e.userName}</div>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground truncate">{e.email ?? "N/A"}</div>
+              {e.tenantRoles && e.tenantRoles.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {e.tenantRoles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* sm+: table */}
+        <div className="hidden sm:block rounded-2xl border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -121,9 +158,9 @@ export default function StaffUsersCard() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm opacity-70">{total.toLocaleString()} employees</div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Prev</Button>
             <div className="min-w-[6rem] text-center text-sm">Page {page} / {totalPages}</div>
             <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Next</Button>

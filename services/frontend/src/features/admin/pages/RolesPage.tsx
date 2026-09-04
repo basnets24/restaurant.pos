@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield } from "lucide-react";
 import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
 import { useState } from "react";
@@ -24,19 +23,20 @@ export default function RolesPage() {
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3"><Shield className="h-5 w-5" /><h2 className="text-lg font-semibold">Roles & Permissions</h2></div>
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-muted-foreground">{roles.data?.length ?? 0} roles</div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => (window.location.href = "/settings/account")}
-            title="Open Settings → Account"
-          >
-            Open Settings
-          </Button>
-        </div>
+      {/* No icon+"Roles & Permissions" title here - the AdminTab sub-nav tab
+          above already says that; a card-count and a settings shortcut are
+          the only parts of this header that add anything. */}
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm text-muted-foreground">{roles.data?.length ?? 0} roles</div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={() => (window.location.href = "/settings/account")}
+          title="Open Settings → Account"
+        >
+          Open Settings
+        </Button>
       </header>
       <div className="text-xs text-muted-foreground">Manage your personal account roles under Settings → Account. If the Settings menu is hidden in POS, use the button above.</div>
 
@@ -130,7 +130,7 @@ function RoleMembersModal({ roleName, onClose }: { roleName: string | null; onCl
               ))}
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm opacity-70">{total.toLocaleString()} employees</div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</Button>
