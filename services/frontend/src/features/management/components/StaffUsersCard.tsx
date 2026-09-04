@@ -55,14 +55,19 @@ export default function StaffUsersCard() {
           same thing, stacking a third repeat of it right underneath was
           just noise, worst on mobile once the card lost its own border. */}
       <CardHeader className="px-0 sm:px-6">
-        <div className="flex flex-col gap-2 sm:flex-row">
+        {/* flex-wrap rather than a rigid single row - at tablet widths (the
+            management sidebar leaves less room than it looks like), forcing
+            every control onto one line pushed the whole row past the page
+            edge instead of the row itself scrolling, taking the entire
+            document with it (Add/Filter clipped, no way to reach them). */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Input
             placeholder="Search name/email/username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full sm:w-64"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Select
               value={role ?? "all"}
               onValueChange={(v) => setRole(v === "all" ? undefined : v)}
