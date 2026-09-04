@@ -4,6 +4,7 @@ using IdentityService.Entities;
 using IdentityService.Features.Identity.Extensions;
 using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Shared.DTOs;
+using IdentityService.HostedServices;
 using Microsoft.AspNetCore.Identity;
 
 namespace IdentityService.Features.Identity.Services;
@@ -105,6 +106,16 @@ public class UserService : IUserService
         if (user is null)
         {
             throw new KeyNotFoundException($"User {userId} not found");
+        }
+
+        // Same guard as EmployeeService.UpdateEmployeeAsync (see its comment) - this is the
+        // global, non-tenant-scoped path to the same underlying ApplicationUser row, and a
+        // demo_admin token (roles + IdentityServerApi scopes) satisfies this endpoint's
+        // [Authorize(Roles = Roles.Admin)] just as easily as the tenant-scoped one.
+        var isSeededDemoAdmin = string.Equals(user.Email, DemoSeedHostedService.AdminEmail, StringComparison.OrdinalIgnoreCase);
+        if (isSeededDemoAdmin && (!string.IsNullOrWhiteSpace(dto.UserName) || !string.IsNullOrWhiteSpace(dto.Email)))
+        {
+            throw new InvalidOperationException("Cannot change the seeded demo admin's email or username");
         }
 
         if (!string.IsNullOrWhiteSpace(dto.UserName))

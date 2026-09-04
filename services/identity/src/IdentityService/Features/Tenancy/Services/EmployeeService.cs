@@ -5,6 +5,7 @@ using IdentityService.Features.Identity.Repositories;
 using IdentityService.Features.Shared.DTOs;
 using IdentityService.Features.Tenancy.DTOs;
 using IdentityService.Features.Tenancy.Repositories;
+using IdentityService.HostedServices;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Tenant.Domain;
@@ -188,6 +189,19 @@ public class EmployeeService : IEmployeeService
         if (user is null)
         {
             throw new KeyNotFoundException($"User {employeeId} not found");
+        }
+
+        // The demo admin is one shared, persistent seeded account reused by every "Explore
+        // staff demo" visitor - DemoAdminGrantValidator looks it up by this exact hardcoded
+        // email, so letting anyone holding a demo_admin token repoint that email or username
+        // would break the demo login for every visitor after them, not just their own
+        // session. The frontend already hides the edit UI for a demo session, but that's not
+        // enforcement - block it here too regardless of caller or client. DisplayName/
+        // AccessCode/etc. below are unaffected and still work for the demo account.
+        var isSeededDemoAdmin = string.Equals(user.Email, DemoSeedHostedService.AdminEmail, StringComparison.OrdinalIgnoreCase);
+        if (isSeededDemoAdmin && (!string.IsNullOrWhiteSpace(dto.UserName) || !string.IsNullOrWhiteSpace(dto.Email)))
+        {
+            throw new InvalidOperationException("Cannot change the seeded demo admin's email or username");
         }
 
         if (!string.IsNullOrWhiteSpace(dto.UserName))

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/api-authorization/AuthProvider";
+import { isDemoProfile } from "@/auth/demoSession";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { useTenant } from "@/auth/tenant";
 import { useEmployeeDomain } from "@/domain/employee/Provider";
@@ -41,6 +42,12 @@ export default function AccountPage() {
   const rawRoles = profile?.role;
   const tokenRoles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
   const canAdmin = status?.isAdmin || tokenRoles.includes("Owner") || tokenRoles.includes("Admin");
+  // The demo admin is one shared, persistent seeded account reused by every "Explore staff
+  // demo" visitor - DemoAdminGrantValidator looks it up by a hardcoded email, so a demo
+  // visitor changing that email or username here would break the demo login for everyone
+  // after them, not just their own session. Hide the only path to that edit instead of
+  // relying on a server-side check.
+  const isDemo = isDemoProfile(profile);
 
   // Edit employee modal state
   const [editOpen, setEditOpen] = useState(false);
@@ -94,7 +101,7 @@ export default function AccountPage() {
               </div>
             </div>
           </div>
-          {canAdmin && (
+          {canAdmin && !isDemo && (
             <Button variant="secondary" size="sm" className="shrink-0" onClick={onOpenEdit} disabled={!employeeDetail.data}>
               <PencilLine className="h-3.5 w-3.5" /> Edit Profile
             </Button>
