@@ -1,27 +1,8 @@
-import { useEffect, useState } from "react";
 import { useAuth } from "@/api-authorization/AuthProvider";
 import { isDemoProfile } from "@/auth/demoSession";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import { useGuidedTour } from "./useGuidedTour";
 import { TourTooltip } from "./TourTooltip";
-
-// Below Tailwind's `sm` breakpoint, OrderSideBar never switches into its own
-// mobile Sheet mode (MenuPage hardcodes isMobile={false}), so the fixed cart
-// panel it renders instead covers the entire menu grid - the tour's "tap a
-// menu item" step has nothing visible to point at or click. Gating the tour
-// out below that width sidesteps it rather than walking a visitor into a
-// step that can't be completed.
-const MOBILE_QUERY = "(max-width: 639px)";
-
-function useIsMobileViewport(): boolean {
-    const [isMobile, setIsMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
-    useEffect(() => {
-        const mql = window.matchMedia(MOBILE_QUERY);
-        const onChange = () => setIsMobile(mql.matches);
-        mql.addEventListener("change", onChange);
-        return () => mql.removeEventListener("change", onChange);
-    }, []);
-    return isMobile;
-}
 
 // Mounted once near the router root - no-ops entirely outside a demo_admin
 // session. Lives above route-level components so it survives every
@@ -29,6 +10,10 @@ function useIsMobileViewport(): boolean {
 // through, rather than being remounted (and losing step state) per route.
 export function TourProvider() {
     const { profile } = useAuth();
+    // Off on mobile by request - the multi-step walkthrough (tooltips pinned
+    // to fixed corners, spotlighting targets across a cramped layout) reads
+    // as more friction than help on a small screen even now that the POS
+    // pages it walks through are themselves mobile-friendly.
     const isMobile = useIsMobileViewport();
     const enabled = isDemoProfile(profile) && !isMobile;
     const { step, duringModal, next, skip } = useGuidedTour(enabled);

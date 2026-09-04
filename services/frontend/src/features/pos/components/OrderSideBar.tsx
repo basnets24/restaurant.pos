@@ -374,7 +374,8 @@ export function OrderSidebar(props: OrderSidebarProps) {
                     if (!open) props.onClose();
                 }}
             >
-                <SheetContent side="right" className="w-full sm:max-w-sm p-0">
+                {/* showClose=false - OrderSidebarContent's own header X already closes this (same onClose), so the Sheet's default corner close button would just duplicate it */}
+                <SheetContent side="right" className="w-full sm:max-w-sm p-0" showClose={false}>
                     <OrderSidebarContent {...props} />
                 </SheetContent>
             </Sheet>
