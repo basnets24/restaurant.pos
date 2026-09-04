@@ -97,7 +97,7 @@ export const TOUR_STEPS: TourStep[] = [
         // anywhere on the card" wouldn't reliably mean "added an item".
         target: ".menu-item-card",
         title: "Build the order",
-        body: "Tap any menu item to add it to the order — we'll move on as soon as something's in the cart.",
+        body: "Tap any menu item to add it to the order. We'll move on as soon as something's in the cart.",
         advanceOn: "condition",
         // Fire to Kitchen's own section only renders once the cart is
         // non-empty (see OrderSideBar) - reusing its target's existence as

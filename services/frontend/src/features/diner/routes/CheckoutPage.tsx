@@ -13,8 +13,10 @@ import {
   type DinerTenant,
 } from "@/domain/dinerOrders";
 
+import { DEMO_DINER_EMAIL } from "@/features/landing/demoCredentials";
 import { DinerHeader } from "../components/DinerHeader";
 import { DinerAuthDialog } from "../auth/DinerAuthDialog";
+import { DinerDemoStepBar } from "../components/DinerDemoStepBar";
 import { QuantityStepper } from "../components/ItemModifierDialog";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { useDinerCart } from "../cart/DinerCartProvider";
@@ -39,6 +41,7 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { cart, clear, remove, setQuantity } = useDinerCart();
   const { isSignedIn, session, getToken } = useDinerAuth();
+  const isDemoDiner = session?.email === DEMO_DINER_EMAIL;
   const [authOpen, setAuthOpen] = useState(false);
 
   const tenant: DinerTenant | null = cart
@@ -117,6 +120,8 @@ export default function CheckoutPage() {
       />
 
       <main className="mx-auto max-w-[640px] px-4 sm:px-8 py-6">
+        {isDemoDiner && <DinerDemoStepBar active={2} />}
+
         <h1 className="text-2xl font-semibold">Checkout</h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
           Pickup from {cart.restaurantName}
@@ -134,9 +139,9 @@ export default function CheckoutPage() {
                   {line.optionsLabel && (
                     <p className="text-[13px] text-muted-foreground">{line.optionsLabel}</p>
                   )}
-                  <p className="mt-1.5">
+                  <div className="mt-1.5">
                     <QuantityStepper value={line.quantity} onChange={(q) => setQuantity(line.key, q)} />
-                  </p>
+                  </div>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-2">
                   <span className="font-numeric text-sm">

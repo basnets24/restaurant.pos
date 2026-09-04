@@ -14,10 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { useDiscoveryListing } from "@/domain/discovery";
 import { usePublicMenu, type PublicMenuItemDto } from "@/domain/publicMenu";
+import { DEMO_DINER_EMAIL } from "@/features/landing/demoCredentials";
 
 import { DinerHeader } from "../components/DinerHeader";
 import { ItemModifierDialog, QuantityStepper } from "../components/ItemModifierDialog";
 import { DinerCartSheet } from "../components/DinerCartSheet";
+import { DinerDemoStepBar } from "../components/DinerDemoStepBar";
+import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { useDinerCart } from "../cart/DinerCartProvider";
 import { cartCount, defaultSelections, lineKey, type DinerCartSelection } from "../cart/dinerCartTypes";
 import { money } from "../money";
@@ -27,6 +30,8 @@ import { getRestaurantBanner } from "../restaurantBanners";
 export default function RestaurantMenuPage() {
   const { restaurantId = "", locationId = "" } = useParams();
   const navigate = useNavigate();
+  const { session } = useDinerAuth();
+  const isDemoDiner = session?.email === DEMO_DINER_EMAIL;
 
   const { data: listing } = useDiscoveryListing(restaurantId, locationId);
   useDocumentTitle(`${listing?.restaurantName ?? "Menu"} · Spoontab`);
@@ -106,6 +111,8 @@ export default function RestaurantMenuPage() {
       )}
 
       <main className="mx-auto max-w-[900px] md:max-w-[1100px] px-4 sm:px-8 py-6">
+        {isDemoDiner && <DinerDemoStepBar active={2} />}
+
         <div className="mb-6">
           <h1 className="text-2xl font-semibold">{listing?.restaurantName ?? "Menu"}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -166,7 +173,7 @@ export default function RestaurantMenuPage() {
 
                         <div className="shrink-0 flex flex-col items-end gap-1">
                           {hasModifiers ? (
-                            <Button variant="outline" size="sm" onClick={() => setModifierItem(item)}>
+                            <Button size="sm" onClick={() => setModifierItem(item)}>
                               Customize
                             </Button>
                           ) : line ? (
@@ -176,7 +183,7 @@ export default function RestaurantMenuPage() {
                               min={0}
                             />
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => addSimple(item)}>
+                            <Button size="sm" onClick={() => addSimple(item)}>
                               Add
                             </Button>
                           )}

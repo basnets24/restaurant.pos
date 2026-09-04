@@ -14,16 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useCuisines, useDiscoveryListings } from "@/domain/discovery";
+import { useDiscoveryListings } from "@/domain/discovery";
 import type { DiscoveryListingDto, DiscoverySort } from "@/domain/discovery";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { DEMO_DINER_EMAIL } from "@/features/landing/demoCredentials";
 import { DinerHeader } from "../components/DinerHeader";
 import { DinerNotificationBell } from "../components/DinerNotificationBell";
 import { DinerAccountMenu } from "../components/DinerAccountMenu";
+import { DinerDemoStepBar } from "../components/DinerDemoStepBar";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { getRestaurantBanner } from "../restaurantBanners";
-
-const ALL_CUISINES = "__all__";
 
 const SORT_LABELS: Record<DiscoverySort, string> = {
   Recommended: "Recommended",
@@ -33,9 +33,9 @@ const SORT_LABELS: Record<DiscoverySort, string> = {
 
 export default function DiscoveryPage() {
   const navigate = useNavigate();
-  const { isSignedIn } = useDinerAuth();
+  const { isSignedIn, session } = useDinerAuth();
+  const isDemoDiner = session?.email === DEMO_DINER_EMAIL;
   const [search, setSearch] = useState("");
-  const [cuisine, setCuisine] = useState<string>(ALL_CUISINES);
   const [sort, setSort] = useState<DiscoverySort>("Recommended");
 
   // Debounced so the request fires once typing pauses, not on every keystroke - the input
@@ -45,14 +45,12 @@ export default function DiscoveryPage() {
   const query = useMemo(
     () => ({
       q: debouncedSearch.trim() || undefined,
-      cuisine: cuisine === ALL_CUISINES ? undefined : cuisine,
       sort,
     }),
-    [debouncedSearch, cuisine, sort]
+    [debouncedSearch, sort]
   );
 
   const { data: listings, isPending, isError, refetch } = useDiscoveryListings(query);
-  const { data: cuisines } = useCuisines();
 
   return (
     <>
@@ -73,7 +71,6 @@ export default function DiscoveryPage() {
                 aria-label="Search restaurants"
               />
             </div>
-            <CuisineSelect value={cuisine} onChange={setCuisine} cuisines={cuisines} />
           </div>
         }
         right={
@@ -93,21 +90,20 @@ export default function DiscoveryPage() {
       />
 
       <main className="mx-auto max-w-[1160px] px-4 sm:px-8 py-6">
+        {isDemoDiner && <DinerDemoStepBar active={1} />}
+
         {/* Search on its own full-width row below lg (covers iPad portrait, 768px) — the
             header has no room to share with it once the brand mark and account controls are
             in place. See the matching lg breakpoint on the header's center slot above. */}
-        <div className="lg:hidden flex items-center gap-2 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search restaurants"
-              className="pl-9"
-              aria-label="Search restaurants"
-            />
-          </div>
-          <CuisineSelect value={cuisine} onChange={setCuisine} cuisines={cuisines} />
+        <div className="lg:hidden relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search restaurants"
+            className="pl-9"
+            aria-label="Search restaurants"
+          />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -159,7 +155,7 @@ export default function DiscoveryPage() {
         ) : listings.length === 0 ? (
           <EmptyState
             title="No restaurants match your search"
-            hint="Try a different name, or clear the cuisine filter."
+            hint="Try a different name."
           />
         ) : (
           <div className="grid gap-5 grid-cols-1 min-[600px]:grid-cols-2 min-[900px]:grid-cols-3">
@@ -176,32 +172,6 @@ export default function DiscoveryPage() {
         )}
       </main>
     </>
-  );
-}
-
-function CuisineSelect({
-  value,
-  onChange,
-  cuisines,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  cuisines: string[] | undefined;
-}) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-[170px] shrink-0" aria-label="Filter by cuisine">
-        <SelectValue placeholder="All cuisines" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL_CUISINES}>All cuisines</SelectItem>
-        {(cuisines ?? []).map((c) => (
-          <SelectItem key={c} value={c}>
-            {c}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 
