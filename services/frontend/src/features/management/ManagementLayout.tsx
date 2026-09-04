@@ -1,9 +1,10 @@
 // src/features/management/ManagementLayout.tsx
-import { Suspense, type ComponentType } from "react";
+import { Suspense, useEffect, type ComponentType } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Utensils, Settings } from "lucide-react";
 import { useCan } from "@/auth/permissions";
+import { prefetchApiToken } from "@/auth/getApiToken";
 import { User } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
@@ -47,6 +48,18 @@ export default function ManagementLayout({ userData }: { userData?: RestaurantUs
     const showAdmin = canManageStaff;
 
     const coreTabs = TAB_LIST.filter(t => t.value !== "staff" || canManageStaff);
+
+    // Warm the tokens MenuTab/StaffTab will need as soon as this layout mounts - it renders
+    // before its lazy tab chunk finishes loading (see the inner Suspense below), so the
+    // signinSilent() round trip overlaps with that chunk fetch instead of only starting once
+    // the tab's own queries mount and ask for it themselves.
+    useEffect(() => {
+        prefetchApiToken("Catalog", ["menu.read"]);
+        if (canManageStaff) {
+            prefetchApiToken("IdentityServerApi", ["IdentityServerApi"]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div className="min-h-screen bg-background">

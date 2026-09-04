@@ -117,6 +117,17 @@ public class FinalOrderService : IOrderService
         }
     }
 
+    public async Task MarkServedAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
+        if (order.Status is OrderStatus.Cancelled or OrderStatus.Rejected)
+            throw new ConflictException("Order was cancelled and cannot be marked served.");
+        if (order.ServedAt is not null) return; // idempotent
+
+        order.ServedAt = DateTimeOffset.UtcNow;
+        await _orders.UpdateAsync(order);
+    }
+
     public async Task CancelAsync(Guid orderId, string? reason = null, CancellationToken ct = default)
     {
         var order = await _orders.GetAsync(orderId) ?? throw new KeyNotFoundException("Order not found");
@@ -126,6 +137,11 @@ public class FinalOrderService : IOrderService
             throw new ConflictException("Order was never fulfilled and cannot be cancelled.");
         if (order.Status == OrderStatus.Cancelled)
             return; // idempotent
+        // Once served, the reserved ingredients were actually used - releasing
+        // them back to stock here would phantom-restock inventory that's gone.
+        // A served-but-unpaid order needs a write-off/comp path, not this one.
+        if (order.ServedAt is not null)
+            throw new ConflictException("Order has already been served and cannot be voided.");
 
         order.Status = OrderStatus.Cancelled;
         order.CancelledAt = DateTimeOffset.UtcNow;

@@ -3,6 +3,7 @@ using System.Globalization;
 using Common.Library;                 // IRepository<T>
 using Common.Library.Tenancy;        // ITenantContext
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using OrderService.Dtos;
 using OrderService.Entities;         // DiningTable
 using OrderService.Exceptions;
@@ -132,14 +133,16 @@ public class DiningTableService : IDiningTableService
         var t = await _repo.GetAsync(id) ?? throw new KeyNotFoundException("Table not found.");
         if (t.Status == DiningTableStatus.Occupied && t.ActiveCartId is not null)
             throw new ConflictException($"Table {t.Number} is already occupied.");
+        if (dto.PartySize < 1 || dto.PartySize > t.Seats)
+            throw new BusinessRuleException($"Party size must be between 1 and {t.Seats} for table {t.Number}.");
 
-        t.Status = DiningTableStatus.Occupied;
-        t.PartySize = dto.PartySize;
-        await _repo.UpdateAsync(t);
-
-        // CartService.CreateAsync links the new cart as this table's ActiveCartId
-        // itself (shares this request's DbContext, so it sees the status/partySize
-        // write above rather than a stale copy).
+        // CartService.CreateAsync claims the table (status/partySize/ActiveCartId,
+        // version-checked) in the same write as linking the new cart - deliberately
+        // not split into a separate table write here first. That used to leave the
+        // table stuck Occupied with no cart if cart creation failed partway through,
+        // and let two concurrent seat attempts both pass the check above before
+        // either wrote. CreateAsync shares this request's DbContext/tracked instance,
+        // so `t` below reflects its write rather than a stale copy.
         var cart = await _cartService.CreateAsync(
             tableId: id, customerId: null, serverId: null, serverName: null, guestCount: dto.PartySize);
 
@@ -162,6 +165,8 @@ public class DiningTableService : IDiningTableService
         var normalized = DiningTableStatus.Normalize(dto.Status);
         if (normalized == DiningTableStatus.Occupied && dto.PartySize is null)
             throw new ArgumentException("partySize is required when status = occupied.");
+        if (normalized == DiningTableStatus.Occupied && (dto.PartySize < 1 || dto.PartySize > t.Seats))
+            throw new BusinessRuleException($"Party size must be between 1 and {t.Seats} for table {t.Number}.");
 
         // Any move away from Occupied detaches the table's order, whichever
         // status it's headed to (Available, Reserved, or Dirty) - so guard all
@@ -184,7 +189,15 @@ public class DiningTableService : IDiningTableService
         if (normalized != DiningTableStatus.Occupied)
             t.ActiveCartId = null; // released above (guarded when the cart still had items)
 
-        await _repo.UpdateAsync(t);
+        t.Version++;
+        try
+        {
+            await _repo.UpdateAsync(t);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException($"Table {t.Number} was modified concurrently - reload and try again.");
+        }
 
         await _hub.Clients.Group(GroupKey()).SendAsync("TableStatusChanged", new
         {
@@ -217,7 +230,14 @@ public class DiningTableService : IDiningTableService
         }
 
         t.ActiveCartId = cartId;
-        await _repo.UpdateAsync(t);
+        try
+        {
+            await _repo.UpdateAsync(t);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException($"Table {t.Number} was modified concurrently - reload and try again.");
+        }
 
         await _hub.Clients.Group(GroupKey())
             .SendAsync("OrderLinked", new { tableId = id, orderId = cartId }, ct);
@@ -240,7 +260,14 @@ public class DiningTableService : IDiningTableService
 
         var wasLinked = t.ActiveCartId == cartId;
         if (wasLinked) t.ActiveCartId = null;
-        await _repo.UpdateAsync(t);
+        try
+        {
+            await _repo.UpdateAsync(t);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException($"Table {t.Number} was modified concurrently - reload and try again.");
+        }
 
         await _hub.Clients.Group(GroupKey())
             .SendAsync("OrderUnlinked", new { tableId = id, orderId = cartId }, ct);
@@ -265,7 +292,15 @@ public class DiningTableService : IDiningTableService
         t.PartySize   = null;
         t.ActiveCartId = null;
 
-        await _repo.UpdateAsync(t);
+        t.Version++;
+        try
+        {
+            await _repo.UpdateAsync(t);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException($"Table {t.Number} was modified concurrently - reload and try again.");
+        }
 
         await _hub.Clients.Group(GroupKey()).SendAsync("TableStatusChanged", new
         {

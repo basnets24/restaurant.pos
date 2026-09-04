@@ -35,6 +35,7 @@ export function pickMessage(data: unknown): string | undefined {
   if (typeof data === "object") {
     const d = data as Record<string, unknown>;
     if (typeof d.message === "string") return d.message;
+    if (typeof d.detail === "string") return d.detail;
     if (Array.isArray(d.errors)) return d.errors.join(", ");
     if (d.title) return String(d.title);
   }

@@ -27,6 +27,7 @@ import CancelView from "@/components/CancelView";
 // so deferring their JS is a real win rather than pure overhead.
 import LandingView from "@/features/landing/LandingView";
 import EngineeringView from "@/features/landing/EngineeringView";
+import { TourProvider } from "@/features/tour/TourProvider";
 
 // ---- Shared fallback ----
 const Fallback = () => <FullScreenLoader />;
@@ -199,6 +200,9 @@ export const router = createBrowserRouter([
       { path: "tables", element: <Suspense fallback={<Fallback />}><TablesPage /></Suspense> },
       { path: "current", element: <Suspense fallback={<Fallback />}><ActiveOrdersPage /></Suspense> },
       { path: "orders", element: <Suspense fallback={<Fallback />}><OrdersPage /></Suspense> },
+      // Pickup orders have no table to nest under (see table/:tableId/order below) -
+      // this is the same OrderPage, reached without a tableId param.
+      { path: "orders/:orderId", element: <Suspense fallback={<Fallback />}><OrderPage /></Suspense> },
       {
         path: "table/:tableId",
         element: <Suspense fallback={<Fallback />}><TableRoute /></Suspense>,
@@ -221,6 +225,13 @@ export function AppRouter() {
   return (
     <Suspense fallback={<Fallback />}>
       <RouterProvider router={router} />
+      {/* Sibling of RouterProvider, not a route element - stays mounted across
+          every navigation the guided tour walks through (/home -> /pos/tables
+          -> /pos/table/:id/menu), instead of remounting (and losing step
+          state) each time ProtectedRoute swaps in a different page. Reads
+          location off the `router` singleton directly rather than
+          useLocation(), since it renders outside the router's own context. */}
+      <TourProvider />
     </Suspense>
   );
 }

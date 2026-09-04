@@ -52,9 +52,9 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
     };
 
     return (
-        <Card className={`menu-item-card h-full min-h-[260px] flex flex-col transition-all duration-200 border-border bg-card group ${unavailable ? "opacity-60" : "hover:shadow-lg"}`}>
+        <Card className={`menu-item-card h-full flex flex-col transition-all duration-200 border-border bg-card group ${unavailable ? "opacity-60" : "hover:shadow-lg"}`}>
             {/* Top: title + price, description */}
-            <CardContent className="p-5 sm:p-6 lg:p-7 flex-1">
+            <CardContent className="p-4 sm:p-5 flex-1">
                 <div
                     className={`flex items-start justify-between gap-3 mb-2 select-none ${unavailable ? "cursor-not-allowed" : "cursor-pointer"}`}
                     onClick={handleQuickAdd}
@@ -84,7 +84,7 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
             </CardContent>
 
             {/* Bottom: quantity + primary action + optional notes */}
-            <CardFooter className="p-5 sm:p-6 lg:p-7 pt-0 flex flex-col gap-3">
+            <CardFooter className="p-4 sm:p-5 pt-0 flex flex-col gap-2">
                 {/* Quantity controls */}
                 <div className="flex items-center justify-between w-full">
                     <span className="text-sm text-muted-foreground">Quantity</span>
@@ -117,8 +117,8 @@ export function MenuItemCard({ item, onAddToOrder }: MenuItemCardProps) {
                 <Button
                     onClick={handleAdd}
                     disabled={isLoading || unavailable}
-                    className="w-full shadow-sm hover:shadow-md transition-all duration-200 text-base py-5"
-                    size="lg"
+                    className="w-full shadow-sm hover:shadow-md transition-all duration-200 text-base"
+                    size="default"
                 >
                     {unavailable ? (
                         "Out of Stock"

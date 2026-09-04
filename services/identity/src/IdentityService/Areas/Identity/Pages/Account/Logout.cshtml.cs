@@ -29,6 +29,12 @@ public class LogoutModel : PageModel
     // out" message and stranded the browser here - it never signed the ASP.NET Identity
     // cookie out and never continued back to the client's post_logout_redirect_uri, so the
     // SPA's own logout-callback page was never reached.
+    // Set only when OnGet falls through to Page() below - lets the shared _BrandLayout
+    // link its brand mark back to the frontend for a visitor stranded on this page
+    // (no id_token_hint context, or ShowSignoutPrompt true), without turning that mark
+    // into a link on every other Identity page (Login/Register) that reuses the layout.
+    public string? HomeUrl { get; private set; }
+
     public async Task<IActionResult> OnGet(string? logoutId = null)
     {
         if (User.Identity?.IsAuthenticated == true)
@@ -52,7 +58,19 @@ public class LogoutModel : PageModel
             return Redirect(context.PostLogoutRedirectUri);
         }
 
+        HomeUrl = GetFrontendFallbackUrl();
         return Page();
+    }
+
+    // Same lookup OnPost's own fallback uses below - by ClientId, not array position, so it
+    // doesn't break silently if "frontend"'s config position changes.
+    private string? GetFrontendFallbackUrl()
+    {
+        var settings = _config.GetSection("IdentityServerSettings").Get<IdentityServerSettings>();
+        return settings?.Clients
+            .FirstOrDefault(c => c.ClientId == "frontend")?
+            .PostLogoutRedirectUris?
+            .FirstOrDefault();
     }
 
     public async Task<IActionResult> OnPost(string? returnUrl = null)
@@ -67,8 +85,6 @@ public class LogoutModel : PageModel
         await _signInManager.SignOutAsync();
         _logger.LogInformation("User logged out.");
 
-        var settings = _config.GetSection("IdentityServerSettings").Get<IdentityServerSettings>();
-
         if (!string.IsNullOrWhiteSpace(returnUrl))
         {
             // Allow local URLs
@@ -76,6 +92,7 @@ public class LogoutModel : PageModel
                 return LocalRedirect(returnUrl);
 
             // Allow absolute URLs that match configured PostLogoutRedirectUris
+            var settings = _config.GetSection("IdentityServerSettings").Get<IdentityServerSettings>();
             var allowed = settings?.Clients
                 .SelectMany(c => c.PostLogoutRedirectUris ?? Array.Empty<string>())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -87,10 +104,7 @@ public class LogoutModel : PageModel
         // Fallback to the "frontend" client's configured PostLogoutRedirectUri, looked up by
         // ClientId rather than array position - a positional "Clients:1:..." lookup broke
         // silently the moment a client got added/removed/reordered in config.
-        var fallback = settings?.Clients
-            .FirstOrDefault(c => c.ClientId == "frontend")?
-            .PostLogoutRedirectUris?
-            .FirstOrDefault();
+        var fallback = GetFrontendFallbackUrl();
         if (!string.IsNullOrEmpty(fallback))
             return Redirect(fallback);
 

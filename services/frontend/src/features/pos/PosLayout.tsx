@@ -1,17 +1,28 @@
+import { useEffect } from "react";
 import { Outlet, useParams } from "react-router-dom";
 import { useTenantInfo } from "@/app/TenantInfoProvider";
 import { PosHeader } from "@/features/pos/components/PosHeader";
-import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
+import { useActiveOrders } from "@/domain/orders/hooks";
 import { useFloorHub } from "@/domain/tables/realtime";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { prefetchApiToken } from "@/auth/getApiToken";
 
 export default function PosLayout() {
   useDocumentTitle("Point of Sale · Spoontab");
   const { restaurantName: nameFromTenant } = useTenantInfo();
   const restaurantName = nameFromTenant || "Restaurant POS";
   const { tableId } = useParams();
-  const kitchen = useKitchen();
-  const activeOrdersCount = kitchen.active().length;
+  // Server-wide active orders, not just what this terminal happens to have
+  // fired locally - see useIsFired for why the old local-only check was a bug.
+  // As a side effect this also warms the `order.read` token before TablesPage mounts.
+  const activeOrders = useActiveOrders().data;
+  const activeOrdersCount = activeOrders.length;
+
+  // TablesPage itself never needs `menu.read` - only opening a table's menu does - so warm it
+  // here as soon as the POS session starts instead of waiting for that navigation.
+  useEffect(() => {
+    prefetchApiToken("Catalog", ["menu.read"]);
+  }, []);
 
   // The connection itself is app-wide (FloorHubProvider, mounted once in
   // main.tsx for the whole login session) — this just subscribes to table
@@ -23,8 +34,11 @@ export default function PosLayout() {
     tables: "/pos/tables",
     menu: (() => {
       if (tableId) return `/pos/table/${tableId}/menu`;
-      const target = kitchen.defaultMenuTarget?.();
-      if (target) return `/pos/table/${target.tableId}/menu?cartId=${encodeURIComponent(target.cartId)}`;
+      // Order.Id === cartId (see FinalOrderService.FinalizeOrderAsync).
+      if (activeOrders.length === 1) {
+        const only = activeOrders[0];
+        if (only.tableId) return `/pos/table/${only.tableId}/menu?cartId=${encodeURIComponent(only.id)}`;
+      }
       return "/pos/tables";
     })(),
     // Swap: current = active (local KDS), orders = server history (TBD)

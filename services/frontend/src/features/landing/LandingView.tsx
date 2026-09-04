@@ -135,10 +135,14 @@ export default function LandingView() {
                     so it floats over the stacked image below, back to normal flow on lg
                     so it doesn't eat into the text column's vertical centering. */}
                 <div className="absolute inset-x-0 top-0 z-20 lg:relative lg:z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-6">
-                    <span className="inline-flex items-center gap-2.5">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/")}
+                        className="inline-flex items-center gap-2.5"
+                    >
                         <img src="/favicon.svg" alt="" className="h-8 w-8" />
                         <span className="font-display text-4xl text-white lg:text-foreground">Spoontab</span>
-                    </span>
+                    </button>
                     <Button
                         type="button"
                         variant="outline"

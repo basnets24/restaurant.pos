@@ -22,7 +22,7 @@ import {
     MoreVertical,
 } from "lucide-react";
 import { Flame, Check, Loader2, Ban } from "lucide-react";
-import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
+import { useIsFired } from "@/features/pos/kitchen/useIsFired";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props — deliberately narrower than the canonical domain Order/Table (types/pos):
@@ -193,7 +193,7 @@ function OrderSidebarContent({
                                  isCancellable,
                                  firing,
                              }: Omit<OrderSidebarProps, "isOpen" | "isMobile">) {
-    const kitchen = useKitchen();
+    const { isFired } = useIsFired(order?.id);
     if (!table) return null;
 
     // Prefer the server-computed estimate (real configured tax rate + any
@@ -210,7 +210,6 @@ function OrderSidebarContent({
     const total = order?.estimate?.grandTotal ?? subtotal;
 
     const itemCount = order?.items.reduce((n, it) => n + it.quantity, 0) ?? 0;
-    const isFired = order ? kitchen.isFired(order.id) : false;
 
     return (
         <div className="flex flex-col h-full">
@@ -323,6 +322,7 @@ function OrderSidebarContent({
                         reserves inventory; payment happens later, separately, below. */}
                     <Button
                         type="button"
+                        data-tour="fire-btn"
                         variant={isFired ? "outline" : "default"}
                         disabled={isFired || firing || order.items.length === 0}
                         onClick={onFire}
@@ -344,6 +344,7 @@ function OrderSidebarContent({
                     </Button>
 
                     <Button
+                        data-tour="pay-btn"
                         onClick={onPay}
                         variant="outline"
                         className="w-full"

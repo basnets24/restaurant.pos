@@ -3,6 +3,7 @@ using Common.Library.Tenancy;
 using MassTransit;
 using Messaging.Contracts.Events.Payment;
 using PaymentService.Entities;
+using PaymentService.Services;
 using Stripe;
 
 namespace PaymentService.Consumers;
@@ -13,17 +14,20 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
     private readonly ILogger<PaymentRequestedConsumer> _logger;
     private readonly ITenantContext _tenant;
     private readonly IStripeClient _stripeClient;
+    private readonly IPaymentSessionNotifier _notifier;
 
     public PaymentRequestedConsumer(
         ILogger<PaymentRequestedConsumer> logger,
         IRepository<Payment> repository,
         ITenantContext tenant,
-        IStripeClient stripeClient)
+        IStripeClient stripeClient,
+        IPaymentSessionNotifier notifier)
     {
         _logger = logger;
         _paymentsRepo = repository;
         _tenant = tenant;
         _stripeClient = stripeClient;
+        _notifier = notifier;
     }
 
     public async Task Consume(ConsumeContext<PaymentRequested> context)
@@ -34,6 +38,21 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
         if (existing != null && existing.Status == "Succeeded")
         {
             _logger.LogWarning("Payment has already succeeded for Order {OrderId}. Ignoring. ", msg.OrderId);
+            return;
+        }
+
+        // A duplicate PaymentRequested (a retry click, the same order open in two places,
+        // a redelivered event) for an attempt that's still live and already has a
+        // ClientSecret must not invalidate it - a browser could be mid-confirmation with
+        // Stripe against exactly that ClientSecret right now. Re-announce the existing
+        // attempt instead of starting a new one out from under it; only Failed, or Pending
+        // with no ClientSecret yet (a previous attempt crashed before reaching Stripe),
+        // actually need a fresh attempt below.
+        if (existing != null && existing.Status == "Pending" && !string.IsNullOrWhiteSpace(existing.ClientSecret))
+        {
+            await context.Publish(new PaymentSessionCreated(
+                msg.CorrelationId, msg.OrderId, existing.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));
+            _notifier.NotifyUpdated(msg.OrderId);
             return;
         }
 
@@ -111,5 +130,6 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequested>
 
         await context.Publish(new PaymentSessionCreated(
             msg.CorrelationId, msg.OrderId, intent.ClientSecret!, _tenant.RestaurantId, _tenant.LocationId));
+        _notifier.NotifyUpdated(msg.OrderId);
     }
 }

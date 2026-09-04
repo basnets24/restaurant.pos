@@ -31,6 +31,9 @@ export interface OrderDto {
     serverId?: string | null;
     serverName?: string | null;
     guestCount?: number | null;
+    // "DineIn" | "Pickup" (OrderService.Entities.OrderTypes) - a Pickup order
+    // has no tableId by design, not as an error state. See isPickupOrder.
+    orderType?: string;
 
     items: OrderItem[];
     status: OrderStatus;
@@ -52,6 +55,7 @@ export interface OrderDto {
     paidAt?: string | null;
     lastPaymentError?: string | null;
     lastPaymentFailedAt?: string | null;
+    servedAt?: string | null;
 }
 
 export type { TenantHeaders } from "@/auth/tenantHeaders";

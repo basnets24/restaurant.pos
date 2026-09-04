@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StripeCheckoutDialog } from "@/features/pos/components/StripeCheckoutDialog";
+import { DEMO_DINER_EMAIL } from "@/features/landing/demoCredentials";
 import {
   DinerOrderKeys,
   DinerOrders,
@@ -17,6 +18,7 @@ import {
 } from "@/domain/dinerOrders";
 
 import { DinerHeader } from "../components/DinerHeader";
+import { DinerDemoStepBar } from "../components/DinerDemoStepBar";
 import { useDinerAuth } from "../auth/DinerAuthProvider";
 import { useDinerLastTenant } from "../cart/lastTenant";
 import { money } from "../money";
@@ -27,7 +29,8 @@ const SETTLED = ["Paid", "Cancelled", "Rejected"];
 export default function OrderStatusPage() {
   const { orderId = "" } = useParams();
   const navigate = useNavigate();
-  const { isSignedIn, getToken } = useDinerAuth();
+  const { isSignedIn, session: dinerSession, getToken } = useDinerAuth();
+  const isDemoDiner = dinerSession?.email === DEMO_DINER_EMAIL;
   const tenant = useDinerLastTenant();
   const queryClient = useQueryClient();
 
@@ -57,21 +60,24 @@ export default function OrderStatusPage() {
   const paid = Boolean(order.data?.paidAt) || order.data?.status === "Paid";
   const dead = order.data?.status === "Cancelled" || order.data?.status === "Rejected";
 
-  const session = useQuery<DinerPaymentSession>({
+  const paymentSession = useQuery<DinerPaymentSession>({
     queryKey: DinerOrderKeys.paymentSession(orderId),
     queryFn: async () => {
       const token = await getToken();
       if (!token) throw new Error("Signed out");
-      return DinerOrders.paymentSession(token, tenant as DinerTenant, orderId);
+      return DinerOrders.waitForPaymentSession(token, tenant as DinerTenant, orderId);
     },
     enabled: Boolean(isSignedIn && orderId && tenant && order.data && !paid && !dead),
-    // The PaymentIntent is created off InventoryReserved, so it simply is not there for the
-    // first few seconds. Poll until the secret shows up, then stop - it does not change.
-    refetchInterval: (query) => (query.state.data?.clientSecret ? false : 5000),
+    // The PaymentIntent is created off InventoryReserved, so it simply is not there right away -
+    // waitForPaymentSession holds one SSE connection open for it instead of polling every few
+    // seconds. If that one attempt times out (still "pending") without the stream ever seeing the
+    // secret - e.g. the consumer restarted mid-attempt - retry with another open connection
+    // rather than giving up.
+    refetchInterval: (query) => (query.state.data?.clientSecret ? false : 15_000),
   });
 
-  const clientSecret = session.data?.clientSecret ?? null;
-  const attemptId = session.data?.attemptId ?? null;
+  const clientSecret = paymentSession.data?.clientSecret ?? null;
+  const attemptId = paymentSession.data?.attemptId ?? null;
 
   const cancel = useMutation({
     mutationFn: async () => {
@@ -113,6 +119,8 @@ export default function OrderStatusPage() {
       />
 
       <main className="mx-auto max-w-[640px] px-4 sm:px-8 py-6">
+        {isDemoDiner && <DinerDemoStepBar active={3} />}
+
         {order.isPending ? (
           <div className="h-40 rounded-lg bg-muted/40 animate-pulse" />
         ) : order.isError ? (
@@ -197,9 +205,17 @@ export default function OrderStatusPage() {
                   Confirming your payment…
                 </Button>
               ) : clientSecret ? (
-                <Button className="w-full" size="lg" onClick={() => setPayOpen(true)}>
-                  Pay {money(order.data.grandTotal)}
-                </Button>
+                <>
+                  {isDemoDiner && (
+                    <p className="mb-2 text-center text-[12px] text-muted-foreground">
+                      Demo purchase: use test card 4242 4242 4242 4242, any future expiry, any
+                      CVC, and any ZIP to see a real payment complete.
+                    </p>
+                  )}
+                  <Button className="w-full" size="lg" onClick={() => setPayOpen(true)}>
+                    Pay {money(order.data.grandTotal)}
+                  </Button>
+                </>
               ) : (
                 // Deliberately a disabled button rather than a spinner: the diner needs to see
                 // that paying is the next step and is coming, not wonder whether it's their move.

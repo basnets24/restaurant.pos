@@ -58,6 +58,13 @@ public class Order : IEntity, ITenantEntity
     public DateTimeOffset? LastPaymentFailedAt { get; set; }
 
     public DateTimeOffset? CancelledAt { get; set; }
+
+    // Kitchen "delivered to guest" marker - independent of payment, dine-in
+    // orders are routinely served before they're paid. No dedicated Status
+    // value for this: Status's terminal set (Paid/Cancelled/Rejected) is
+    // relied on elsewhere as exhaustive (see GuardNotCheckedOutAsync), and
+    // "served" isn't terminal.
+    public DateTimeOffset? ServedAt { get; set; }
 }
 
 /// <summary>Single source of truth for Order.Status values - previously hardcoded

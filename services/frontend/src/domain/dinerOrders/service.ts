@@ -93,27 +93,54 @@ export const DinerOrders = {
     });
   },
 
-  async paymentSession(
+  // SSE alternative to polling GET .../payment-session - see payments/api.ts's waitForClientSecret for why
+  // this is a manual fetch + stream read rather than the native EventSource API (no way to carry
+  // an Authorization header with it). Holds the connection open until PaymentRequestedConsumer's
+  // ClientSecret is ready, or up to timeoutMs, instead of a fixed-interval poll.
+  async waitForPaymentSession(
     token: string,
     tenant: DinerTenant,
-    orderId: string
+    orderId: string,
+    timeoutMs = 15_000
   ): Promise<DinerPaymentSession> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const { data } = await dinerHttp.get<DinerPaymentSession>(
-        DinerOrdersAPI.paymentSession(orderId),
-        { headers: headers(token, tenant) }
-      );
-      return data ?? { status: "pending" };
-    } catch (error) {
-      // 404 means the PaymentIntent doesn't exist yet - it is created a broker round trip after
-      // inventory is reserved. 202 is the same thing once the row exists but has no secret.
-      //
-      // 404 is also the answer for an order belonging to someone else, deliberately: the payment
-      // service refuses to distinguish the two. Reporting "pending" for both is the price of
-      // that, and it only shows up on a page the diner reached with someone else's order id.
-      const code = axios.isAxiosError(error) ? error.response?.status : undefined;
-      if (code === 404 || code === 202) return { status: "pending" };
-      throw error;
+      const res = await fetch(DinerOrdersAPI.paymentSessionStream(orderId), {
+        headers: headers(token, tenant),
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) return { status: "pending" };
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) return { status: "pending" };
+        buffer += decoder.decode(value, { stream: true });
+
+        let sepIndex: number;
+        while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, sepIndex);
+          buffer = buffer.slice(sepIndex + 2);
+          const dataLine = rawEvent.split("\n").find((l) => l.startsWith("data:"));
+          if (!dataLine) continue;
+          try {
+            const parsed = JSON.parse(dataLine.slice(5).trim()) as DinerPaymentSession;
+            if (parsed.clientSecret && parsed.attemptId) {
+              void reader.cancel().catch(() => { });
+              return parsed;
+            }
+          } catch {
+            // Malformed/partial chunk - keep reading.
+          }
+        }
+      }
+    } catch {
+      return { status: "pending" };
+    } finally {
+      clearTimeout(timeout);
     }
   },
 

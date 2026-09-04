@@ -15,7 +15,6 @@ export type KitchenTicket = {
 
 type KitchenState = {
   tickets: KitchenTicket[];
-  selectedCartId?: string | null;
 };
 
 const LS_KEY = "pos.kitchen.tickets.v1";
@@ -23,15 +22,14 @@ const LS_KEY = "pos.kitchen.tickets.v1";
 function read(): KitchenState {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { tickets: [], selectedCartId: null };
+    if (!raw) return { tickets: [] };
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return { tickets: [], selectedCartId: null };
+    if (!parsed || typeof parsed !== "object") return { tickets: [] };
     const obj = parsed as Record<string, unknown>;
     const tickets = Array.isArray(obj.tickets) ? (obj.tickets as KitchenTicket[]) : [];
-    const selectedCartId = typeof obj.selectedCartId === "string" ? obj.selectedCartId : null;
-    return { tickets, selectedCartId };
+    return { tickets };
   } catch {
-    return { tickets: [], selectedCartId: null };
+    return { tickets: [] };
   }
 }
 
@@ -58,10 +56,9 @@ function subscribe(cb: () => void) {
 }
 
 // Plain (non-hook) reset for callers outside React, e.g. AuthProvider clearing
-// tenant-local caches on sign-out - useKitchen()'s clearAll requires being
-// inside a component.
+// tenant-local caches on sign-out.
 export function clearKitchenState() {
-  setState({ tickets: [], selectedCartId: null });
+  setState({ tickets: [] });
 }
 
 export function useKitchen() {
@@ -87,34 +84,14 @@ export function useKitchen() {
           ),
         });
       },
-      serve: (cartId: string) => {
-        setState({
-          tickets: state.tickets.map((t) =>
-            t.id === cartId && t.status === "fired" ? { ...t, status: "served" } : t,
-          ),
-        });
-      },
-      remove: (cartId: string) => {
-        setState({ tickets: state.tickets.filter((t) => t.id !== cartId) });
-      },
-      // "served" means the kitchen delivered the food, not that the guest paid -
-      // the cart must stay locked (no more adding items / re-firing) until the
-      // order reaches a terminal state. Only "voided" - which also releases the
-      // table - actually reopens the cart.
+      // "served"/active-orders/nav-badge status now comes from the server
+      // (Order.ServedAt via useActiveOrders/useIsFired) - see MenuPage's old
+      // `kitchen.isFired(cartId)`-only check for why local-only state here was
+      // a bug across multiple terminals. `isFired` still consults the local
+      // ticket as an instant fallback right after this terminal fires, before
+      // the order query has refetched.
       isFired: (cartId?: string | null) =>
         !!cartId && state.tickets.some((t) => t.id === cartId && t.status !== "voided"),
-      active: () => state.tickets.filter((t) => t.status === "fired"),
-      all: () => state.tickets.slice(),
-      setSelected: (cartId: string | null) => setState({ selectedCartId: cartId }),
-      selected: () => state.tickets.find(t => t.id === state.selectedCartId && t.status === "fired"),
-      defaultMenuTarget: (): { tableId: string; cartId: string } | undefined => {
-        const sel = state.tickets.find(t => t.id === state.selectedCartId && t.status === "fired");
-        if (sel) return { tableId: sel.tableId, cartId: sel.id };
-        const act = state.tickets.filter(t => t.status === "fired");
-        if (act.length === 1) return { tableId: act[0].tableId, cartId: act[0].id };
-        return undefined;
-      },
-      clearAll: () => setState({ tickets: [] }),
     };
   }, []);
 

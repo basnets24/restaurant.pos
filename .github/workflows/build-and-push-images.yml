@@ -3,6 +3,7 @@ name: Build and Push Images
 on:
   push:
     branches: [ main ]
+    paths: [ 'services/**', '.github/workflows/build-and-push-images.yml' ]
   workflow_dispatch:
 
 permissions:

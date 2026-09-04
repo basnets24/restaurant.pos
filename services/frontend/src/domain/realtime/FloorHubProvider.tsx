@@ -37,7 +37,11 @@ export function FloorHubProvider({ children }: { children: ReactNode }) {
       // Default (Information) logs the full connection URL, which includes
       // the access_token query param SignalR appends for WebSocket auth -
       // that's a live JWT leaking into the browser console on every connect.
-      .configureLogging(signalR.LogLevel.Warning)
+      // Error (not Warning): Warning is where SignalR logs "no client method
+      // found" for a hub event nobody on this connection subscribed to -
+      // routine here since notification handlers are mounted per-page (see
+      // useNotificationHub), not a real problem worth surfacing as noise.
+      .configureLogging(signalR.LogLevel.Error)
       .build();
 
     hub.start().catch(console.error);

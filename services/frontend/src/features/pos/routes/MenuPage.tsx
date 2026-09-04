@@ -14,12 +14,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useBlocker } from "react-router-dom";
 
 import { useLinkOrder, useSetTableStatus, useTable, useUnlinkOrder } from "@/domain/tables/hooks";
-import { useOrder, useCancelOrder } from "@/domain/orders/hooks";
+import { useCancelOrder } from "@/domain/orders/hooks";
+import { orderKeys } from "@/domain/orders/keys";
+import { useIsFired } from "@/features/pos/kitchen/useIsFired";
 import { useMenuCategories as useDomainMenuCategories, useMenuList } from "@/domain/menu/hooks";
 import type { MenuItemDto } from "@/domain/menu/types";
 import { MenuItemCard } from "@/features/pos/components/MenuItemCard";
 import { OrderSidebar, type SidebarOrder, type SidebarTable } from "@/features/pos/components/OrderSideBar";
 import { CheckoutPaymentDialog } from "@/features/pos/components/CheckoutPaymentDialog";
+import { PAYMENT_SUCCEEDED_EVENT } from "@/features/tour/tourSteps";
 import { useKitchen } from "@/features/pos/kitchen/kitchenStore";
 import {
   useCreateCart,
@@ -107,6 +110,10 @@ export default function MenuPage() {
   const [firing, setFiring] = useState(false);
   // Once checked out, the placed order id drives the inline payment dialog.
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+  // Distinguishes "dismissed after paying" (head back to the dashboard) from
+  // dismissing before paying (stay put - the unpaid order is still payable
+  // later from Orders, see onOpenChange below).
+  const [justPaid, setJustPaid] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -123,17 +130,21 @@ export default function MenuPage() {
     location.state?.cartId ?? cartIdFromQuery ?? initialSession?.cartId ?? null
   );
   // Once fired, the backend order is a snapshot of the cart at that moment —
-  // further cart edits wouldn't reach it, so they're blocked below.
-  const isFired = kitchen.isFired(cartId);
+  // further cart edits wouldn't reach it, so they're blocked below. Server
+  // truth (does an order exist for this cart id?), not just this browser's
+  // local kitchen ticket list - see useIsFired.
+  // Order.Id === cartId (see FinalOrderService.FinalizeOrderAsync's idempotency
+  // key) — once fired, this is the same order OrderPage/OrdersPage show.
+  const { isFired, order: firedOrder } = useIsFired(cartId);
   const createCart = useCreateCart();
   const linkOrder = useLinkOrder(tableId);
   const setTableStatus = useSetTableStatus(tableId);
   const unlinkOrder = useUnlinkOrder(tableId);
-  // Order.Id === cartId (see FinalOrderService.FinalizeOrderAsync's idempotency
-  // key) — once fired, this is the same order OrderPage/OrdersPage show.
-  const orderQuery = useOrder(isFired ? cartId ?? undefined : undefined);
   const cancelOrder = useCancelOrder();
-  const isCancellable = isFired && orderQuery.data?.status === "Pending";
+  // Once served the reserved ingredients were actually used - the server
+  // rejects cancelling a served order (would phantom-restock inventory), so
+  // don't offer the action here either.
+  const isCancellable = isFired && firedOrder?.status === "Pending" && !firedOrder?.servedAt;
 
   // Table details (also tells us whether the table already has an active cart)
   const tableQuery = useTable(tableId);
@@ -158,7 +169,11 @@ export default function MenuPage() {
       // we don't race ahead and create a duplicate cart for an already-linked
       // table, and so the server-truth reconciliation right below actually has
       // something to reconcile against before any link/create call fires.
-      if (tableQuery.isLoading || table === undefined) return;
+      // Also wait out any in-flight refetch (e.g. a cache-invalidated table
+      // query revalidating after another client cleared/reseated it) - acting
+      // on the stale cached activeCartId while a fresher one is already on the
+      // way is exactly what causes a spurious link-order 409 below.
+      if (tableQuery.isLoading || tableQuery.isFetching || table === undefined) return;
 
       const serverCartId =
         table?.activeCartId && table.activeCartId !== EMPTY_GUID ? table.activeCartId : null;
@@ -235,7 +250,7 @@ export default function MenuPage() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId, cartId, table, tableQuery.isLoading]);
+  }, [tableId, cartId, table, tableQuery.isLoading, tableQuery.isFetching]);
 
   const cartQuery = useCart(cartId ?? undefined); // enabled only when id exists
   const cart = cartQuery.data;
@@ -351,6 +366,10 @@ export default function MenuPage() {
         items: cart.items.map((i) => ({ name: i.menuItemName, quantity: i.quantity })),
         firedAt: Date.now(),
       });
+      // Don't wait out useOrderIfExists's staleTime - other consumers of
+      // useIsFired for this cart (e.g. OrderSideBar) should see it as fired
+      // as soon as the server actually has the order, not up to 10s later.
+      await qc.invalidateQueries({ queryKey: orderKeys.byId(orderId) });
       setOrderPlaced(true);
       toast.success("Fired to kitchen");
     } catch (e: unknown) {
@@ -581,19 +600,30 @@ export default function MenuPage() {
           open
           orderId={paymentOrderId}
           onOpenChange={(o) => {
-            // Dismissing the dialog (Back to Tables, X, or before paying)
-            // leaves the menu screen. An unpaid placed order stays payable
-            // later from Orders; a paid one already released the table below.
+            // Dismissing before paying (X) just closes it and stays on this
+            // table's menu screen - the unpaid placed order stays payable
+            // later from Orders. Dismissing *after* paying (the success
+            // card's own "Back to Home") heads back to the dashboard
+            // instead, for every staff session, since there's nothing left
+            // to do at this table - it was already released below.
             if (!o) {
               setPaymentOrderId(null);
-              navigate("/pos/tables");
+              if (justPaid) navigate("/home");
             }
           }}
           onPaid={async () => {
+            // Set synchronously, before the awaits below - the success card's
+            // "Back to Home" is clickable the instant it renders, and can
+            // beat releaseTable()'s round trips if this waited on them too.
+            setJustPaid(true);
             // Payment confirmed — release the table; the dialog stays open on
             // its success card until the user dismisses it.
             await releaseTable();
             toast.success("Payment confirmed!");
+            // Harmless when no tour is listening — see tourSteps.ts's "pay"
+            // step, which waits for this rather than the earlier click that
+            // just opened this dialog.
+            window.dispatchEvent(new Event(PAYMENT_SUCCEEDED_EVENT));
           }}
         />
       )}

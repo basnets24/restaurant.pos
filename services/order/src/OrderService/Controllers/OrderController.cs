@@ -82,6 +82,14 @@ public class OrderController : ControllerBase
         return Accepted();
     }
 
+    [HttpPost("{orderId:guid}/serve")]
+    [Authorize(Policy = OrderPolicyExtensions.Write)]
+    public async Task<IActionResult> MarkServed(Guid orderId, CancellationToken ct)
+    {
+        await _orders.MarkServedAsync(orderId, ct);
+        return NoContent();
+    }
+
     [HttpPost("{orderId:guid}/cancel")]
     [Authorize(Policy = OrderPolicyExtensions.Write)]
     public async Task<IActionResult> Cancel(Guid orderId, CancellationToken ct)
