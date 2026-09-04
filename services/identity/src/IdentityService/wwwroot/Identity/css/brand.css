@@ -52,6 +52,8 @@ h1, h2 { font-family: 'Lora', Georgia, 'Times New Roman', serif; }
 .brand-inner { max-width: 480px; padding: 48px; text-align: center; }
 .brand-mark { width: 64px; height: 64px; margin: 0 auto 20px; }
 .brand-title { margin: 0; font-size: 36px; letter-spacing: -0.02em; }
+.brand-link { display: block; color: inherit; text-decoration: none; }
+.brand-link:hover .brand-title { text-decoration: underline; }
 .brand-sub { margin-top: 8px; opacity: 0.9; }
 
 .auth-pane { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }

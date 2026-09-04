@@ -1,6 +1,8 @@
 @*
   Custom brand layout for Identity Area, aligned with frontend tokens.
 *@
+@using IdentityService.Common.Settings
+@inject IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,12 +19,33 @@
 <div class="auth-shell">
     <div class="brand-pane">
         <div class="brand-inner">
-            <svg class="brand-mark" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="60" cy="60" r="48" fill="#fbf9e6" />
-                <path d="M48 20 Q40 44 48 58 Q52 65 60 65 Q68 65 72 58 Q80 44 72 20 Z" fill="#708823" />
-                <rect x="56" y="62" width="8" height="38" rx="4" fill="#708823" />
-            </svg>
-            <h1 class="brand-title">Spoontab</h1>
+            @{
+                // A page can override this (the logout confirmation page's fallback sets it
+                // to the frontend's post-logout-callback URL, which both leaves the app and
+                // finishes the sign-out round trip cleanly). Every other page - Login,
+                // Register, ... - has no reason for anything more specific than "take me back
+                // to the app", so default to the frontend's own origin, looked up the same way
+                // as Logout's fallback (by ClientId, not array position).
+                var homeUrl = ViewData["HomeUrl"] as string;
+                if (string.IsNullOrEmpty(homeUrl))
+                {
+                    var settings = Configuration.GetSection("IdentityServerSettings").Get<IdentityServerSettings>();
+                    homeUrl = settings?.Clients
+                        .FirstOrDefault(c => c.ClientId == "frontend")?
+                        .AllowedCorsOrigins?
+                        .FirstOrDefault();
+                }
+            }
+            @if (!string.IsNullOrEmpty(homeUrl))
+            {
+                <a href="@homeUrl" class="brand-link">
+                    <partial name="_BrandMark" />
+                </a>
+            }
+            else
+            {
+                <partial name="_BrandMark" />
+            }
             <p class="brand-sub">One system for orders, kitchen, staff, and sales.</p>
         </div>
     </div>
