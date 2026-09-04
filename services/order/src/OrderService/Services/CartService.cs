@@ -1,4 +1,5 @@
 using Common.Library;
+using Microsoft.EntityFrameworkCore;
 using OrderService.Dtos;
 using OrderService.Entities;
 using OrderService.Exceptions;
@@ -61,6 +62,24 @@ public class CartService : ICartService
         DateTimeOffset? pickupTime = null,
         Guid? cartId = null)
     {
+        if (guestCount < 1)
+            throw new BusinessRuleException("Guest count must be at least 1.");
+
+        DiningTable? table = null;
+        if (tableId.HasValue)
+        {
+            table = await _tableRepo.GetAsync(tableId.Value)
+                ?? throw new KeyNotFoundException("Table not found.");
+            if (table.Status == DiningTableStatus.Occupied && table.ActiveCartId != null)
+            {
+                throw new ConflictException($"Table {table.Number} is already in use.");
+            }
+            if (guestCount is < 1 || guestCount > table.Seats)
+            {
+                throw new BusinessRuleException($"Guest count must be between 1 and {table.Seats} for table {table.Number}.");
+            }
+        }
+
         var cart = new Cart
         {
             Id = cartId ?? Guid.NewGuid(),
@@ -75,18 +94,25 @@ public class CartService : ICartService
         };
         await _cartRepo.CreateAsync(cart);
 
-        if (tableId.HasValue)
+        if (table is not null)
         {
-            var table = await _tableRepo.GetAsync(tableId.Value)
-                ?? throw new KeyNotFoundException("Table not found.");
-            if (table.Status == DiningTableStatus.Occupied && table.ActiveCartId != null)
-            {
-                throw new ConflictException($"Table {table.Number} is already in use.");
-            }
-
             table.Status = DiningTableStatus.Occupied;
+            table.PartySize = guestCount;
             table.ActiveCartId = cart.Id;
-            await _tableRepo.UpdateAsync(table);
+            table.Version++;
+            try
+            {
+                await _tableRepo.UpdateAsync(table);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Someone else claimed this table between our read above and this
+                // write - the cart we just created has nothing to attach to, so
+                // remove it rather than leaving an orphaned cart pointing at a
+                // table that never actually linked back to it.
+                await _cartRepo.DeleteAsync(cart.Id);
+                throw new ConflictException($"Table {table.Number} is already occupied.");
+            }
         }
         return cart;
     }
@@ -94,6 +120,8 @@ public class CartService : ICartService
     public async Task AddItemAsync(Guid cartId, AddCartItemDto itemDto)
     {
         await GuardNotCheckedOutAsync(cartId);
+        if (itemDto.Quantity <= 0)
+            throw new BusinessRuleException("Quantity must be at least 1.");
         var cart = await _cartRepo.GetAsync(cartId)
             ?? throw new KeyNotFoundException("Cart not found.");
         var posItem = await _posCatalog.GetAsync(itemDto.MenuItemId);

@@ -51,6 +51,11 @@ public class OrderDbContext : DbContext, ITenantScopedDbContext
         {
             b.HasKey(t => t.Id);
             b.HasIndex(t => new { t.RestaurantId, t.LocationId });
+            // Enforced at the DB write (not just the manual checks in
+            // UpdateLayoutAsync/BulkUpdateLayoutAsync): any writer whose loaded
+            // Version no longer matches the row gets a DbUpdateConcurrencyException
+            // instead of silently overwriting a concurrent change.
+            b.Property(t => t.Version).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Notification>(b =>
