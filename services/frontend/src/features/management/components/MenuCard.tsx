@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { MenuItemDto, CreateMenuItemDto, UpdateMenuItemDto } from "@/domain/menu/types";
 import { useMenuCategories, useMenuList, useToggleMenuAvailability, usePatchMenuItem, useCreateMenuItem, useRemoveMenuItem } from "@/domain/menu/hooks";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Utensils, Plus, Pencil, Trash2, ListPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, ListPlus } from "lucide-react";
 import { toast } from "sonner";
 import ModifiersDialog from "./ModifiersDialog";
 
@@ -66,19 +66,21 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
     const [modifiersItem, setModifiersItem] = useState<MenuItemDto | null>(null);
 
     return (
-        <Card>
-            <CardHeader className="flex items-center justify-between gap-4">
-                <div>
-                    <CardTitle className="flex items-center gap-2"><Utensils className="h-5 w-5"/> Menu Items</CardTitle>
-                    <CardDescription>Manage your menu, prices, and availability. Creating/editing requires Admin or Manager.</CardDescription>
-                </div>
+        // Borderless/flush on mobile - matches the Staff table treatment,
+        // see StaffUsersCard. sm+ keeps the standard bordered Card frame.
+        <Card className="border-0 bg-transparent rounded-none sm:border sm:bg-card sm:rounded-xl">
+            <CardHeader className="px-0 sm:px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* No "Menu Items" title here - the page's own "Menu" heading
+                    (MenuTab) already says that; the permission note below is
+                    the only part of this header worth keeping. */}
+                <CardDescription>Manage your menu, prices, and availability. Creating/editing requires Admin or Manager.</CardDescription>
                 {canWrite && (
-                    <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-2"/>New Item</Button>
+                    <Button onClick={() => setCreateOpen(true)} className="shrink-0"><Plus className="h-4 w-4 mr-2"/>New Item</Button>
                 )}
             </CardHeader>
 
             {/* Filters */}
-            <CardContent className="space-y-4">
+            <CardContent className="px-0 sm:px-6 space-y-4">
                 {!canWrite && (
                     <div className="text-xs text-muted-foreground">You have read-only access to menu items.</div>
                 )}
@@ -110,8 +112,32 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="rounded-2xl border">
+                {/* Mobile: one card per item - the 6-column table has no
+                    room to breathe below sm (same treatment as the Staff
+                    table, see StaffUsersCard). */}
+                <div className="sm:hidden rounded-2xl border divide-y divide-border">
+                    {list.isLoading && <div className="p-4 text-sm text-muted-foreground">Loading…</div>}
+                    {!list.isLoading && items.length === 0 && <div className="p-4 text-sm text-muted-foreground">No menu items</div>}
+                    {items.map((m) => (
+                        <MenuMobileCard
+                            key={m.id}
+                            item={m}
+                            canWrite={canWrite}
+                            busy={mToggle.isPending || mPatch.isPending || mDelete.isPending}
+                            onToggleAvailability={(v) => mToggle.mutate({ id: m.id, value: v })}
+                            onEdit={() => { setEditing(m); setEditOpen(true); }}
+                            onManageModifiers={() => { setModifiersItem(m); setModifiersOpen(true); }}
+                            onDelete={() =>
+                                mDelete.mutate(m.id, {
+                                    onSuccess: () => toast.success("Menu item deleted"),
+                                })
+                            }
+                        />
+                    ))}
+                </div>
+
+                {/* sm+: table */}
+                <div className="hidden sm:block rounded-2xl border">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -147,9 +173,9 @@ export default function MenuItemsCard({ canWrite = true }: { canWrite?: boolean 
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-sm opacity-70">{total.toLocaleString()} items</div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</Button>
                         <div className="min-w-[6rem] text-center text-sm">Page {page} / {totalPages}</div>
                         <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</Button>
@@ -246,6 +272,55 @@ function MenuRow({ item, canWrite, busy, onToggleAvailability, onEdit, onManageM
                 )}
             </TableCell>
         </TableRow>
+    );
+}
+
+function MenuMobileCard({ item, canWrite, busy, onToggleAvailability, onEdit, onManageModifiers, onDelete }: {
+    item: MenuItemDto;
+    canWrite: boolean;
+    busy?: boolean;
+    onToggleAvailability: (value: boolean) => void;
+    onEdit: () => void;
+    onManageModifiers: () => void;
+    onDelete: () => void;
+}) {
+    return (
+        <div className="p-4 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <div className="font-medium truncate">{item.name}</div>
+                    {item.description && <div className="text-xs opacity-70 line-clamp-2">{item.description}</div>}
+                </div>
+                <Badge variant="secondary" className="shrink-0">{item.category || "N/A"}</Badge>
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+                <span className="font-medium font-numeric">${item.price.toFixed(2)}</span>
+                <span className="text-muted-foreground">Stock: <span className="font-numeric">{item.quantity ?? 0}</span></span>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <Switch disabled={!canWrite || busy} checked={item.isAvailable} onCheckedChange={onToggleAvailability} />
+                <span className="text-sm">{item.isAvailable ? "Available" : "Hidden"}</span>
+            </div>
+
+            {canWrite && (
+                <div className="flex items-center gap-2 pt-1">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={onEdit}><Pencil className="h-4 w-4 mr-1"/>Edit</Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={onManageModifiers}><ListPlus className="h-4 w-4 mr-1"/>Modifiers</Button>
+                    <Button
+                        size="icon"
+                        variant="outline"
+                        className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={onDelete}
+                        disabled={busy}
+                        aria-label="Delete menu item"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+        </div>
     );
 }
 
