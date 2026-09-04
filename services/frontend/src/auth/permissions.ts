@@ -17,6 +17,12 @@ const grantedScopes = new Set<string>();
 let grantedScopesSnapshot: string[] = [];
 const listeners = new Set<() => void>();
 
+// Read-only snapshot for callers that need to union against it (see getApiToken.ts's
+// mintToken) rather than just react to it via the hook.
+export function getGrantedScopes(): string[] {
+  return grantedScopesSnapshot;
+}
+
 export function addGrantedScopes(scopes: string[]) {
   let changed = false;
   for (const s of scopes) {

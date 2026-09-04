@@ -6,7 +6,13 @@ import { ENV } from '@/config/env';
 const origin = window.location.origin;
 const authority = ENV.IDENTITY_URL;
 
-export const BASE_ID_SCOPES = 'openid profile roles tenancy';
+// menu.read/order.read/IdentityServerApi are granted at login rather than lazily via
+// getApiToken()'s signinSilent() - every staff session ends up needing them anyway (POS
+// tables/menu, the Home dashboard, staff management), and none of them unlock a write action:
+// every write policy server-side requires a role claim in addition to its scope (e.g.
+// CatalogPolicyExtensions.MenuWritePolicy), so granting these reads upfront doesn't change who
+// can mutate anything. Write scopes (menu.write/order.write) and payment scopes stay lazy.
+export const BASE_ID_SCOPES = 'openid profile roles tenancy menu.read order.read IdentityServerApi';
 
 const scope = import.meta.env.VITE_OIDC_SCOPE ?? BASE_ID_SCOPES;
 
